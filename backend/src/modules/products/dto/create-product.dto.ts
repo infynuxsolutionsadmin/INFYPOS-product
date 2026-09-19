@@ -1,84 +1,84 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ProductStatus } from '@prisma/client';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
+  Max,
+  MaxLength,
   Min,
 } from 'class-validator';
-import { ProductStatus } from '@prisma/client';
 
-export class CreateProductPayloadDto {
-  @ApiProperty({ description: 'Product name' })
+export class CreateProductDto {
   @IsString()
-  name: string;
-
-  @ApiProperty({ description: 'Product Stock Keeping Unit (unique per tenant)' })
-  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
   sku: string;
 
-  @ApiPropertyOptional({ description: 'Primary barcode' })
   @IsString()
   @IsOptional()
+  @MaxLength(100)
   barcode?: string;
 
-  @ApiPropertyOptional({ description: 'Category ID' })
   @IsString()
-  @IsOptional()
-  categoryId?: string;
+  @IsNotEmpty()
+  @MaxLength(255)
+  name: string;
 
-  @ApiPropertyOptional({ description: 'Brand name' })
-  @IsString()
-  @IsOptional()
-  brand?: string;
-
-  @ApiPropertyOptional({ description: 'Product description' })
   @IsString()
   @IsOptional()
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Selling unit (e.g. PCS, KG)' })
   @IsString()
   @IsOptional()
-  unit?: string;
+  @MaxLength(100)
+  category?: string;
 
-  @ApiProperty({ description: 'Purchase cost price' })
-  @IsNumber()
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  brand?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  unit: string;
+
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Transform(({ value }) => parseFloat(value))
   costPrice: number;
 
-  @ApiProperty({ description: 'Retail selling price' })
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Transform(({ value }) => parseFloat(value))
   sellingPrice: number;
 
-  @ApiPropertyOptional({ description: 'Product status', enum: ProductStatus })
-  @IsEnum(ProductStatus)
+  @IsString()
+  @IsIn(['STANDARD', 'REDUCED', 'ZERO'])
   @IsOptional()
-  status?: ProductStatus;
+  vatBand?: string;
 
-  @ApiPropertyOptional({ description: 'Enable inventory tracking' })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsIn([0, 5, 20])
+  @IsOptional()
+  @Transform(({ value }) => parseFloat(value))
+  vatRate?: number;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(1024)
+  imageUrl?: string;
+
   @IsBoolean()
   @IsOptional()
   trackInventory?: boolean;
 
-  @ApiPropertyOptional({ description: 'Starting or current stock count' })
-  @IsNumber()
+  @IsEnum(ProductStatus)
   @IsOptional()
-  minimumStock?: number; // Sourced as current stock in frontend implementation
-
-  @ApiPropertyOptional({ description: 'Minimum stock alert trigger count' })
-  @IsNumber()
-  @IsOptional()
-  reorderLevel?: number;
-
-  @ApiProperty({ description: 'VAT rate UUID — every product must belong to a VAT category', format: 'uuid' })
-  @IsUUID()
-  @IsNotEmpty()
-  vatRateId: string;
+  status?: ProductStatus;
 }
-export class CreateProductDto extends CreateProductPayloadDto {}
-

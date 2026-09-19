@@ -1,120 +1,93 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { ProductStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { FindProductsQueryDto } from './dto/find-products-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { QueryProductDto } from './dto/query-product.dto';
-import { ProductStatus } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(tenantId: string, dto: CreateProductDto) {
-    // Check if SKU already exists for this tenant
-    const existing = await this.prisma.product.findFirst({
-      where: { tenantId, sku: dto.sku, deletedAt: null },
-    });
-    if (existing) {
-      throw new ConflictException('Product SKU already exists in this tenant.');
+  async create(tenantId: string, currentUserId: string, dto: CreateProductDto) {
+    if (dto.sellingPrice < dto.costPrice) {
+      throw new BadRequestException('Selling price cannot be less than cost price');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Validate VAT Rate exists and is active
-      const vatRate = await tx.vatRate.findFirst({
-        where: { id: dto.vatRateId, tenantId, deletedAt: null },
-      });
-      if (!vatRate) {
-        throw new BadRequestException('VAT Rate not found or inactive. Every product must have a valid VAT category.');
-      }
-
-      // 2. Fetch active stores for the tenant
-      const activeStores = await tx.store.findMany({
-        where: { tenantId, deletedAt: null },
-        select: { id: true },
-      });
-
-      if (activeStores.length === 0) {
-        throw new BadRequestException('No active store found for this tenant. Please create a store first.');
-      }
-
-      // 3. Create the product
-      const product = await tx.product.create({
-        data: {
+    const skuExists = await this.prisma.product.findUnique({
+      where: {
+        tenantId_sku: {
           tenantId,
-          categoryId: dto.categoryId || null,
-          vatRateId: dto.vatRateId,
           sku: dto.sku,
-          barcode: dto.barcode || null,
-          name: dto.name,
-          description: dto.description || null,
-          brand: dto.brand || null,
-          unit: dto.unit || 'PCS',
-          costPrice: dto.costPrice,
-          sellingPrice: dto.sellingPrice,
-          status: dto.status || ProductStatus.ACTIVE,
-          trackInventory: dto.trackInventory ?? true,
-          minimumStock: dto.minimumStock ?? 0,
-          reorderLevel: dto.reorderLevel ?? 0,
+        },
+      },
+    });
+
+    if (skuExists) {
+      throw new ConflictException('Product with this SKU already exists');
+    }
+
+    if (dto.barcode) {
+      const barcodeExists = await this.prisma.product.findUnique({
+        where: {
+          tenantId_barcode: {
+            tenantId,
+            barcode: dto.barcode,
+          },
         },
       });
 
-      // 3. Create ProductBarcode if primary barcode is provided
-      if (dto.barcode) {
-        await tx.productBarcode.create({
-          data: {
-            productId: product.id,
-            barcode: dto.barcode,
-            isPrimary: true,
-          },
-        });
+      if (barcodeExists) {
+        throw new ConflictException('Product with this barcode already exists');
       }
+    }
 
-      // 4. Automatically initialize Inventory stock balances for all active stores of the tenant
-      for (const store of activeStores) {
-        // Enforce duplicate safety check
-        const exists = await tx.inventory.findUnique({
-          where: {
-            storeId_productId: {
-              storeId: store.id,
-              productId: product.id,
-            },
-          },
-        });
+    const resolvedVatRate = this.resolveVat(dto.vatBand, dto.vatRate);
+    if (resolvedVatRate === undefined) {
+      throw new BadRequestException('Either vatBand or vatRate is required');
+    }
 
-        if (!exists) {
-          await tx.inventory.create({
-            data: {
-              tenantId,
-              storeId: store.id,
-              productId: product.id,
-              openingStock: 0,
-              currentStock: 0,
-              reservedStock: 0,
-              damagedStock: 0,
-            },
-          });
-        }
-      }
+    const { vatBand, vatRate, ...dataToSave } = dto;
 
-      return product;
+    return this.prisma.product.create({
+      data: {
+        tenantId,
+        createdBy: currentUserId,
+        ...dataToSave,
+        vatRate: resolvedVatRate,
+      },
+      select: this.getSelectFields(),
     });
   }
 
-  async findAll(tenantId: string, query: QueryProductDto) {
-    const { page = 1, limit = 10, search, categoryId, status, sortBy = 'createdAt', sortOrder = 'desc' } = query;
+  async findAll(tenantId: string, query: FindProductsQueryDto) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      category,
+      brand,
+      status,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
+
     const skip = (page - 1) * limit;
-
-    const where: any = {
-      tenantId,
-      deletedAt: null,
-    };
-
-    if (categoryId) {
-      where.categoryId = categoryId;
-    }
+    const where: any = { tenantId };
 
     if (status) {
-      where.status = status as ProductStatus;
+      where.status = status;
+    }
+    if (category) {
+      where.category = category;
+    }
+    if (brand) {
+      where.brand = brand;
     }
 
     if (search) {
@@ -122,163 +95,174 @@ export class ProductsService {
         { name: { contains: search, mode: 'insensitive' } },
         { sku: { contains: search, mode: 'insensitive' } },
         { barcode: { contains: search, mode: 'insensitive' } },
+        { category: { contains: search, mode: 'insensitive' } },
         { brand: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    // Determine orderBy structure
-    let orderBy: any = {};
-    if (sortBy === 'price') {
-      orderBy.sellingPrice = sortOrder;
-    } else if (sortBy === 'stock') {
-      orderBy.minimumStock = sortOrder;
-    } else if (sortBy === 'name') {
-      orderBy.name = sortOrder;
-    } else {
-      orderBy.createdAt = sortOrder;
-    }
-
-    const [items, total] = await Promise.all([
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.product.count({ where }),
       this.prisma.product.findMany({
         where,
-        orderBy,
         skip,
         take: limit,
-        include: { category: true, vatRate: true, barcodes: true, images: true },
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        select: this.getSelectFields(),
       }),
-      this.prisma.product.count({ where }),
     ]);
 
+    const pages = Math.ceil(total / limit);
+
     return {
-      success: true,
-      statusCode: 200,
-      message: 'Products retrieved successfully',
-      data: items,
-      meta: {
+      items,
+      pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        pages,
       },
     };
   }
 
   async findOne(tenantId: string, id: string) {
     const product = await this.prisma.product.findFirst({
-      where: { id, tenantId, deletedAt: null },
-      include: { category: true, vatRate: true, barcodes: true, images: true },
+      where: { id, tenantId },
+      select: this.getSelectFields(),
     });
 
     if (!product) {
-      throw new NotFoundException('Product not found in this tenant.');
+      throw new NotFoundException('Product not found');
     }
 
-    return {
-      success: true,
-      statusCode: 200,
-      message: 'Product retrieved successfully',
-      data: product,
-    };
+    return product;
   }
 
-  async update(tenantId: string, id: string, dto: UpdateProductDto) {
+  async update(tenantId: string, id: string, currentUserId: string, dto: UpdateProductDto) {
     const product = await this.prisma.product.findFirst({
-      where: { id, tenantId, deletedAt: null },
+      where: { id, tenantId },
     });
 
     if (!product) {
-      throw new NotFoundException('Product not found in this tenant.');
+      throw new NotFoundException('Product not found');
+    }
+
+    const costPrice = dto.costPrice !== undefined ? dto.costPrice : Number(product.costPrice);
+    const sellingPrice = dto.sellingPrice !== undefined ? dto.sellingPrice : Number(product.sellingPrice);
+
+    if (sellingPrice < costPrice) {
+      throw new BadRequestException('Selling price cannot be less than cost price');
     }
 
     if (dto.sku && dto.sku !== product.sku) {
-      const existing = await this.prisma.product.findFirst({
-        where: { tenantId, sku: dto.sku, deletedAt: null },
-      });
-      if (existing) {
-        throw new ConflictException('Product SKU already exists in this tenant.');
-      }
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      // Validate VAT Rate if being updated
-      if (dto.vatRateId !== undefined) {
-        const vatRate = await tx.vatRate.findFirst({
-          where: { id: dto.vatRateId, tenantId, deletedAt: null },
-        });
-        if (!vatRate) {
-          throw new BadRequestException('VAT Rate not found or inactive. Every product must have a valid VAT category.');
-        }
-      }
-
-      const updatedProduct = await tx.product.update({
-        where: { id },
-        data: {
-          categoryId: dto.categoryId !== undefined ? dto.categoryId : undefined,
-          vatRateId: dto.vatRateId !== undefined ? dto.vatRateId : undefined,
-          sku: dto.sku !== undefined ? dto.sku : undefined,
-          barcode: dto.barcode !== undefined ? dto.barcode : undefined,
-          name: dto.name !== undefined ? dto.name : undefined,
-          description: dto.description !== undefined ? dto.description : undefined,
-          brand: dto.brand !== undefined ? dto.brand : undefined,
-          unit: dto.unit !== undefined ? dto.unit : undefined,
-          costPrice: dto.costPrice !== undefined ? dto.costPrice : undefined,
-          sellingPrice: dto.sellingPrice !== undefined ? dto.sellingPrice : undefined,
-          status: dto.status !== undefined ? dto.status : undefined,
-          trackInventory: dto.trackInventory !== undefined ? dto.trackInventory : undefined,
-          minimumStock: dto.minimumStock !== undefined ? dto.minimumStock : undefined,
-          reorderLevel: dto.reorderLevel !== undefined ? dto.reorderLevel : undefined,
+      const skuExists = await this.prisma.product.findUnique({
+        where: {
+          tenantId_sku: {
+            tenantId,
+            sku: dto.sku,
+          },
         },
       });
 
-      // Sync primary barcode if changed
-      if (dto.barcode !== undefined) {
-        // Delete old primary barcodes
-        await tx.productBarcode.deleteMany({
-          where: { productId: id, isPrimary: true },
-        });
-
-        if (dto.barcode) {
-          await tx.productBarcode.create({
-            data: {
-              productId: id,
-              barcode: dto.barcode,
-              isPrimary: true,
-            },
-          });
-        }
+      if (skuExists) {
+        throw new ConflictException('Product with this SKU already exists');
       }
+    }
 
-      return {
-        success: true,
-        statusCode: 200,
-        message: 'Product updated successfully',
-        data: updatedProduct,
-      };
-    });
-  }
+    if (dto.barcode && dto.barcode !== product.barcode) {
+      const barcodeExists = await this.prisma.product.findUnique({
+        where: {
+          tenantId_barcode: {
+            tenantId,
+            barcode: dto.barcode,
+          },
+        },
+      });
 
-  async softDelete(tenantId: string, id: string) {
-    const product = await this.prisma.product.findFirst({
-      where: { id, tenantId, deletedAt: null },
-    });
+      if (barcodeExists) {
+        throw new ConflictException('Product with this barcode already exists');
+      }
+    }
 
-    if (!product) {
-      throw new NotFoundException('Product not found in this tenant.');
+    const resolvedVatRate = this.resolveVat(dto.vatBand, dto.vatRate);
+    const { vatBand, vatRate, ...dataToUpdate } = dto;
+    
+    const updateData: any = {
+      ...dataToUpdate,
+      updatedBy: currentUserId,
+    };
+    
+    if (resolvedVatRate !== undefined) {
+      updateData.vatRate = resolvedVatRate;
     }
 
     await this.prisma.product.update({
       where: { id },
-      data: {
-        deletedAt: new Date(),
-        status: ProductStatus.DELETED,
-      },
+      data: updateData,
     });
 
+    return this.findOne(tenantId, id);
+  }
+
+  async remove(tenantId: string, id: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    await this.prisma.product.update({
+      where: { id },
+      data: { status: ProductStatus.INACTIVE },
+    });
+
+    return this.findOne(tenantId, id);
+  }
+
+  private getSelectFields() {
     return {
-      success: true,
-      statusCode: 200,
-      message: 'Product deleted successfully',
-      data: { success: true },
+      id: true,
+      sku: true,
+      barcode: true,
+      name: true,
+      description: true,
+      category: true,
+      brand: true,
+      unit: true,
+      costPrice: true,
+      sellingPrice: true,
+      vatRate: true,
+      imageUrl: true,
+      trackInventory: true,
+      status: true,
+      createdBy: true,
+      updatedBy: true,
+      createdAt: true,
+      updatedAt: true,
     };
+  }
+
+  private resolveVat(vatBand?: string, vatRate?: number): number | undefined {
+    if (vatBand !== undefined && vatRate !== undefined) {
+      throw new BadRequestException('Provide either vatBand or vatRate, not both');
+    }
+
+    if (vatBand !== undefined) {
+      switch (vatBand) {
+        case 'STANDARD': return 20;
+        case 'REDUCED': return 5;
+        case 'ZERO': return 0;
+        default: throw new BadRequestException('Invalid vatBand');
+      }
+    }
+
+    if (vatRate !== undefined) {
+      return vatRate;
+    }
+
+    return undefined;
   }
 }

@@ -4,48 +4,52 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+export interface ErrorResponseFormat {
+  success: boolean;
+  statusCode: number;
+  timestamp: string;
+  path: string;
+  message: string | string[];
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(HttpExceptionFilter.name);
-
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    let statusCode: number;
+    let message: string | string[];
 
-    const exceptionResponse =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : 'Internal server error';
+    if (exception instanceof HttpException) {
+      statusCode = exception.getStatus();
+      const res = exception.getResponse();
 
-    const message: unknown =
-      typeof exceptionResponse === 'object' && exceptionResponse !== null
-        ? (exceptionResponse as Record<string, unknown>).message ||
-          exceptionResponse
-        : exceptionResponse;
+      if (typeof res === 'object' && res !== null) {
+        const resBody = res as Record<string, any>;
+        message = resBody.message || exception.message;
+      } else if (typeof res === 'string') {
+        message = res;
+      } else {
+        message = exception.message;
+      }
+    } else {
+      statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+      message = 'Internal server error';
+    }
 
-    this.logger.error(
-      `HTTP ${status} Error on ${request.method} ${request.url}: ${JSON.stringify(
-        message,
-      )}`,
-      exception instanceof Error ? exception.stack : undefined,
-    );
-
-    response.status(status).json({
+    const errorResponse: ErrorResponseFormat = {
       success: false,
-      statusCode: status,
-      message,
+      statusCode,
       timestamp: new Date().toISOString(),
       path: request.url,
-    });
+      message,
+    };
+
+    response.status(statusCode).json(errorResponse);
   }
 }

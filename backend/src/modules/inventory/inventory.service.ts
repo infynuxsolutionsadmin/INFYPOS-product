@@ -4,300 +4,225 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, InventoryMovementType } from '@prisma/client';
+import { InventoryStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
-import { AuditService } from '../audit/audit.service';
-import { AdjustStockDto } from './dto/adjust-stock.dto';
-import { QueryInventoryDto, QueryMovementsDto } from './dto/query-inventory.dto';
+import { CreateInventoryDto } from './dto/create-inventory.dto';
+import { FindInventoryQueryDto } from './dto/find-inventory-query.dto';
+import { UpdateInventoryDto } from './dto/update-inventory.dto';
 
 @Injectable()
 export class InventoryService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly auditService: AuditService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // findAll — paginated stock list with low/out-of-stock flags
-  // ──────────────────────────────────────────────────────────────────────────
+  async create(tenantId: string, dto: CreateInventoryDto) {
+    if (dto.maximumStock < dto.minimumStock) {
+      throw new BadRequestException('Maximum stock cannot be less than minimum stock');
+    }
+    if (dto.reorderLevel > dto.maximumStock) {
+      throw new BadRequestException('Reorder level cannot exceed maximum stock');
+    }
 
-  async findAll(tenantId: string, query: QueryInventoryDto) {
-    const { page = 1, limit = 20, storeId, productId, search, lowStock, outOfStock } = query;
+    const store = await this.prisma.store.findFirst({
+      where: { id: dto.storeId, tenantId },
+    });
+    if (!store) {
+      throw new NotFoundException('Store not found or does not belong to tenant');
+    }
+
+    const product = await this.prisma.product.findFirst({
+      where: { id: dto.productId, tenantId },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found or does not belong to tenant');
+    }
+
+    const exists = await this.prisma.inventory.findUnique({
+      where: {
+        storeId_productId: {
+          storeId: dto.storeId,
+          productId: dto.productId,
+        },
+      },
+    });
+
+    if (exists) {
+      if (exists.status === InventoryStatus.ACTIVE) {
+        throw new ConflictException('Inventory record already exists for this product in this store');
+      }
+
+      // Reactivate
+      const reactivated = await this.prisma.inventory.update({
+        where: { id: exists.id },
+        data: {
+          quantityOnHand: dto.quantityOnHand,
+          minimumStock: dto.minimumStock,
+          maximumStock: dto.maximumStock,
+          reorderLevel: dto.reorderLevel,
+          reservedQuantity: 0,
+          status: InventoryStatus.ACTIVE,
+        },
+      });
+
+      return this.findOne(tenantId, reactivated.id);
+    }
+
+    const created = await this.prisma.inventory.create({
+      data: {
+        tenantId,
+        storeId: dto.storeId,
+        productId: dto.productId,
+        quantityOnHand: dto.quantityOnHand,
+        minimumStock: dto.minimumStock,
+        maximumStock: dto.maximumStock,
+        reorderLevel: dto.reorderLevel,
+      },
+    });
+
+    return this.findOne(tenantId, created.id);
+  }
+
+  async findAll(tenantId: string, query: FindInventoryQueryDto) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      storeId,
+      productId,
+      status,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
+
     const skip = (page - 1) * limit;
+    const where: any = { tenantId };
 
-    // Build the inventory where clause
-    const where: Prisma.InventoryWhereInput = {
-      tenantId,
-      deletedAt: null,
-    };
-
-    if (storeId) where.storeId = storeId;
-    if (productId) where.productId = productId;
-
-    if (outOfStock) {
-      where.currentStock = new Prisma.Decimal(0);
+    if (status) {
+      where.status = status;
+    }
+    if (storeId) {
+      where.storeId = storeId;
+    }
+    if (productId) {
+      where.productId = productId;
     }
 
     if (search) {
-      where.product = {
-        deletedAt: null,
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { sku: { contains: search, mode: 'insensitive' } },
-          { barcode: { contains: search, mode: 'insensitive' } },
-        ],
-      };
-    } else {
-      // Always filter out deleted products
-      where.product = { deletedAt: null };
+      where.OR = [
+        { product: { name: { contains: search, mode: 'insensitive' } } },
+        { product: { sku: { contains: search, mode: 'insensitive' } } },
+        { product: { barcode: { contains: search, mode: 'insensitive' } } },
+        { store: { name: { contains: search, mode: 'insensitive' } } },
+      ];
     }
 
-    const [items, total] = await Promise.all([
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.inventory.count({ where }),
       this.prisma.inventory.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { product: { name: 'asc' } },
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              sku: true,
-              barcode: true,
-              unit: true,
-              minimumStock: true,
-              reorderLevel: true,
-              status: true,
-              category: { select: { id: true, name: true } },
-            },
-          },
-          store: { select: { id: true, name: true, code: true } },
+        orderBy: {
+          [sortBy]: sortOrder,
         },
+        include: this.getIncludeFields(),
       }),
-      this.prisma.inventory.count({ where }),
     ]);
 
-    // Post-process: add computed flags and filter lowStock if requested
-    let enriched = items.map((inv) => ({
-      ...inv,
-      currentStock: Number(inv.currentStock),
-      reservedStock: Number(inv.reservedStock),
-      damagedStock: Number(inv.damagedStock),
-      availableStock: Number(inv.currentStock) - Number(inv.reservedStock),
-      isLowStock:
-        Number(inv.product.reorderLevel) > 0 &&
-        Number(inv.currentStock) <= Number(inv.product.reorderLevel),
-      isOutOfStock: Number(inv.currentStock) === 0,
-    }));
-
-    if (lowStock) {
-      enriched = enriched.filter((i) => i.isLowStock);
-    }
+    const pages = Math.ceil(total / limit);
 
     return {
-      data: enriched,
-      meta: {
-        page,
-        limit,
-        total: lowStock ? enriched.length : total,
-        totalPages: Math.ceil((lowStock ? enriched.length : total) / limit),
-      },
-    };
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // findOne — single inventory record
-  // ──────────────────────────────────────────────────────────────────────────
-
-  async findOne(tenantId: string, id: string) {
-    const inv = await this.prisma.inventory.findFirst({
-      where: { id, tenantId, deletedAt: null },
-      include: {
-        product: {
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            barcode: true,
-            unit: true,
-            sellingPrice: true,
-            costPrice: true,
-            minimumStock: true,
-            reorderLevel: true,
-            status: true,
-            category: { select: { id: true, name: true } },
-          },
-        },
-        store: { select: { id: true, name: true, code: true } },
-      },
-    });
-
-    if (!inv) throw new NotFoundException('Inventory record not found in this tenant.');
-
-    return {
-      ...inv,
-      currentStock: Number(inv.currentStock),
-      reservedStock: Number(inv.reservedStock),
-      damagedStock: Number(inv.damagedStock),
-      availableStock: Number(inv.currentStock) - Number(inv.reservedStock),
-      isLowStock:
-        Number(inv.product.reorderLevel) > 0 &&
-        Number(inv.currentStock) <= Number(inv.product.reorderLevel),
-      isOutOfStock: Number(inv.currentStock) === 0,
-    };
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // adjustStock — manual stock adjustment with movement record
-  // ──────────────────────────────────────────────────────────────────────────
-
-  async adjustStock(tenantId: string, userId: string, dto: AdjustStockDto) {
-    // Validate product belongs to tenant
-    const product = await this.prisma.product.findFirst({
-      where: { id: dto.productId, tenantId, deletedAt: null },
-      select: { id: true, name: true, sku: true },
-    });
-    if (!product) throw new NotFoundException('Product not found in this tenant.');
-
-    // Validate store belongs to tenant
-    const store = await this.prisma.store.findFirst({
-      where: { id: dto.storeId, tenantId, deletedAt: null },
-      select: { id: true, name: true },
-    });
-    if (!store) throw new NotFoundException('Store not found in this tenant.');
-
-    return this.prisma.$transaction(async (tx) => {
-      // Load inventory row with lock
-      const inventory = await tx.inventory.findUnique({
-        where: { storeId_productId: { storeId: dto.storeId, productId: dto.productId } },
-      });
-
-      if (!inventory) {
-        throw new NotFoundException(
-          `No inventory record for product "${product.name}" in store "${store.name}". Ensure product is assigned to this store.`,
-        );
-      }
-
-      const previousStock = new Prisma.Decimal(inventory.currentStock);
-      const adjustQty = new Prisma.Decimal(dto.quantity);
-      const newStock = previousStock.add(adjustQty);
-
-      // Prevent negative stock unless type is DAMAGE (write-off)
-      if (newStock.lt(0) && dto.type !== InventoryMovementType.DAMAGE) {
-        throw new ConflictException({
-          message: `Adjustment would result in negative stock for "${product.name}".`,
-          currentStock: Number(previousStock),
-          adjustment: Number(adjustQty),
-          wouldBe: Number(newStock),
-        });
-      }
-
-      // Update stock
-      const updated = await tx.inventory.update({
-        where: { id: inventory.id },
-        data: { currentStock: newStock.lt(0) ? new Prisma.Decimal(0) : newStock },
-      });
-
-      // Create movement record
-      const movement = await tx.inventoryMovement.create({
-        data: {
-          tenantId,
-          storeId: dto.storeId,
-          productId: dto.productId,
-          userId,
-          type: dto.type,
-          quantity: adjustQty,
-          previousStock,
-          newStock: updated.currentStock,
-          reference: dto.reference ?? null,
-          notes: dto.notes ?? null,
-        },
-      });
-
-      // Audit log
-      await this.auditService.createLog({
-        tenantId,
-        userId,
-        action: 'ADJUST',
-        table: 'inventories',
-        recordId: inventory.id,
-        newValue: {
-          product: { id: product.id, name: product.name },
-          store: { id: store.id, name: store.name },
-          type: dto.type,
-          adjustment: Number(adjustQty),
-          previousStock: Number(previousStock),
-          newStock: Number(updated.currentStock),
-          reference: dto.reference,
-          notes: dto.notes,
-        },
-      });
-
-      return {
-        inventoryId: inventory.id,
-        product: { id: product.id, name: product.name, sku: product.sku },
-        store: { id: store.id, name: store.name },
-        previousStock: Number(previousStock),
-        adjustment: Number(adjustQty),
-        newStock: Number(updated.currentStock),
-        movementId: movement.id,
-        type: dto.type,
-      };
-    });
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // getMovements — paginated movement log
-  // ──────────────────────────────────────────────────────────────────────────
-
-  async getMovements(tenantId: string, query: QueryMovementsDto) {
-    const { page = 1, limit = 20, storeId, productId, type, dateFrom, dateTo } = query;
-    const skip = (page - 1) * limit;
-
-    const where: Prisma.InventoryMovementWhereInput = { tenantId };
-
-    if (storeId) where.storeId = storeId;
-    if (productId) where.productId = productId;
-    if (type) where.type = type;
-
-    if (dateFrom || dateTo) {
-      where.createdAt = {};
-      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
-      if (dateTo) {
-        const end = new Date(dateTo);
-        end.setHours(23, 59, 59, 999);
-        where.createdAt.lte = end;
-      }
-    }
-
-    const [items, total] = await Promise.all([
-      this.prisma.inventoryMovement.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-        include: {
-          product: { select: { id: true, name: true, sku: true } },
-          store: { select: { id: true, name: true } },
-          user: { select: { id: true, firstName: true, lastName: true } },
-        },
-      }),
-      this.prisma.inventoryMovement.count({ where }),
-    ]);
-
-    return {
-      data: items.map((m) => ({
-        ...m,
-        quantity: Number(m.quantity),
-        previousStock: Number(m.previousStock),
-        newStock: Number(m.newStock),
-      })),
-      meta: {
+      items,
+      pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        pages,
+      },
+    };
+  }
+
+  async findOne(tenantId: string, id: string) {
+    const inventory = await this.prisma.inventory.findFirst({
+      where: { id, tenantId },
+      include: this.getIncludeFields(),
+    });
+
+    if (!inventory) {
+      throw new NotFoundException('Inventory record not found');
+    }
+
+    return inventory;
+  }
+
+  async update(tenantId: string, id: string, dto: UpdateInventoryDto) {
+    const inventory = await this.prisma.inventory.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!inventory) {
+      throw new NotFoundException('Inventory record not found');
+    }
+
+    const minStock = dto.minimumStock !== undefined ? dto.minimumStock : Number(inventory.minimumStock);
+    const maxStock = dto.maximumStock !== undefined ? dto.maximumStock : Number(inventory.maximumStock);
+    const reorder = dto.reorderLevel !== undefined ? dto.reorderLevel : Number(inventory.reorderLevel);
+
+    if (maxStock < minStock) {
+      throw new BadRequestException('Maximum stock cannot be less than minimum stock');
+    }
+    if (reorder > maxStock) {
+      throw new BadRequestException('Reorder level cannot exceed maximum stock');
+    }
+
+    await this.prisma.inventory.update({
+      where: { id },
+      data: {
+        quantityOnHand: dto.quantityOnHand,
+        reservedQuantity: dto.reservedQuantity,
+        minimumStock: dto.minimumStock,
+        maximumStock: dto.maximumStock,
+        reorderLevel: dto.reorderLevel,
+        status: dto.status,
+      },
+    });
+
+    return this.findOne(tenantId, id);
+  }
+
+  async remove(tenantId: string, id: string) {
+    const inventory = await this.prisma.inventory.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!inventory) {
+      throw new NotFoundException('Inventory record not found');
+    }
+
+    await this.prisma.inventory.update({
+      where: { id },
+      data: { status: InventoryStatus.INACTIVE },
+    });
+
+    return this.findOne(tenantId, id);
+  }
+
+  private getIncludeFields() {
+    return {
+      store: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+        },
+      },
+      product: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          barcode: true,
+          unit: true,
+        },
       },
     };
   }

@@ -4,35 +4,47 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Response as ExpressResponse } from 'express';
-import { Observable, map } from 'rxjs';
+import { Response } from 'express';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
-export interface Response<T> {
+export interface ResponseFormat<T> {
   success: boolean;
   statusCode: number;
-  data: T;
   timestamp: string;
+  data: T;
 }
 
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<
-  T,
-  Response<T>
-> {
+export class TransformInterceptor<T>
+  implements NestInterceptor<T, ResponseFormat<T>>
+{
   intercept(
     context: ExecutionContext,
-    next: CallHandler<T>,
-  ): Observable<Response<T>> {
-    const response = context.switchToHttp().getResponse<ExpressResponse>();
-    const statusCode = response.statusCode;
+    next: CallHandler,
+  ): Observable<ResponseFormat<T>> {
+    const ctx = context.switchToHttp();
+    const response = ctx.getResponse<Response>();
 
     return next.handle().pipe(
-      map((data: T) => ({
-        success: true,
-        statusCode,
-        data,
-        timestamp: new Date().toISOString(),
-      })),
+      map((data) => {
+        // If handler response is already wrapped with success flag, return as is
+        if (
+          data &&
+          typeof data === 'object' &&
+          'success' in data &&
+          data.success === true
+        ) {
+          return data;
+        }
+
+        return {
+          success: true,
+          statusCode: response.statusCode,
+          timestamp: new Date().toISOString(),
+          data: data !== undefined ? data : null,
+        };
+      }),
     );
   }
 }

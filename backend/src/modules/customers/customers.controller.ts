@@ -1,136 +1,100 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Patch,
   Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
-import type { Request } from 'express';
-import { GetUser } from '../../common/decorators/get-user.decorator';
-import { Permissions } from '../../common/decorators/permissions.decorator';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { CustomersService } from './customers.service';
+import { CreateCustomerDto } from './dto/create-customer.dto';
+import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { FindCustomersQueryDto } from './dto/find-customers-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { CreateCustomerDto } from './dto/create-customer.dto';
-import { QueryCustomerDto } from './dto/query-customer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { CustomersService } from './customers.service';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
-@ApiTags('Customers')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('customers')
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
-  @ApiOperation({
-    summary: 'Register a new customer profile',
-    description: 'Creates a tenant-isolated customer profile. Generates a unique customer code (CUST-000001) sequentially.',
-  })
-  @ApiResponse({ status: 201, description: 'Customer created successfully.' })
-  @ApiResponse({ status: 400, description: 'Validation or duplicate email error.' })
-  @Roles('OWNER', 'MANAGER', 'CASHIER')
-  @Permissions('customers:create')
+  @Permissions('customers.create')
   @Post()
-  @HttpCode(HttpStatus.CREATED)
-  async create(
-    @GetUser('tenantId') tenantId: string,
-    @GetUser('id') userId: string,
+  create(
+    @CurrentUser('tenantId') tenantId: string,
     @Body() dto: CreateCustomerDto,
-    @Req() req: Request,
   ) {
-    const ipAddress = (req.headers['x-forwarded-for'] as string) ?? req.socket?.remoteAddress;
-    const userAgent = req.headers['user-agent'];
-    return this.customersService.create(tenantId, userId, dto, ipAddress, userAgent);
+    return this.customersService.create(tenantId, dto);
   }
 
-  @ApiOperation({
-    summary: 'List customers (paginated)',
-    description: 'Returns a paginated list of customers. Supports search filters covering name, email, phone, and customer code.',
-  })
-  @ApiResponse({ status: 200, description: 'Customers list retrieved successfully.' })
-  @Roles('OWNER', 'MANAGER', 'CASHIER')
-  @Permissions('customers:read')
+  @Permissions('customers.read')
   @Get()
-  async findAll(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryCustomerDto,
+  findAll(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query() query: FindCustomersQueryDto,
   ) {
     return this.customersService.findAll(tenantId, query);
   }
+  
+  @Permissions('customers.read')
+  @Get('search')
+  search(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('q') q: string,
+  ) {
+    return this.customersService.search(tenantId, q);
+  }
 
-  @ApiOperation({
-    summary: 'Get customer profile details',
-    description: 'Retrieves a single customer record by ID.',
-  })
-  @ApiParam({ name: 'id', description: 'Customer UUID', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Customer details retrieved successfully.' })
-  @ApiResponse({ status: 404, description: 'Customer not found.' })
-  @Roles('OWNER', 'MANAGER', 'CASHIER')
-  @Permissions('customers:read')
+  @Permissions('customers.read')
   @Get(':id')
-  async findOne(
-    @GetUser('tenantId') tenantId: string,
+  findOne(
+    @CurrentUser('tenantId') tenantId: string,
     @Param('id') id: string,
   ) {
     return this.customersService.findOne(tenantId, id);
   }
 
-  @ApiOperation({
-    summary: 'Update customer details',
-    description: 'Updates properties of a customer profile. Enforces tenant-unique email checks.',
-  })
-  @ApiParam({ name: 'id', description: 'Customer UUID to modify', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Customer updated successfully.' })
-  @ApiResponse({ status: 404, description: 'Customer not found.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('customers:update')
-  @Patch(':id')
-  async update(
-    @GetUser('tenantId') tenantId: string,
-    @GetUser('id') userId: string,
+  @Permissions('customers.history')
+  @Get(':id/history')
+  history(
+    @CurrentUser('tenantId') tenantId: string,
     @Param('id') id: string,
-    @Body() dto: UpdateCustomerDto,
-    @Req() req: Request,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    const ipAddress = (req.headers['x-forwarded-for'] as string) ?? req.socket?.remoteAddress;
-    const userAgent = req.headers['user-agent'];
-    return this.customersService.update(tenantId, userId, id, dto, ipAddress, userAgent);
+    return this.customersService.getHistory(tenantId, id, +(page || 1), +(limit || 10));
   }
 
-  @ApiOperation({
-    summary: 'Soft delete a customer',
-    description: 'Marks a customer as deleted. Retains record inside database for audit history.',
-  })
-  @ApiParam({ name: 'id', description: 'Customer UUID to remove', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Customer soft-deleted successfully.' })
-  @ApiResponse({ status: 404, description: 'Customer not found.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('customers:delete')
-  @Delete(':id')
-  async remove(
-    @GetUser('tenantId') tenantId: string,
-    @GetUser('id') userId: string,
+  @Permissions('customers.history')
+  @Get(':id/statistics')
+  statistics(
+    @CurrentUser('tenantId') tenantId: string,
     @Param('id') id: string,
-    @Req() req: Request,
   ) {
-    const ipAddress = (req.headers['x-forwarded-for'] as string) ?? req.socket?.remoteAddress;
-    const userAgent = req.headers['user-agent'];
-    return this.customersService.remove(tenantId, userId, id, ipAddress, userAgent);
+    return this.customersService.getStatistics(tenantId, id);
+  }
+
+  @Permissions('customers.update')
+  @Patch(':id')
+  update(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateCustomerDto,
+  ) {
+    return this.customersService.update(tenantId, id, dto);
+  }
+
+  @Permissions('customers.delete')
+  @Delete(':id')
+  remove(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+  ) {
+    return this.customersService.remove(tenantId, id);
   }
 }

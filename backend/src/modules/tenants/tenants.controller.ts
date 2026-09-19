@@ -6,17 +6,20 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards,
+  Query,
 } from '@nestjs/common';
-import { GetTenant } from '../../common/decorators/get-tenant.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CreateTenantDto } from './dto/create-tenant.dto';
+import { QueryTenantDto } from './dto/query-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { TenantsService } from './tenants.service';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 @Controller('tenants')
-@UseGuards(JwtAuthGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Permissions('system.tenants.manage')
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
@@ -25,14 +28,14 @@ export class TenantsController {
     return this.tenantsService.create(dto);
   }
 
-  @Get('current')
-  getCurrent(@GetTenant() tenantId: string) {
-    return this.tenantsService.findOne(tenantId);
+  @Get()
+  findAll(@Query() query: QueryTenantDto) {
+    return this.tenantsService.findAll(query);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tenantsService.findOne(id);
+  @Get(':idOrSlug')
+  findOne(@Param('idOrSlug') idOrSlug: string) {
+    return this.tenantsService.findOne(idOrSlug);
   }
 
   @Patch(':id')
@@ -42,6 +45,6 @@ export class TenantsController {
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.tenantsService.softDelete(id);
+    return this.tenantsService.remove(id);
   }
 }

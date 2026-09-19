@@ -1,193 +1,324 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { CustomerStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
-import { AuditService } from '../audit/audit.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
-import { QueryCustomerDto } from './dto/query-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { FindCustomersQueryDto } from './dto/find-customers-query.dto';
 
 @Injectable()
 export class CustomersService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly auditService: AuditService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  // Helper method to generate collision-safe customer numbers sequentially
-  private async generateCustomerCode(tx: Prisma.TransactionClient, tenantId: string): Promise<string> {
-    const result = await tx.$queryRaw<[{ last_sequence: number }]>`
-      INSERT INTO invoice_counters (id, tenant_id, prefix, counter_date, last_sequence, updated_at)
-      VALUES (gen_random_uuid(), ${tenantId}::uuid, 'CUST', 'GLOBAL', 1, NOW())
-      ON CONFLICT (tenant_id, prefix, counter_date)
-      DO UPDATE SET
-        last_sequence = invoice_counters.last_sequence + 1,
-        updated_at    = NOW()
-      RETURNING last_sequence
-    `;
-    const seq = Number(result[0].last_sequence);
-    return `CUST-${String(seq).padStart(6, '0')}`;
+  private async generateCustomerCode(tenantId: string): Promise<string> {
+    const count = await this.prisma.customer.count({
+      where: { tenantId },
+    });
+    const sequence = (count + 1).toString().padStart(6, '0');
+    return `CUS-${sequence}`;
   }
 
-  async create(tenantId: string, userId: string, dto: CreateCustomerDto, ipAddress?: string, userAgent?: string) {
-    // Prevent duplicate emails within same tenant
-    if (dto.email) {
-      const existing = await this.prisma.customer.findFirst({
-        where: { tenantId, email: dto.email, deletedAt: null },
-      });
-      if (existing) {
-        throw new ConflictException(`Email "${dto.email}" is already registered to a customer.`);
-      }
-    }
-
+  async create(tenantId: string, dto: CreateCustomerDto) {
     return this.prisma.$transaction(async (tx) => {
-      const code = await this.generateCustomerCode(tx, tenantId);
+      // Check phone uniqueness
+      const existingByPhone = await tx.customer.findFirst({
+        where: { tenantId, phone: dto.phone },
+      });
 
-      const customer = await tx.customer.create({
+      if (existingByPhone) {
+        if (existingByPhone.status === CustomerStatus.INACTIVE) {
+          // Reactivate
+          return tx.customer.update({
+            where: { id: existingByPhone.id },
+            data: {
+              ...dto,
+              status: CustomerStatus.ACTIVE,
+            },
+          });
+        }
+        throw new ConflictException('Customer with this phone number already exists');
+      }
+
+      const customerCode = await this.generateCustomerCode(tenantId);
+
+      return tx.customer.create({
         data: {
           tenantId,
-          code,
+          customerCode,
+          customerType: dto.customerType,
           firstName: dto.firstName,
-          lastName: dto.lastName ?? null,
-          email: dto.email ?? null,
-          phone: dto.phone ?? null,
-          address: dto.address ?? null,
-          city: dto.city ?? null,
-          country: dto.country ?? null,
-          metadata: dto.notes ? { notes: dto.notes } : Prisma.JsonNull,
-          loyaltyPoints: dto.loyaltyPoints ?? 0,
+          lastName: dto.lastName,
+          phone: dto.phone,
+          email: dto.email,
+          addressLine1: dto.addressLine1,
+          addressLine2: dto.addressLine2,
+          city: dto.city,
+          state: dto.state,
+          postalCode: dto.postalCode,
+          country: dto.country,
+          dob: dto.dob ? new Date(dto.dob) : null,
+          gender: dto.gender,
+          gstNumber: dto.gstNumber,
+          creditLimit: dto.creditLimit,
+          marketingOptIn: dto.marketingOptIn,
+          smsEnabled: dto.smsEnabled,
+          emailEnabled: dto.emailEnabled,
+          notes: dto.notes,
+          status: CustomerStatus.ACTIVE,
         },
       });
-
-      await this.auditService.createLog({
-        tenantId,
-        userId,
-        action: 'CREATE',
-        table: 'customers',
-        recordId: customer.id,
-        ipAddress,
-        userAgent,
-        newValue: customer,
-      });
-
-      return customer;
     });
   }
 
-  async findAll(tenantId: string, query: QueryCustomerDto) {
-    const { page = 1, limit = 20, search, sortBy = 'createdAt', sortOrder = 'desc' } = query;
-    const skip = (page - 1) * limit;
+  async findAll(tenantId: string, query: FindCustomersQueryDto) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      status,
+      customerType,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
 
-    const where: Prisma.CustomerWhereInput = {
-      tenantId,
-      deletedAt: null,
-    };
+    const skip = (page - 1) * limit;
+    const where: any = { tenantId };
+
+    if (status) where.status = status;
+    if (customerType) where.customerType = customerType;
 
     if (search) {
       where.OR = [
+        { customerCode: { contains: search, mode: 'insensitive' } },
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search, mode: 'insensitive' } },
-        { code: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    const orderBy: Prisma.CustomerOrderByWithRelationInput = {
-      [sortBy]: sortOrder,
-    };
-
-    const [items, total] = await Promise.all([
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.customer.count({ where }),
       this.prisma.customer.findMany({
         where,
-        orderBy,
         skip,
         take: limit,
+        orderBy: { [sortBy]: sortOrder },
       }),
-      this.prisma.customer.count({ where }),
     ]);
 
     return {
-      data: items,
-      meta: {
+      items,
+      pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        pages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async search(tenantId: string, q: string) {
+    if (!q || q.length < 2) return [];
+
+    return this.prisma.customer.findMany({
+      where: {
+        tenantId,
+        status: CustomerStatus.ACTIVE,
+        OR: [
+          { customerCode: { contains: q, mode: 'insensitive' } },
+          { firstName: { contains: q, mode: 'insensitive' } },
+          { lastName: { contains: q, mode: 'insensitive' } },
+          { phone: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      take: 10,
+      orderBy: { firstName: 'asc' },
+    });
   }
 
   async findOne(tenantId: string, id: string) {
     const customer = await this.prisma.customer.findFirst({
-      where: { id, tenantId, deletedAt: null },
+      where: { id, tenantId },
     });
+
     if (!customer) {
-      throw new NotFoundException(`Customer details not found.`);
+      throw new NotFoundException('Customer not found');
     }
+
     return customer;
   }
 
-  async update(tenantId: string, userId: string, id: string, dto: UpdateCustomerDto, ipAddress?: string, userAgent?: string) {
-    const customer = await this.findOne(tenantId, id);
+  async update(tenantId: string, id: string, dto: UpdateCustomerDto) {
+    const customer = await this.prisma.customer.findFirst({
+      where: { id, tenantId },
+    });
 
-    if (dto.email && dto.email !== customer.email) {
-      const existing = await this.prisma.customer.findFirst({
-        where: { tenantId, email: dto.email, deletedAt: null, id: { not: id } },
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    if (dto.phone && dto.phone !== customer.phone) {
+      const existingPhone = await this.prisma.customer.findFirst({
+        where: { tenantId, phone: dto.phone },
       });
-      if (existing) {
-        throw new ConflictException(`Email "${dto.email}" is already in use by another customer.`);
+      if (existingPhone) {
+        throw new ConflictException('Phone number is already registered to another customer');
       }
     }
 
-    const updated = await this.prisma.customer.update({
+    const updateData: any = { ...dto };
+    if (dto.dob) updateData.dob = new Date(dto.dob);
+
+    return this.prisma.customer.update({
       where: { id },
-      data: {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        email: dto.email,
-        phone: dto.phone,
-        address: dto.address,
-        city: dto.city,
-        country: dto.country,
-        metadata: dto.notes ? { notes: dto.notes } : undefined,
-        loyaltyPoints: dto.loyaltyPoints,
+      data: updateData,
+    });
+  }
+
+  async remove(tenantId: string, id: string) {
+    const customer = await this.prisma.customer.findFirst({
+      where: { id, tenantId },
+      include: {
+        _count: {
+          select: { sales: true },
+        },
       },
     });
 
-    await this.auditService.createLog({
-      tenantId,
-      userId,
-      action: 'UPDATE',
-      table: 'customers',
-      recordId: id,
-      ipAddress,
-      userAgent,
-      oldValue: customer,
-      newValue: updated,
-    });
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
 
-    return updated;
+    if (customer._count.sales > 0) {
+      throw new ConflictException('Cannot permanently delete customer with existing sales records');
+    }
+
+    return this.prisma.customer.update({
+      where: { id },
+      data: { status: CustomerStatus.INACTIVE },
+    });
   }
 
-  async remove(tenantId: string, userId: string, id: string, ipAddress?: string, userAgent?: string) {
+  async getHistory(tenantId: string, id: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+
+    const [totalSales, sales] = await this.prisma.$transaction([
+      this.prisma.sale.count({ where: { tenantId, customerId: id } }),
+      this.prisma.sale.findMany({
+        where: { tenantId, customerId: id },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          store: { select: { name: true, code: true } },
+          user: { select: { firstName: true, lastName: true } },
+        },
+      }),
+    ]);
+
+    // Returns (future), Payments (future), Outstanding placeholders can be added to standard response
+    return {
+      sales: {
+        items: sales,
+        pagination: { page, limit, total: totalSales, pages: Math.ceil(totalSales / limit) }
+      },
+      returns: [], // Placeholder for Phase 17
+      payments: [], // Placeholder
+    };
+  }
+
+  async getStatistics(tenantId: string, id: string) {
     const customer = await this.findOne(tenantId, id);
 
-    await this.prisma.customer.update({
-      where: { id },
-      data: { deletedAt: new Date() },
+    const sales = await this.prisma.sale.findMany({
+      where: { tenantId, customerId: id },
+      orderBy: { createdAt: 'desc' },
+      include: { items: true },
     });
 
-    await this.auditService.createLog({
-      tenantId,
-      userId,
-      action: 'DELETE',
-      table: 'customers',
-      recordId: id,
-      ipAddress,
-      userAgent,
-      oldValue: customer,
+    const totalPurchases = sales.length;
+    let totalSpending = 0;
+    
+    // Most purchased product
+    const productCount: Record<string, {name: string, count: number}> = {};
+    const storeCount: Record<string, number> = {};
+
+    sales.forEach(sale => {
+      totalSpending += Number(sale.grandTotal);
+      
+      storeCount[sale.storeId] = (storeCount[sale.storeId] || 0) + 1;
+
+      sale.items.forEach(item => {
+        if (!productCount[item.productId]) {
+          productCount[item.productId] = { name: item.productName, count: 0 };
+        }
+        productCount[item.productId].count += Number(item.quantity);
+      });
     });
 
-    return { success: true, message: 'Customer soft-deleted successfully' };
+    const averageBasket = totalPurchases > 0 ? totalSpending / totalPurchases : 0;
+    const lastPurchaseDate = sales.length > 0 ? sales[0].createdAt : null;
+    const firstPurchaseDate = sales.length > 0 ? sales[sales.length - 1].createdAt : null;
+
+    let mostPurchasedProduct = null;
+    let maxQty = 0;
+    for (const [_, val] of Object.entries(productCount)) {
+      if (val.count > maxQty) {
+        maxQty = val.count;
+        mostPurchasedProduct = val.name;
+      }
+    }
+
+    let favoriteStoreId = null;
+    let maxVisits = 0;
+    for (const [sId, count] of Object.entries(storeCount)) {
+      if (count > maxVisits) {
+        maxVisits = count;
+        favoriteStoreId = sId;
+      }
+    }
+
+    let favoriteStoreName = null;
+    if (favoriteStoreId) {
+      const store = await this.prisma.store.findUnique({ where: { id: favoriteStoreId } });
+      favoriteStoreName = store?.name || null;
+    }
+
+    let averageVisitGapDays = 0;
+    if (sales.length > 1 && lastPurchaseDate && firstPurchaseDate) {
+      const ms = lastPurchaseDate.getTime() - firstPurchaseDate.getTime();
+      const days = ms / (1000 * 60 * 60 * 24);
+      averageVisitGapDays = days / (sales.length - 1);
+    }
+
+    let purchaseFrequency = 'OCCASIONAL';
+    if (averageVisitGapDays > 0) {
+      if (averageVisitGapDays <= 14) purchaseFrequency = 'WEEKLY';
+      else if (averageVisitGapDays <= 45) purchaseFrequency = 'MONTHLY';
+    }
+
+    return {
+      totalPurchases,
+      totalSpending,
+      averageBasket,
+      lastVisit: lastPurchaseDate,
+      firstVisit: firstPurchaseDate,
+      customerSince: customer.createdAt,
+      mostPurchasedProduct,
+      favoriteStore: favoriteStoreName,
+      averageVisitGapDays: averageVisitGapDays.toFixed(2),
+      purchaseFrequency,
+      outstandingBalance: customer.outstandingBalance,
+      loyaltyPoints: {
+        current: customer.currentPoints,
+        lifetime: customer.lifetimePoints,
+        tier: customer.tier,
+      }
+    };
   }
 }

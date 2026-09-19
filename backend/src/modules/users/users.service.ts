@@ -4,323 +4,306 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { PasswordService } from '../auth/services/password.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { FindUsersQueryDto } from './dto/find-users-query.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
-/**
- * User Management Service — enforces multi-tenant isolation, store-level access,
- * and role hierarchy via rank comparison. Never trusts tenantId from client.
- */
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly passwordService: PasswordService,
+  ) {}
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Private Helpers
-  // ──────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Validates that the caller can manage a target role.
-   * Rule: caller's role rank must be STRICTLY GREATER than the target role rank.
-   * This prevents privilege escalation (e.g. MANAGER assigning OWNER role).
-   *
-   * @param callerRoleRank - Rank of the user performing the action (from JWT)
-   * @param targetRoleId   - UUID of the role being assigned to the new/updated user
-   * @param tenantId       - Caller's tenantId for tenant-scoped role lookup
-   * @throws ForbiddenException if caller cannot assign the target role
-   */
-  private async assertRoleHierarchy(
-    callerRoleRank: number,
-    targetRoleId: string,
-    tenantId: string,
-  ): Promise<void> {
-    const targetRole = await this.prisma.role.findFirst({
-      where: {
-        id: targetRoleId,
-        deletedAt: null,
-        OR: [{ tenantId }, { isSystem: true }],
-      },
-      select: { rank: true, name: true },
+  async create(tenantId: string, dto: CreateUserDto) {
+    const role = await this.prisma.role.findUnique({
+      where: { id: dto.roleId },
     });
 
-    if (!targetRole) {
-      throw new NotFoundException(
-        'Specified role was not found in this tenant',
-      );
+    if (!role || role.tenantId !== tenantId) {
+      throw new ForbiddenException('Invalid role assignment');
     }
 
-    if (callerRoleRank <= targetRole.rank) {
-      throw new ForbiddenException(
-        `Access denied. You cannot assign a role with equal or higher authority than your own (target: '${targetRole.name}').`,
-      );
+    if (dto.storeId) {
+      const store = await this.prisma.store.findUnique({
+        where: { id: dto.storeId },
+      });
+
+      if (!store || store.tenantId !== tenantId) {
+        throw new ForbiddenException('Invalid store assignment');
+      }
     }
-  }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // CRUD Operations
-  // ──────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Creates a new user within the tenant.
-   *
-   * Enforces:
-   * - Email uniqueness within tenant
-   * - Role belongs to tenant or is a system role
-   * - Role rank hierarchy: caller must outrank the assigned role
-   * - Store IDs belong to the same tenant
-   *
-   * @param tenantId      - Caller's tenantId from JWT (never from request body)
-   * @param callerRoleRank - Caller's role rank from JWT strategy
-   * @param dto           - Validated create user payload
-   */
-  async create(tenantId: string, callerRoleRank: number, dto: CreateUserDto) {
-    // 1. Email uniqueness within tenant
-    const existingUser = await this.prisma.user.findFirst({
-      where: { tenantId, email: dto.email, deletedAt: null },
+    const existingUser = await this.prisma.user.findUnique({
+      where: {
+        tenantId_email: {
+          tenantId,
+          email: dto.email,
+        },
+      },
     });
 
     if (existingUser) {
-      throw new ConflictException(
-        'Email address is already in use within this tenant',
-      );
+      throw new ConflictException('Email already in use');
     }
 
-    // 2. Role hierarchy enforcement — never skip, never compare by name
-    await this.assertRoleHierarchy(callerRoleRank, dto.roleId, tenantId);
+    const passwordHash = await this.passwordService.hash(dto.password);
 
-    // 3. Validate store IDs belong to the caller's tenant
-    if (dto.storeIds && dto.storeIds.length > 0) {
-      const validCount = await this.prisma.store.count({
-        where: { id: { in: dto.storeIds }, tenantId, deletedAt: null },
-      });
-
-      if (validCount !== dto.storeIds.length) {
-        throw new NotFoundException(
-          'One or more specified stores were not found in this tenant',
-        );
-      }
-    }
-
-    // 4. Hash password
-    const passwordHash = await bcrypt.hash(dto.password, 10);
-
-    // 5. Create user and store assignments atomically
-    const user = await this.prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          tenantId,
-          roleId: dto.roleId,
-          email: dto.email,
-          passwordHash,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          phone: dto.phone,
-        },
-      });
-
-      if (dto.storeIds && dto.storeIds.length > 0) {
-        await tx.userStore.createMany({
-          data: dto.storeIds.map((storeId, index) => ({
-            userId: newUser.id,
-            storeId,
-            isDefault: index === 0,
-          })),
-        });
-      }
-
-      return newUser;
-    });
-
-    return this.findOne(tenantId, user.id);
-  }
-
-  /**
-   * Returns all active users belonging to the authenticated tenant.
-   * Automatically scoped to tenantId — no cross-tenant leakage possible.
-   *
-   * @param tenantId - Caller's tenantId from JWT
-   */
-  async findAll(tenantId: string) {
-    const users = await this.prisma.user.findMany({
-      where: { tenantId, deletedAt: null },
+    const user = await this.prisma.user.create({
+      data: {
+        tenantId,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        email: dto.email,
+        phone: dto.phone,
+        passwordHash,
+        roleId: dto.roleId,
+        storeId: dto.storeId,
+        status: UserStatus.ACTIVE,
+      },
       select: {
         id: true,
-        tenantId: true,
-        email: true,
         firstName: true,
         lastName: true,
-        phone: true,
+        email: true,
+        roleId: true,
+        storeId: true,
         status: true,
-        lastLoginAt: true,
-        createdAt: true,
-        updatedAt: true,
-        role: {
-          select: { id: true, name: true, rank: true, description: true },
+      },
+    });
+
+    return user;
+  }
+
+  async findAll(tenantId: string, query: FindUsersQueryDto) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      roleId,
+      storeId,
+      status,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
+
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      tenantId,
+    };
+
+    if (roleId) {
+      where.roleId = roleId;
+    }
+
+    if (storeId) {
+      where.storeId = storeId;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          [sortBy]: sortOrder,
         },
-        userStores: {
-          where: { deletedAt: null },
-          select: {
-            isDefault: true,
-            store: {
-              select: { id: true, name: true, code: true, isMain: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          status: true,
+          roleId: true,
+          storeId: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+            },
+          },
+          store: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
             },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+      }),
+    ]);
 
-    return users.map((u) => ({
-      ...u,
-      stores: u.userStores.map((us) => ({
-        ...us.store,
-        isDefault: us.isDefault,
-      })),
-      userStores: undefined,
-    }));
+    const pages = Math.ceil(total / limit);
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages,
+      },
+    };
   }
 
-  /**
-   * Returns details for a specific user. Enforces strict tenant boundary.
-   *
-   * @param tenantId - Caller's tenantId from JWT
-   * @param id       - Target user UUID
-   */
   async findOne(tenantId: string, id: string) {
     const user = await this.prisma.user.findFirst({
-      where: { id, tenantId, deletedAt: null },
+      where: {
+        id,
+        tenantId,
+      },
       select: {
         id: true,
-        tenantId: true,
-        email: true,
         firstName: true,
         lastName: true,
+        email: true,
         phone: true,
         status: true,
-        lastLoginAt: true,
-        createdAt: true,
-        updatedAt: true,
         role: {
-          select: { id: true, name: true, rank: true, description: true },
-        },
-        userStores: {
-          where: { deletedAt: null },
           select: {
-            isDefault: true,
-            store: {
-              select: { id: true, name: true, code: true, isMain: true },
-            },
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        store: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
           },
         },
       },
     });
 
     if (!user) {
-      throw new NotFoundException(
-        'User not found or does not belong to this tenant',
-      );
+      throw new NotFoundException('User not found');
     }
 
-    return {
-      ...user,
-      stores: user.userStores.map((us) => ({
-        ...us.store,
-        isDefault: us.isDefault,
-      })),
-      userStores: undefined,
-    };
+    return user;
   }
 
-  /**
-   * Updates user profile fields and/or store assignments within tenant boundary.
-   * If a new roleId is provided, enforces rank hierarchy before applying.
-   *
-   * @param tenantId       - Caller's tenantId from JWT
-   * @param callerRoleRank  - Caller's role rank from JWT strategy
-   * @param id             - Target user UUID
-   * @param dto            - Validated update payload
-   */
-  async update(
-    tenantId: string,
-    callerRoleRank: number,
-    id: string,
-    dto: UpdateUserDto,
-  ) {
-    // Verify user exists in this tenant
-    await this.findOne(tenantId, id);
+  async update(tenantId: string, id: string, dto: UpdateUserDto) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, tenantId },
+      include: { role: true, store: true },
+    });
 
-    // Role change hierarchy check
-    if (dto.roleId) {
-      await this.assertRoleHierarchy(callerRoleRank, dto.roleId, tenantId);
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
 
-    // Validate stores belong to tenant
-    if (dto.storeIds && dto.storeIds.length > 0) {
-      const validCount = await this.prisma.store.count({
-        where: { id: { in: dto.storeIds }, tenantId, deletedAt: null },
+    const updates: any = {};
+
+    if (dto.firstName !== undefined && dto.firstName !== user.firstName) {
+      updates.firstName = dto.firstName;
+    }
+    if (dto.lastName !== undefined && dto.lastName !== user.lastName) {
+      updates.lastName = dto.lastName;
+    }
+    if (dto.phone !== undefined && dto.phone !== user.phone) {
+      updates.phone = dto.phone;
+    }
+    if (dto.status !== undefined && dto.status !== user.status) {
+      updates.status = dto.status;
+    }
+
+    if (dto.roleId !== undefined && dto.roleId !== user.roleId) {
+      const newRole = await this.prisma.role.findFirst({
+        where: { id: dto.roleId, tenantId },
       });
 
-      if (validCount !== dto.storeIds.length) {
-        throw new NotFoundException(
-          'One or more specified stores were not found in this tenant',
-        );
+      if (!newRole) {
+        throw new ForbiddenException('Invalid role assignment');
       }
+
+      if (user.role.code === 'OWNER' && newRole.code !== 'OWNER') {
+        throw new ForbiddenException('Cannot downgrade an OWNER account');
+      }
+
+      updates.roleId = dto.roleId;
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id },
-        data: {
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          phone: dto.phone,
-          status: dto.status,
-          roleId: dto.roleId,
-        },
-      });
+    if (dto.storeId !== undefined && dto.storeId !== user.storeId) {
+      if (dto.storeId === null) {
+        updates.storeId = null;
+      } else {
+        const newStore = await this.prisma.store.findFirst({
+          where: { id: dto.storeId, tenantId },
+        });
 
-      if (dto.storeIds !== undefined) {
-        // Replace all store assignments atomically
-        await tx.userStore.deleteMany({ where: { userId: id } });
-
-        if (dto.storeIds.length > 0) {
-          await tx.userStore.createMany({
-            data: dto.storeIds.map((storeId, index) => ({
-              userId: id,
-              storeId,
-              isDefault: index === 0,
-            })),
-          });
+        if (!newStore) {
+          throw new ForbiddenException('Invalid store assignment');
         }
+
+        updates.storeId = dto.storeId;
       }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return this.findOne(tenantId, id);
+    }
+
+    await this.prisma.user.update({
+      where: { id },
+      data: updates,
     });
 
     return this.findOne(tenantId, id);
   }
 
-  /**
-   * Soft-deletes a user. Never physically removes database records.
-   * Only OWNER-level callers should reach this via controller guard.
-   *
-   * @param tenantId - Caller's tenantId from JWT
-   * @param id       - Target user UUID
-   */
-  async softDelete(tenantId: string, id: string) {
-    await this.findOne(tenantId, id);
-
-    await this.prisma.user.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-        status: 'DELETED',
-      },
+  async remove(tenantId: string, id: string, currentUserId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, tenantId },
+      include: { role: true },
     });
 
-    return {
-      success: true,
-      message: 'User deleted successfully',
-    };
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.id === currentUserId) {
+      throw new ForbiddenException('Cannot deactivate your own account');
+    }
+
+    if (user.role.code === 'OWNER') {
+      throw new ForbiddenException('Cannot deactivate an OWNER account');
+    }
+
+    if (user.status === UserStatus.INACTIVE) {
+      return this.findOne(tenantId, id);
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id },
+        data: { status: UserStatus.INACTIVE },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    return this.findOne(tenantId, id);
   }
 }

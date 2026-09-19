@@ -4,29 +4,25 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { PasswordService } from './services/password.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
-/**
- * Milestone 1 AuthModule
- * Registers Passport JWT strategy and JwtModule dynamically via ConfigService.
- */
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret:
-          configService.get<string>('jwt.secret') || 'infypos-super-secret-key',
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('jwt.secret'),
         signOptions: {
-          expiresIn: '1d',
+          expiresIn: configService.get<string>('jwt.expiresIn') as any,
         },
       }),
-      inject: [ConfigService],
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtModule, PassportModule],
+  providers: [AuthService, JwtStrategy, PasswordService],
+  exports: [AuthService, PasswordService],
 })
 export class AuthModule {}

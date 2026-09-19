@@ -1,174 +1,132 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { GetUser } from '../../common/decorators/get-user.decorator';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { Permissions } from '../../common/decorators/permissions.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ReportsService } from './reports.service';
-import { QueryReportDto } from './dto/query-report.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
-@ApiTags('Reporting & Analytics')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Permissions('reports.read')
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
-  @ApiOperation({ summary: 'Overview of business metrics, sale statuses, and low stock counts' })
-  @ApiResponse({ status: 200, description: 'Overview counters returned successfully.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('reports:read')
-  @Get('dashboard')
-  async getDashboard(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryReportDto,
-  ) {
-    return this.reportsService.getDashboard(tenantId, query);
+  // SALES REPORTS
+  @Get('sales')
+  getSales(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getSales(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Periodic revenue summaries comparison (Today vs Yesterday vs Month)' })
-  @ApiResponse({ status: 200, description: 'Period summaries returned successfully.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('reports:read')
   @Get('sales/summary')
-  async getSalesSummary(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryReportDto,
-  ) {
+  getSalesSummary(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
     return this.reportsService.getSalesSummary(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Hourly transaction distribution metrics' })
-  @ApiResponse({ status: 200, description: 'Hourly metrics list returned.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('reports:read')
-  @Get('sales/hourly')
-  async getSalesHourly(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryReportDto,
-  ) {
-    return this.reportsService.getSalesHourly(tenantId, query);
+  @Get('sales/by-product')
+  getSalesByProduct(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getSalesByProduct(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Daily transaction summary records list' })
-  @ApiResponse({ status: 200, description: 'Daily summary list returned.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('reports:read')
-  @Get('sales/daily')
-  async getSalesDaily(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryReportDto,
-  ) {
-    return this.reportsService.getSalesDaily(tenantId, query);
+  @Get('sales/by-payment-method')
+  getSalesByPaymentMethod(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getSalesByPaymentMethod(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Top 10 highest selling catalog items list' })
-  @ApiResponse({ status: 200, description: 'Top selling list returned.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('reports:read')
-  @Get('products/top-selling')
-  async getTopSellingProducts(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryReportDto,
-  ) {
-    return this.reportsService.getTopSellingProducts(tenantId, query);
+  @Get('sales/by-store')
+  getSalesByStore(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getSalesByStore(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Category revenue and items sold distribution' })
-  @ApiResponse({ status: 200, description: 'Category statistics list returned.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('reports:read')
-  @Get('categories')
-  async getCategoryReports(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryReportDto,
-  ) {
-    return this.reportsService.getCategoryReports(tenantId, query);
+  // PURCHASE REPORTS
+  @Get('purchases')
+  getPurchases(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getPurchases(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Breakdown percentages for CASH, CARD, and UPI splits' })
-  @ApiResponse({ status: 200, description: 'Payments method breakdowns returned.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('reports:read')
-  @Get('payments')
-  async getPaymentsBreakdown(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryReportDto,
-  ) {
-    return this.reportsService.getPaymentsBreakdown(tenantId, query);
+  @Get('purchases/summary')
+  getPurchasesSummary(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getPurchasesSummary(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'VAT collected and taxable sales grouped by tax band' })
-  @ApiResponse({ status: 200, description: 'UK VAT collected details returned.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('reports:read')
-  @Get('vat')
-  async getVatReports(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryReportDto,
-  ) {
-    return this.reportsService.getVatReports(tenantId, query);
+  @Get('purchases/by-supplier')
+  getPurchasesBySupplier(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getPurchasesBySupplier(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Inventory value, stock levels, and asset valuations' })
-  @ApiResponse({ status: 200, description: 'Asset valuations analytics returned.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('reports:read')
+  // INVENTORY REPORTS
   @Get('inventory')
-  async getInventoryAnalytics(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryReportDto,
-  ) {
-    return this.reportsService.getInventoryAnalytics(tenantId, query);
+  getInventory(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getInventory(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Loyalty spend, top buyers, and returning ratios analytics' })
-  @ApiResponse({ status: 200, description: 'Customer analytics returned successfully.' })
-  @Roles('OWNER', 'MANAGER')
-  @Permissions('reports:read')
+  @Get('inventory/low-stock')
+  getInventoryLowStock(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getInventoryLowStock(tenantId, query);
+  }
+
+  @Get('inventory/out-of-stock')
+  getInventoryOutOfStock(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getInventoryOutOfStock(tenantId, query);
+  }
+
+  @Get('inventory/valuation')
+  getInventoryValuation(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getInventoryValuation(tenantId, query);
+  }
+
+  // STOCK MOVEMENTS
+  @Get('stock-movements')
+  getStockMovements(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getStockMovements(tenantId, query);
+  }
+
+  @Get('inventory-adjustments')
+  getInventoryAdjustments(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getInventoryAdjustments(tenantId, query);
+  }
+
+  @Get('stock-transfers')
+  getStockTransfers(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getStockTransfers(tenantId, query);
+  }
+
+  // =========================================================================
+  // VAT REPORTS
+  // =========================================================================
+  @Get('vat-summary')
+  getVatSummary(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getVatSummary(tenantId, query);
+  }
+
+  @Get('vat-mtd-export')
+  getVatMtdExport(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getVatMtdExport(tenantId, query);
+  }
+
+  // ENTITY REPORTS
   @Get('customers')
-  async getCustomersAnalytics(
-    @GetUser('tenantId') tenantId: string,
-    @Query() query: QueryReportDto,
-  ) {
-    return this.reportsService.getCustomersAnalytics(tenantId, query);
+  getCustomers(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getCustomers(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Category product distribution counts summary' })
-  @ApiResponse({ status: 200, description: 'Category product count breakdown returned.' })
-  @Roles('OWNER', 'MANAGER', 'CASHIER')
-  @Permissions('reports:read')
-  @Get('category-summary')
-  async getCategorySummary(@GetUser('tenantId') tenantId: string) {
-    return this.reportsService.getCategorySummary(tenantId);
+  @Get('suppliers')
+  getSuppliers(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getSuppliers(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Stock status inventory level metrics summary' })
-  @ApiResponse({ status: 200, description: 'Inventory stock level status breakdown returned.' })
-  @Roles('OWNER', 'MANAGER', 'CASHIER')
-  @Permissions('reports:read')
-  @Get('inventory-summary')
-  async getInventorySummary(@GetUser('tenantId') tenantId: string) {
-    return this.reportsService.getInventorySummary(tenantId);
+  // SALES RETURNS
+  @Get('sales-returns')
+  getSalesReturns(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getSalesReturns(tenantId, query);
   }
 
-  @ApiOperation({ summary: 'Store stock count overview summary' })
-  @ApiResponse({ status: 200, description: 'Store stock list returned.' })
-  @Roles('OWNER', 'MANAGER', 'CASHIER')
-  @Permissions('reports:read')
-  @Get('store-summary')
-  async getStoreSummary(@GetUser('tenantId') tenantId: string) {
-    return this.reportsService.getStoreSummary(tenantId);
-  }
-
-  @ApiOperation({ summary: 'Recent activity logs stream' })
-  @ApiResponse({ status: 200, description: 'Activity logs list returned.' })
-  @Roles('OWNER', 'MANAGER', 'CASHIER')
-  @Permissions('reports:read')
-  @Get('activity')
-  async getActivity(@GetUser('tenantId') tenantId: string) {
-    return this.reportsService.getActivity(tenantId);
+  @Get('sales-returns/summary')
+  getSalesReturnsSummary(@CurrentUser('tenantId') tenantId: string, @Query() query: any) {
+    return this.reportsService.getSalesReturnsSummary(tenantId, query);
   }
 }

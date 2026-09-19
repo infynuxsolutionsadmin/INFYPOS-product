@@ -1,58 +1,89 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
+  IsDateString,
   IsEmail,
+  IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
-  IsDateString,
-  IsNumber,
-  Min,
 } from 'class-validator';
+import { CustomerType } from '@prisma/client';
 
 export class CreateCustomerDto {
-  @ApiProperty({ description: 'First name of the customer', example: 'Jane' })
+  @IsEnum(CustomerType)
+  @IsOptional()
+  customerType?: CustomerType;
+
   @IsString()
   @IsNotEmpty()
   firstName: string;
 
-  @ApiPropertyOptional({ description: 'Last name of the customer', example: 'Doe' })
   @IsString()
   @IsOptional()
   lastName?: string;
 
-  @ApiPropertyOptional({ description: 'Email address', example: 'jane.doe@example.com' })
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
+
   @IsEmail()
   @IsOptional()
   email?: string;
 
-  @ApiPropertyOptional({ description: 'Phone number', example: '+1234567890' })
   @IsString()
   @IsOptional()
-  phone?: string;
+  addressLine1?: string;
 
-  @ApiPropertyOptional({ description: 'Postal address details', example: '123 Main St, London' })
   @IsString()
   @IsOptional()
-  address?: string;
+  addressLine2?: string;
 
-  @ApiPropertyOptional({ description: 'City name', example: 'London' })
   @IsString()
   @IsOptional()
   city?: string;
 
-  @ApiPropertyOptional({ description: 'Country', example: 'United Kingdom' })
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @IsString()
+  @IsOptional()
+  postalCode?: string;
+
   @IsString()
   @IsOptional()
   country?: string;
 
-  @ApiPropertyOptional({ description: 'Custom metadata notes', example: 'Vip customer' })
+  @IsDateString()
+  @IsOptional()
+  dob?: string;
+
+  @IsString()
+  @IsOptional()
+  gender?: string;
+
+  @IsString()
+  @IsOptional()
+  gstNumber?: string;
+
+  @IsNumber()
+  @IsOptional()
+  creditLimit?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  marketingOptIn?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  smsEnabled?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  emailEnabled?: boolean;
+
   @IsString()
   @IsOptional()
   notes?: string;
-
-  @ApiPropertyOptional({ description: 'Loyalty points accrued', example: 100, default: 0 })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  loyaltyPoints?: number;
 }
