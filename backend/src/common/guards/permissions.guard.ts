@@ -32,6 +32,10 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('User context missing for permissions validation');
     }
 
+    if (user.roleCode === 'SUPER_ADMIN' || user.roleCode === 'OWNER') {
+      return true;
+    }
+
     // Cache permissions per request
     if (!request.userPermissions) {
       request.userPermissions = await this.authService.getRolePermissions(

@@ -18,6 +18,13 @@ async function bootstrap() {
   // Set Global API Route Prefix (e.g. /api/v1)
   app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`);
 
+  // Enable CORS
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+
   // Global Enterprise Validation Pipe Configuration
   app.useGlobalPipes(
     new ValidationPipe({

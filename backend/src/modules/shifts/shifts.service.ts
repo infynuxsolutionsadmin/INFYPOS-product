@@ -63,6 +63,7 @@ export class ShiftsService {
       where: { shiftId },
       include: {
         items: true,
+        payments: true,
       },
     });
 
@@ -84,14 +85,16 @@ export class ShiftsService {
       grossSales = grossSales.add(total);
       vat = vat.add(new Decimal(sale.taxAmount));
 
-      const method = sale.paymentMethod;
-      if (!paymentTotals[method]) {
-        paymentTotals[method] = new Decimal(0);
-      }
-      paymentTotals[method] = paymentTotals[method].add(total);
+      for (const payment of sale.payments) {
+        const method = payment.paymentMethod;
+        if (!paymentTotals[method]) {
+          paymentTotals[method] = new Decimal(0);
+        }
+        paymentTotals[method] = paymentTotals[method].add(payment.amount);
 
-      if (method === PaymentMethod.CASH) {
-        cashSales = cashSales.add(total);
+        if (method === PaymentMethod.CASH) {
+          cashSales = cashSales.add(payment.amount);
+        }
       }
     }
 

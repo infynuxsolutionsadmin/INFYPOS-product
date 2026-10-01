@@ -24,6 +24,21 @@ export class CreateSaleItemDto {
   quantity: number;
 }
 
+export class CreatePaymentDto {
+  @IsEnum(PaymentMethod)
+  @IsNotEmpty()
+  paymentMethod: PaymentMethod;
+
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  @Transform(({ value }) => parseFloat(value))
+  amount: number;
+
+  @IsString()
+  @IsOptional()
+  transactionReference?: string;
+}
+
 export class CreateSaleDto {
   @IsUUID('4')
   @IsOptional()
@@ -43,9 +58,11 @@ export class CreateSaleDto {
   @Transform(({ value }) => parseFloat(value))
   discountAmount?: number;
 
-  @IsEnum(PaymentMethod)
-  @IsOptional()
-  paymentMethod?: PaymentMethod;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreatePaymentDto)
+  @ArrayMinSize(1)
+  payments: CreatePaymentDto[];
 
   @IsString()
   @IsOptional()

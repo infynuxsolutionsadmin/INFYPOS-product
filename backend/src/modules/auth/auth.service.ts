@@ -49,12 +49,21 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { code: dto.tenantCode },
+    const tenant = await this.prisma.tenant.findFirst({
+      where: {
+        code: {
+          equals: dto.tenantCode,
+          mode: 'insensitive',
+        },
+      },
     });
 
     if (!tenant) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (tenant.status !== 'ACTIVE' && tenant.code.toLowerCase() !== 'infynux') {
+      throw new ForbiddenException(`Company account is ${tenant.status.toLowerCase()}`);
     }
 
     const user = await this.prisma.user.findUnique({
@@ -126,7 +135,9 @@ export class AuthService {
       user: {
         id: user.id,
         tenantId: user.tenantId,
+        tenantCode: tenant.code,
         roleId: user.roleId,
+        roleCode: user.role.code,
         storeId: user.storeId,
         email: user.email,
         firstName: user.firstName,
@@ -163,11 +174,15 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { role: true },
+      include: { role: true, tenant: true },
     });
 
     if (!user) {
       throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (user.tenant.status !== 'ACTIVE' && user.tenant.code.toLowerCase() !== 'infynux') {
+      throw new ForbiddenException(`Company account is ${user.tenant.status.toLowerCase()}`);
     }
 
     if (user.status === UserStatus.INACTIVE || user.status === UserStatus.LOCKED) {

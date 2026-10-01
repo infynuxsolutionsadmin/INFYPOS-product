@@ -25,7 +25,7 @@ export class ReportsService {
     };
     if (storeId) where.storeId = storeId;
     if (userId) where.userId = userId;
-    if (paymentMethod) where.paymentMethod = paymentMethod;
+    if (paymentMethod) where.payments = { some: { paymentMethod } };
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.sale.count({ where }),
@@ -112,17 +112,17 @@ export class ReportsService {
     const { start, end } = this.dateUtils.normalizeDateRange(query.fromDate, query.toDate);
     const storeIdFilter = query.storeId ? { storeId: query.storeId } : {};
 
-    const items = await this.prisma.sale.groupBy({
+    const items = await this.prisma.payment.groupBy({
       by: ['paymentMethod'],
-      _count: { id: true },
-      _sum: { grandTotal: true },
-      where: { tenantId, status: SaleStatus.COMPLETED, createdAt: { gte: start, lte: end }, ...storeIdFilter }
+      _count: { saleId: true },
+      _sum: { amount: true },
+      where: { sale: { tenantId, status: SaleStatus.COMPLETED, createdAt: { gte: start, lte: end }, ...storeIdFilter } }
     });
 
     return items.map(item => ({
       paymentMethod: item.paymentMethod,
-      transactionCount: item._count.id,
-      amount: (item._sum.grandTotal || new Prisma.Decimal(0)).toFixed(2)
+      transactionCount: item._count.saleId,
+      amount: (item._sum.amount || new Prisma.Decimal(0)).toFixed(2)
     }));
   }
 

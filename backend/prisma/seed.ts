@@ -13,6 +13,7 @@ const RESOURCES = [
   'reports',
   'settings',
   'permissions',
+  'dashboard',
 ];
 
 const ACTIONS = ['read', 'create', 'update', 'delete'];

@@ -221,16 +221,23 @@ export class SalesService {
             taxAmount,
             discountAmount: dto.discountAmount || 0,
             grandTotal,
-            paymentMethod: dto.paymentMethod || PaymentMethod.CASH,
             status: SaleStatus.COMPLETED,
             notes: dto.notes,
             shiftId: dto.shiftId,
             items: {
               create: saleItemsToCreate,
             },
+            payments: {
+              create: dto.payments.map(p => ({
+                paymentMethod: p.paymentMethod,
+                amount: p.amount,
+                transactionReference: p.transactionReference
+              }))
+            }
           },
           include: {
             items: true,
+            payments: true,
           },
         });
 
@@ -259,7 +266,6 @@ export class SalesService {
           subtotal: sale.subtotal.toString(),
           taxAmount: sale.taxAmount.toString(),
           discountAmount: sale.discountAmount.toString(),
-          paymentMethod: sale.paymentMethod,
           status: sale.status,
           createdAt: sale.createdAt,
           items: sale.items.map(item => ({
@@ -270,6 +276,11 @@ export class SalesService {
             unitPrice: item.unitPrice.toString(),
             vatRate: item.vatRate.toString(),
             lineTotal: item.lineTotal.toString(),
+          })),
+          payments: sale.payments.map(payment => ({
+            paymentMethod: payment.paymentMethod,
+            amount: payment.amount.toString(),
+            transactionReference: payment.transactionReference
           })),
         };
       });
@@ -341,6 +352,7 @@ export class SalesService {
       where: { id, tenantId },
       include: {
         items: true,
+        payments: true,
         store: { select: { id: true, name: true, code: true } },
         user: { select: { id: true, firstName: true, lastName: true, email: true } },
       },

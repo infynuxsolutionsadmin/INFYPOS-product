@@ -9,9 +9,14 @@ import { CreateTenantDto } from './dto/create-tenant.dto';
 import { QueryTenantDto } from './dto/query-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 
+import { PasswordService } from '../auth/services/password.service';
+
 @Injectable()
 export class TenantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly passwordService: PasswordService,
+  ) {}
 
   async create(dto: CreateTenantDto) {
     // 1. Check for code collision
@@ -22,15 +27,66 @@ export class TenantsService {
       throw new ConflictException(`Tenant code "${dto.code}" is already taken.`);
     }
 
-    // 2. Create Tenant
-    return this.prisma.tenant.create({
-      data: {
-        name: dto.name,
-        code: dto.code,
-        email: dto.email || null,
-        phone: dto.phone || null,
-        status: dto.status || TenantStatus.ACTIVE,
-      },
+    // 2. Hash owner password
+    const passwordHash = await this.passwordService.hash(dto.ownerPassword);
+
+    // 3. Create Tenant, Role, and User in a transaction
+    return this.prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({
+        data: {
+          name: dto.name,
+          code: dto.code,
+          email: dto.email || null,
+          phone: dto.phone || null,
+          status: dto.status || TenantStatus.ACTIVE,
+        },
+      });
+
+      const ownerRole = await tx.role.create({
+        data: {
+          tenantId: tenant.id,
+          name: 'Owner',
+          code: 'OWNER',
+          description: 'Default owner role with all permissions',
+        },
+      });
+
+      await tx.role.createMany({
+        data: [
+          {
+            tenantId: tenant.id,
+            name: 'Store Manager',
+            code: 'STORE_MANAGER',
+            description: 'Manages a specific store',
+          },
+          {
+            tenantId: tenant.id,
+            name: 'Inventory Manager',
+            code: 'INVENTORY_MANAGER',
+            description: 'Manages products and stock levels',
+          },
+          {
+            tenantId: tenant.id,
+            name: 'Cashier',
+            code: 'CASHIER',
+            description: 'Point of sale operator',
+          },
+        ]
+      });
+
+      await tx.user.create({
+        data: {
+          tenantId: tenant.id,
+          firstName: dto.ownerFirstName,
+          lastName: dto.ownerLastName,
+          email: dto.ownerEmail,
+          passwordHash,
+          roleId: ownerRole.id,
+          status: 'ACTIVE',
+        },
+      });
+
+      return tenant;
     });
   }
 

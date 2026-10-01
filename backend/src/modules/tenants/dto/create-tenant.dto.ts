@@ -39,4 +39,21 @@ export class CreateTenantDto {
   @IsEnum(TenantStatus)
   @IsOptional()
   status?: TenantStatus;
+
+  @IsEmail()
+  @IsNotEmpty()
+  ownerEmail: string;
+
+  @IsString()
+  @IsNotEmpty()
+  ownerFirstName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  ownerLastName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
+  ownerPassword: string;
 }

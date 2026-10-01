@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, ReturnStatus, MovementType, ReferenceType, ReturnType, InventoryStatus, SaleStatus } from '@prisma/client';
+import { Prisma, ReturnStatus, MovementType, ReferenceType, ReturnType, InventoryStatus, SaleStatus, PaymentMethod } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateSaleReturnDto } from './dto/create-sale-return.dto';
 import { FindSaleReturnsQueryDto } from './dto/find-sale-returns-query.dto';
@@ -55,7 +55,7 @@ export class SalesReturnsService {
       // 1. Validate Original Sale
       const sale = await tx.sale.findFirst({
         where: { id: dto.originalSaleId, tenantId },
-        include: { items: true },
+        include: { items: true, payments: true },
       });
 
       if (!sale) {
@@ -208,7 +208,7 @@ export class SalesReturnsService {
           subtotal,
           taxAmount,
           refundTotal,
-          refundMethod: dto.refundMethod || sale.paymentMethod,
+          refundMethod: dto.refundMethod || (sale.payments.length > 0 ? sale.payments[0].paymentMethod : PaymentMethod.CASH),
           status: ReturnStatus.COMPLETED,
           notes: dto.notes,
           shiftId: dto.shiftId,
