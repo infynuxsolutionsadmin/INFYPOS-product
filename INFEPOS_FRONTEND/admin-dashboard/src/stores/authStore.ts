@@ -36,6 +36,8 @@ export const useAuthStore = create<AuthState>()(
       },
 
       hasPermission: (permission: string) => {
+        const user = get().user;
+        if (user?.roleCode === 'SUPER_ADMIN' || user?.roleCode === 'OWNER') return true;
         return get().permissions.includes(permission);
       }
     }),

@@ -5,12 +5,16 @@ import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 
 const AdminLayout: React.FC = () => {
-  const { isAuthenticated, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated, user } = useAuthStore();
 
   if (!_hasHydrated) return null;
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (user?.roleCode === 'SUPER_ADMIN') {
+    return <Navigate to="/master-admin" replace />;
   }
 
   return (

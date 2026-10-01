@@ -21,12 +21,22 @@ import RolesPermissionsPage from '../pages/roles/RolesPermissionsPage';
 import ReportsPage from '../pages/reports/ReportsPage';
 import SettingsPage from '../pages/settings/SettingsPage';
 
+import MasterAdminLayout from '../layouts/MasterAdminLayout';
+import MasterAdminDashboard from '../pages/masterAdmin/MasterAdminDashboard';
+
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
       </Route>
+      
+      {/* Master Admin Routes */}
+      <Route element={<MasterAdminLayout />}>
+        <Route path="/master-admin" element={<MasterAdminDashboard />} />
+      </Route>
+
+      {/* Tenant/Store Admin Routes */}
       <Route element={<AdminLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/products/*" element={<ProductsPage />} />
