@@ -9,6 +9,7 @@ const navigation = [
   { name: 'Stores', href: '/stores', icon: Store },
   { name: 'Inventory', href: '/inventory', icon: ClipboardList },
   { name: 'Sales', href: '/sales', icon: ShoppingCart },
+
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

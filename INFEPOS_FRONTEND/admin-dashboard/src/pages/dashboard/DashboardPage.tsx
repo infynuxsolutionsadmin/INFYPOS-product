@@ -11,6 +11,8 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fmt = (n: any) => `£${Number(n || 0).toFixed(2)}`;
+
   useEffect(() => {
     const fetchDashboard = async () => {
       if (!canReadDashboard) {
@@ -65,19 +67,19 @@ const DashboardPage: React.FC = () => {
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="p-5">
                 <dt className="text-sm font-medium text-gray-500 truncate">Net Revenue</dt>
-                <dd className="mt-1 text-3xl font-semibold text-gray-900"></dd>
+                <dd className="mt-1 text-3xl font-semibold text-gray-900">{fmt(summary.sales.netRevenue)}</dd>
               </div>
             </div>
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="p-5">
                 <dt className="text-sm font-medium text-gray-500 truncate">Gross Revenue</dt>
-                <dd className="mt-1 text-3xl font-semibold text-gray-900"></dd>
+                <dd className="mt-1 text-3xl font-semibold text-gray-900">{fmt(summary.sales.grossRevenue)}</dd>
               </div>
             </div>
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="p-5">
                 <dt className="text-sm font-medium text-gray-500 truncate">Average Basket</dt>
-                <dd className="mt-1 text-3xl font-semibold text-gray-900"></dd>
+                <dd className="mt-1 text-3xl font-semibold text-gray-900">{fmt(summary.sales.averageBasket)}</dd>
               </div>
             </div>
           </div>
@@ -154,7 +156,7 @@ const DashboardPage: React.FC = () => {
                           <p className="text-sm text-gray-500">Sold: {product.quantitySold}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-medium text-green-600"></p>
+                          <p className="text-sm font-medium text-green-600">{fmt(product.revenue)}</p>
                         </div>
                       </li>
                     ))

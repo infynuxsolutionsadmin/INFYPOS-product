@@ -15,6 +15,7 @@ import GoodsReceiptsPage from '../pages/goodsReceipts/GoodsReceiptsPage';
 import CustomersPage from '../pages/customers/CustomersPage';
 import SalesPage from '../pages/sales/SalesPage';
 import SalesReturnsPage from '../pages/salesReturns/SalesReturnsPage';
+
 import UsersPage from '../pages/users/UsersPage';
 import RolesPermissionsPage from '../pages/roles/RolesPermissionsPage';
 import ReportsPage from '../pages/reports/ReportsPage';
@@ -39,6 +40,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/customers/*" element={<CustomersPage />} />
         <Route path="/sales" element={<SalesPage />} />
         <Route path="/sales-returns" element={<SalesReturnsPage />} />
+
         <Route path="/users" element={<UsersPage />} />
         <Route path="/roles-permissions" element={<RolesPermissionsPage />} />
         <Route path="/reports" element={<ReportsPage />} />

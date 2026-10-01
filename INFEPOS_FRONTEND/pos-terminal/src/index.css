@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --pos-bg: #0f1117;
+  --pos-surface: #1a1d27;
+  --pos-surface-2: #22263a;
+  --pos-border: #2e3348;
+  --pos-accent: #6366f1;
+  --pos-accent-hover: #5254d4;
+  --pos-accent-light: rgba(99, 102, 241, 0.15);
+  --pos-success: #22c55e;
+  --pos-success-light: rgba(34, 197, 94, 0.15);
+  --pos-danger: #ef4444;
+  --pos-danger-light: rgba(239, 68, 68, 0.15);
+  --pos-warning: #f59e0b;
+  --pos-warning-light: rgba(245, 158, 11, 0.15);
+  --pos-text: #e8eaf0;
+  --pos-text-muted: #8b91a8;
+  --pos-text-dim: #5a6282;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--pos-bg);
+  color: var(--pos-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--pos-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--pos-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pos-text-dim);
+}
+
+/* POS Button Base */
+.btn-pos {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+  outline: none;
+  white-space: nowrap;
+}
+
+.btn-pos:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--pos-accent);
+  color: white;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--pos-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-success {
+  background: var(--pos-success);
+  color: white;
+}
+.btn-success:hover:not(:disabled) {
+  background: #16a34a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.btn-danger {
+  background: var(--pos-danger);
+  color: white;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--pos-text-muted);
+  border: 1px solid var(--pos-border);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--pos-surface-2);
+  color: var(--pos-text);
+  border-color: var(--pos-text-dim);
+}
+
+/* Input */
+.pos-input {
+  width: 100%;
+  background: var(--pos-surface-2);
+  border: 1px solid var(--pos-border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  color: var(--pos-text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+.pos-input:focus {
+  border-color: var(--pos-accent);
+  box-shadow: 0 0 0 3px var(--pos-accent-light);
+}
+.pos-input::placeholder {
+  color: var(--pos-text-dim);
+}
+
+/* Card */
+.pos-card {
+  background: var(--pos-surface);
+  border: 1px solid var(--pos-border);
+  border-radius: 14px;
+}
+
+/* Spinner */
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--pos-border);
+  border-top-color: var(--pos-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.badge-green { background: var(--pos-success-light); color: var(--pos-success); }
+.badge-red { background: var(--pos-danger-light); color: var(--pos-danger); }
+.badge-yellow { background: var(--pos-warning-light); color: var(--pos-warning); }
+.badge-blue { background: var(--pos-accent-light); color: var(--pos-accent); }
+
+/* Fade-in animation */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeInUp 0.3s ease forwards; }
+
+/* Pulse animation for shift indicator */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+}
+.pulse-green { animation: pulse-glow 2s infinite; }
