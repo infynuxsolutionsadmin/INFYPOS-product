@@ -23,6 +23,18 @@ export class ShiftsController {
     };
   }
 
+  @Get('active')
+  // No specific permission required beyond auth, any cashier can check if a shift is active
+  async getActiveShift(@Req() req) {
+    const shift = await this.shiftsService.getActiveShift(req.user.tenantId, req.user.storeId);
+    return {
+      success: true,
+      statusCode: 200,
+      timestamp: new Date().toISOString(),
+      data: shift,
+    };
+  }
+
   @Get(':id/x-report')
   @Permissions('shifts.xreport')
   async getXReport(@Req() req, @Param('id') shiftId: string) {

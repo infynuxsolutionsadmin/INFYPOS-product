@@ -3,6 +3,7 @@ import { Search, ScanBarcode, X, Loader2, Package, AlertCircle, ChevronLeft, Che
 import { getProducts } from '../../api/products.api';
 import { useCartStore } from '../../stores/cartStore';
 import type { Product } from '../../types/product';
+import { useBarcodeScanner } from './useBarcodeScanner';
 
 const ProductCatalog: React.FC = () => {
   const addItem = useCartStore((s) => s.addItem);
@@ -66,7 +67,7 @@ const ProductCatalog: React.FC = () => {
     fetchProducts(search, page, selectedCategory);
   }, [page]);
 
-  const handleAdd = (product: Product) => {
+  const handleAdd = useCallback((product: Product) => {
     addItem(product);
     setAddedIds((prev) => {
       const next = new Set(prev);
@@ -80,7 +81,35 @@ const ProductCatalog: React.FC = () => {
         return next;
       });
     }, 600);
-  };
+  }, [addItem]);
+
+  // Handle barcode scanner input
+  useBarcodeScanner(async (barcode) => {
+    try {
+      // Temporarily show loading state
+      setLoading(true);
+      // Fetch specifically for this barcode
+      const result = await getProducts({
+        search: barcode,
+        page: 1,
+        limit: 1,
+        status: 'ACTIVE',
+      });
+      
+      if (result.items.length > 0) {
+        // If we found a product matching this barcode/sku, add it to cart instantly!
+        handleAdd(result.items[0]);
+      } else {
+        // Not found via barcode
+        setError(`Barcode not found: ${barcode}`);
+        setTimeout(() => setError(null), 3000);
+      }
+    } catch (err) {
+      console.error('Barcode scan error:', err);
+    } finally {
+      setLoading(false);
+    }
+  });
 
   const handleClearSearch = () => {
     setSearch('');

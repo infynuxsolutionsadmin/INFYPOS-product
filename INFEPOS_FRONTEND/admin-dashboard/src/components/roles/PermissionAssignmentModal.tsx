@@ -136,18 +136,33 @@ const PermissionAssignmentModal: React.FC<PermissionAssignmentModalProps> = ({
                         )}
                       </div>
                       <div className="divide-y divide-gray-100">
-                        {perms.map(p => (
-                          <label key={p.id} className={`flex items-center gap-3 px-4 py-2.5 ${isOwner ? 'cursor-default' : 'cursor-pointer hover:bg-blue-50'}`}>
-                            <input
-                              type="checkbox"
-                              disabled={isOwner}
-                              checked={selectedIds.has(p.id)}
-                              onChange={e => !isOwner && toggleOne(p.id, e.target.checked)}
-                              className="h-4 w-4 text-blue-600 border-gray-300 rounded disabled:opacity-60"
-                            />
-                            <span className="text-sm text-gray-700 font-mono">{p.code}</span>
-                          </label>
-                        ))}
+                        {perms.map(p => {
+                          const parts = p.code.split('.');
+                          let label = p.code;
+                          if (parts.length >= 2) {
+                            const action = parts[parts.length - 1];
+                            const entity = parts.slice(0, parts.length - 1).join(' ');
+                            const formattedAction = action.charAt(0).toUpperCase() + action.slice(1);
+                            const formattedEntity = entity.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+                            label = `${formattedAction} ${formattedEntity}`;
+                          }
+                          
+                          return (
+                            <label key={p.id} className={`flex items-center gap-3 px-4 py-2.5 ${isOwner ? 'cursor-default' : 'cursor-pointer hover:bg-blue-50'}`}>
+                              <input
+                                type="checkbox"
+                                disabled={isOwner}
+                                checked={selectedIds.has(p.id)}
+                                onChange={e => !isOwner && toggleOne(p.id, e.target.checked)}
+                                className="h-4 w-4 text-blue-600 border-gray-300 rounded disabled:opacity-60"
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium text-gray-800">{label}</span>
+                                <span className="text-xs text-gray-400 font-mono">{p.code}</span>
+                              </div>
+                            </label>
+                          );
+                        })}
                       </div>
                     </div>
                   );

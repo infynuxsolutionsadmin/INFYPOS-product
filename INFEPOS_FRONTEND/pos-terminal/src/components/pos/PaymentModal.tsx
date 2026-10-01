@@ -47,7 +47,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
       shiftId: currentShift?.id,
       storeId: user.storeId,
       discountAmount: parsedDiscount,
-      paymentMethod,
+      payments: [{
+        paymentMethod,
+        amount: finalTotal,
+      }],
       items: cartItems.map((i) => ({
         productId: i.product.id,
         quantity: i.quantity,
@@ -77,7 +80,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
           taxAmount: cartSummary.totalVat,
           discountAmount: payload.discountAmount,
           grandTotal: finalTotal,
-          paymentMethod: payload.paymentMethod,
+          paymentMethod: paymentMethod,
           status: 'COMPLETED',
           notes: 'Offline sale pending sync',
           createdAt: syncEvent.occurredAt,

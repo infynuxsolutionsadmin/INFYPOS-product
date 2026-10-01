@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, Settings, ShoppingCart, Store, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Package, Users, Settings, ShoppingCart, Store, ClipboardList, Shield, CornerUpLeft } from 'lucide-react';
 
 
 const navigation = [
@@ -9,8 +9,10 @@ const navigation = [
   { name: 'Stores', href: '/stores', icon: Store },
   { name: 'Inventory', href: '/inventory', icon: ClipboardList },
   { name: 'Sales', href: '/sales', icon: ShoppingCart },
+  { name: 'Returns', href: '/sales-returns', icon: CornerUpLeft },
 
   { name: 'Users', href: '/users', icon: Users },
+  { name: 'Roles & Permissions', href: '/roles-permissions', icon: Shield },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

@@ -1,10 +1,35 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, ScanBarcode, X } from 'lucide-react';
 import type { Product, FindProductsQuery, ProductStatus } from '../../types/products';
 import { getProducts } from '../../api/products.api';
 import { useAuthStore } from '../../stores/authStore';
 import ProductFormModal from '../../components/products/ProductFormModal';
 import DeleteConfirmModal from '../../components/products/DeleteConfirmModal';
+import Barcode from 'react-barcode';
+
+const BarcodeModal = ({ isOpen, onClose, product }: { isOpen: boolean, onClose: () => void, product: Product | null }) => {
+  if (!isOpen || !product) return null;
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-75 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Product Barcode</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        <div className="p-6 flex flex-col items-center justify-center">
+          <p className="text-sm text-gray-500 mb-4">{product.name}</p>
+          {product.barcode ? (
+             <Barcode value={product.barcode} width={2} height={100} displayValue={true} />
+          ) : (
+             <p className="text-red-500 font-medium">This product does not have a barcode assigned.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ProductsPage: React.FC = () => {
   const { hasPermission } = useAuthStore();
@@ -29,7 +54,13 @@ const ProductsPage: React.FC = () => {
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  const openBarcodeModal = (product: Product) => {
+    setSelectedProduct(product);
+    setIsBarcodeModalOpen(true);
+  };
 
   const fetchProducts = useCallback(async () => {
     if (!canRead) {
@@ -196,13 +227,18 @@ const ProductsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {canRead && (
+                        <button onClick={() => openBarcodeModal(product)} className="text-gray-600 hover:text-gray-900 mr-4" title="Show Barcode">
+                          <ScanBarcode className="h-4 w-4" />
+                        </button>
+                      )}
                       {canUpdate && (
-                        <button onClick={() => openEditModal(product)} className="text-blue-600 hover:text-blue-900 mr-4">
+                        <button onClick={() => openEditModal(product)} className="text-blue-600 hover:text-blue-900 mr-4" title="Edit">
                           <Edit2 className="h-4 w-4" />
                         </button>
                       )}
                       {canDelete && (
-                        <button onClick={() => openDeleteModal(product)} className="text-red-600 hover:text-red-900">
+                        <button onClick={() => openDeleteModal(product)} className="text-red-600 hover:text-red-900" title="Delete">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       )}
@@ -257,6 +293,12 @@ const ProductsPage: React.FC = () => {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onSuccess={fetchProducts}
+        product={selectedProduct}
+      />
+
+      <BarcodeModal
+        isOpen={isBarcodeModalOpen}
+        onClose={() => setIsBarcodeModalOpen(false)}
         product={selectedProduct}
       />
     </div>

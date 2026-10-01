@@ -10,7 +10,11 @@ export interface CreateSaleRequest {
   storeId: string;
   customerId?: string;
   discountAmount?: number;
-  paymentMethod?: PaymentMethod;
+  payments: Array<{
+    paymentMethod: PaymentMethod;
+    amount: number;
+    transactionReference?: string;
+  }>;
   notes?: string;
   items: CreateSaleItemRequest[];
 }

@@ -12,6 +12,11 @@ export const getSalesHistory = async (params?: any): Promise<{ items: Sale[]; pa
   return response.data.data;
 };
 
+export const getSalesReturnsHistory = async (params?: any): Promise<{ items: any[]; pagination: any }> => {
+  const response = await client.get<BackendResponse<{ items: any[]; pagination: any }>>('/sales-returns', { params });
+  return response.data.data;
+};
+
 export const getReturnableSale = async (saleId: string): Promise<any> => {
   const response = await client.get<BackendResponse<any>>(`/sales/${saleId}/returnable`);
   return response.data.data;

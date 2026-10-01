@@ -14,6 +14,10 @@ export class ShiftsService {
   ) {}
 
   async openShift(tenantId: string, storeId: string, userId: string, dto: OpenShiftDto) {
+    if (!storeId) {
+      throw new BadRequestException('You must be assigned to a store to open a shift.');
+    }
+
     // Check if there is already an active shift for this store
     const activeShift = await this.prisma.shift.findFirst({
       where: {
@@ -39,6 +43,27 @@ export class ShiftsService {
     });
 
     return shift;
+  }
+
+  async getActiveShift(tenantId: string, storeId: string) {
+    if (!storeId) {
+      throw new BadRequestException('Store ID is required.');
+    }
+
+    const activeShift = await this.prisma.shift.findFirst({
+      where: {
+        tenantId,
+        storeId,
+        status: ShiftStatus.OPEN,
+      },
+      include: {
+        openedBy: {
+          select: { firstName: true, lastName: true },
+        },
+      },
+    });
+
+    return activeShift; // Returns null if not found
   }
 
   async getXReport(tenantId: string, storeId: string, shiftId: string) {

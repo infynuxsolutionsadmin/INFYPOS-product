@@ -10,6 +10,7 @@ const RESOURCES = [
   'inventory',
   'products',
   'sales',
+  'salesReturns',
   'reports',
   'settings',
   'permissions',
