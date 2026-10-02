@@ -252,7 +252,7 @@ const ReportsPage: React.FC = () => {
           <>
             {summary && (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-                <ReportSummaryCard label="Total Sales" value={summary.totalSales} color="text-blue-600" />
+                <ReportSummaryCard label="Total Sales" value={summary.totalSales} color="text-[#5B58F2]" />
                 <ReportSummaryCard label="Gross Sales" value={`${summary.grossSales}`} color="text-green-600" />
                 <ReportSummaryCard label="Returns" value={`${summary.totalReturns}`} color="text-red-500" />
                 <ReportSummaryCard label="Net Sales" value={`${summary.netSales}`} color="text-indigo-600" />
@@ -330,7 +330,7 @@ const ReportsPage: React.FC = () => {
           <>
             {summary && (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-5">
-                <ReportSummaryCard label="Total POs" value={summary.totalPurchaseOrders} color="text-blue-600" />
+                <ReportSummaryCard label="Total POs" value={summary.totalPurchaseOrders} color="text-[#5B58F2]" />
                 <ReportSummaryCard label="Total Value" value={summary.totalPurchaseValue} color="text-green-600" />
                 <ReportSummaryCard label="Received" value={summary.receivedOrders} color="text-emerald-600" />
                 <ReportSummaryCard label="Pending / Draft" value={summary.draftOrders + summary.approvedOrders + summary.orderedOrders} color="text-amber-600" />
@@ -503,7 +503,7 @@ const ReportsPage: React.FC = () => {
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Returns by Reason</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {summary.byReason.map((r: any) => (
-                    <div key={r.reason} className="bg-gray-50 border rounded p-3">
+                    <div key={r.reason} className="bg-slate-50/50 border rounded p-3">
                       <p className="text-xs text-gray-500">{r.reason}</p>
                       <p className="text-sm font-semibold text-gray-800">Qty: {r.quantityReturned}</p>
                       <p className="text-xs text-gray-600">Value: {r.refundValue}</p>
@@ -573,7 +573,7 @@ const ReportsPage: React.FC = () => {
         return (
           <>
             {summary && (
-              <div className="mb-5 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="mb-5 bg-blue-50 border border-blue-200 rounded-3xl p-4">
                 <h4 className="text-sm font-bold text-blue-800 mb-3">MTD Export Summary</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                   {Object.entries(summary).map(([k, v]) => (
@@ -630,7 +630,7 @@ const ReportsPage: React.FC = () => {
       </div>
 
       {/* Group nav */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4 overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm mb-4 overflow-hidden">
         <div className="flex flex-wrap border-b border-gray-200">
           {TAB_GROUPS.map(group => (
             <div key={group.label} className="border-r border-gray-100 last:border-0">
@@ -642,8 +642,8 @@ const ReportsPage: React.FC = () => {
                     onClick={() => handleTabChange(tab.id)}
                     className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 ${
                       activeTab === tab.id
-                        ? 'border-blue-600 text-blue-600 bg-blue-50'
-                        : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                        ? 'border-[#5B58F2] text-[#5B58F2] bg-blue-50'
+                        : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-50/50'
                     }`}
                   >
                     {tab.icon}{tab.label}
@@ -676,7 +676,7 @@ const ReportsPage: React.FC = () => {
                 type="text" value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search..."
-                className="border border-gray-300 rounded-md py-1.5 pl-7 pr-3 text-sm focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full pl-11 pr-4 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
               />
             </div>
           </div>
@@ -684,7 +684,7 @@ const ReportsPage: React.FC = () => {
       />
 
       {/* Report content */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-800">
             {TABS.find(t => t.id === activeTab)?.label} Report
@@ -708,14 +708,14 @@ const ReportsPage: React.FC = () => {
               <button
                 onClick={() => setPage(p => p - 1)}
                 disabled={page <= 1 || loading}
-                className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-slate-50/50 disabled:opacity-50"
               >
                 <ArrowLeft className="h-3 w-3" /> Prev
               </button>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={page >= pagination.pages || loading}
-                className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-slate-50/50 disabled:opacity-50"
               >
                 Next <ArrowRight className="h-3 w-3" />
               </button>

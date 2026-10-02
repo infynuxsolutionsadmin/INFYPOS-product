@@ -37,5 +37,7 @@ export interface DashboardSummary {
     productName: string;
     quantitySold: string;
     revenue: string;
+    category?: string;
+    imageUrl?: string;
   }>;
 }

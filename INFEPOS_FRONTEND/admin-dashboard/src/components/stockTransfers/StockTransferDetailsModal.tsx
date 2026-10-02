@@ -89,15 +89,15 @@ const StockTransferDetailsModal: React.FC<StockTransferDetailsModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 transition-opacity" aria-hidden="true" onClick={onClose}>
-          <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
         </div>
 
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full relative z-10">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div className="inline-block align-bottom bg-white rounded-[30px] text-left overflow-hidden shadow-[0px_8px_40px_rgba(0,0,0,0.08)] border border-gray-100 transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full relative z-10">
+          <div className="bg-white px-6 pt-6 pb-6 sm:p-8 sm:pb-8">
             <div className="flex justify-between items-center mb-5 border-b pb-3">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center gap-3">
+              <h3 className="text-xl font-bold text-[#1a1f36] flex items-center gap-3">
                 Transfer Details
                 {transfer && (
                   <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -199,12 +199,12 @@ const StockTransferDetailsModal: React.FC<StockTransferDetailsModalProps> = ({
                 
                 {transfer.status === 'SHIPPED' && canUpdate && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Received Notes (Optional)</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Received Notes (Optional)</label>
                     <textarea 
                       rows={2} 
                       value={receivedNotes} 
                       onChange={(e) => setReceivedNotes(e.target.value)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm"
                       placeholder="Add any notes upon receiving..."
                     />
                   </div>

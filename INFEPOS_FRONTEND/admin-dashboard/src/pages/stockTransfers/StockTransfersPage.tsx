@@ -127,7 +127,7 @@ const StockTransfersPage: React.FC = () => {
         {canCreate && (
           <button
             onClick={openCreateModal}
-            className="inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-2xl text-white bg-[#5B58F2] hover:bg-[#4A47E5] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5B58F2]"
           >
             <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
             New Transfer
@@ -135,17 +135,17 @@ const StockTransfersPage: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex flex-col sm:flex-row gap-4 flex-wrap">
-          <div className="relative rounded-md shadow-sm flex-1 min-w-[200px] max-w-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+      <div className="bg-white rounded-[24px] shadow-[0px_4px_24px_rgba(149,157,165,0.12)] border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row gap-4 flex-wrap">
+          <div className="relative rounded-2xl shadow-sm flex-1 min-w-[200px] max-w-sm">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
             </div>
             <input
               type="text"
               value={query.search || ''}
               onChange={handleSearchChange}
-              className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 px-3 border"
+              className="block w-full pl-11 pr-4 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
               placeholder="Search Transfer No., Notes, Tracking..."
             />
           </div>
@@ -153,7 +153,7 @@ const StockTransfersPage: React.FC = () => {
             <select
               value={query.sourceStoreId || ''}
               onChange={handleSourceStoreChange}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer"
             >
               <option value="">Source Store (All)</option>
               {stores.map(s => (
@@ -165,7 +165,7 @@ const StockTransfersPage: React.FC = () => {
             <select
               value={query.destinationStoreId || ''}
               onChange={handleDestinationStoreChange}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer"
             >
               <option value="">Dest. Store (All)</option>
               {stores.map(s => (
@@ -177,7 +177,7 @@ const StockTransfersPage: React.FC = () => {
             <select
               value={query.status || ''}
               onChange={handleStatusChange}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer"
             >
               <option value="">All Statuses</option>
               <option value="DRAFT">Draft</option>
@@ -192,7 +192,7 @@ const StockTransfersPage: React.FC = () => {
           <div className="p-4 text-red-500 text-center">{error}</div>
         ) : loading ? (
           <div className="p-10 flex justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#5B58F2]"></div>
           </div>
         ) : transfers.length === 0 ? (
           <div className="p-10 text-center text-gray-500">
@@ -200,7 +200,7 @@ const StockTransfersPage: React.FC = () => {
             {canCreate && (
               <button
                 onClick={openCreateModal}
-                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-2xl text-white bg-[#5B58F2] hover:bg-[#4A47E5]"
               >
                 New Transfer
               </button>
@@ -209,7 +209,7 @@ const StockTransfersPage: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-slate-50/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transfer No.</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
@@ -224,7 +224,7 @@ const StockTransfersPage: React.FC = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {transfers.map((item) => (
                   <tr key={item.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#5B58F2]">
                       {item.transferNumber}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -251,7 +251,7 @@ const StockTransfersPage: React.FC = () => {
                           <Edit2 className="h-5 w-5 inline" />
                         </button>
                       )}
-                      <button onClick={() => openDetailsModal(item.id)} className="text-blue-600 hover:text-blue-900">
+                      <button onClick={() => openDetailsModal(item.id)} className="text-[#5B58F2] hover:text-blue-900">
                         <Eye className="h-5 w-5 inline" />
                       </button>
                     </td>
@@ -270,18 +270,18 @@ const StockTransfersPage: React.FC = () => {
                     </p>
                   </div>
                   <div>
-                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <nav className="relative z-0 inline-flex rounded-2xl shadow-sm -space-x-px" aria-label="Pagination">
                       <button
                         onClick={() => handlePageChange((query.page || 1) - 1)}
                         disabled={(query.page || 1) <= 1}
-                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-slate-50/50 disabled:opacity-50"
                       >
                         Previous
                       </button>
                       <button
                         onClick={() => handlePageChange((query.page || 1) + 1)}
                         disabled={(query.page || 1) >= totalPages}
-                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-slate-50/50 disabled:opacity-50"
                       >
                         Next
                       </button>

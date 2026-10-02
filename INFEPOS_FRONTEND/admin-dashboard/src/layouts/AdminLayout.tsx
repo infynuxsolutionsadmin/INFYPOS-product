@@ -1,7 +1,6 @@
 import React from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 
 const AdminLayout: React.FC = () => {
@@ -18,16 +17,13 @@ const AdminLayout: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-100">
-      <Sidebar />
-      <div className="flex flex-col w-0 flex-1 overflow-hidden">
-        <Header />
-        <main className="flex-1 relative overflow-y-auto focus:outline-none">
-          <div className="py-6 px-4 sm:px-6 md:px-8">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+    <div className="min-h-screen bg-[#F3F5F9] font-sans flex flex-col">
+      <Header />
+      <main className="flex-1 overflow-y-auto focus:outline-none">
+        <div className="py-8 px-4 sm:px-6 md:px-8 max-w-[1600px] mx-auto w-full">
+          <Outlet />
+        </div>
+      </main>
     </div>
   );
 };
