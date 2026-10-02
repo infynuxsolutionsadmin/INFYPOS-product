@@ -12,9 +12,14 @@ export class DashboardService {
   ) {}
 
   async getSummary(tenantId: string, query: DashboardQueryDto) {
-    const { start, end } = this.dateUtils.normalizeDateRange(query.fromDate, query.toDate);
+    const { start: todayStart, end: todayEnd } = this.dateUtils.normalizeDateRange(undefined, undefined);
     const storeIdFilter = query.storeId ? { storeId: query.storeId } : {};
     
+    // If fromDate/toDate is provided, use it for the main metrics. Otherwise, fetch all time.
+    const dateFilter = query.fromDate && query.toDate 
+        ? { createdAt: { gte: new Date(query.fromDate), lte: new Date(query.toDate) } } 
+        : {};
+
     const [
       salesAgg,
       returnsAgg,
@@ -33,16 +38,16 @@ export class DashboardService {
       // Sales Aggregate
       this.prisma.sale.aggregate({
         _sum: { grandTotal: true },
-        where: { tenantId, status: SaleStatus.COMPLETED, createdAt: { gte: start, lte: end }, ...storeIdFilter }
+        where: { tenantId, status: SaleStatus.COMPLETED, ...dateFilter, ...storeIdFilter }
       }),
       // Returns Aggregate
       this.prisma.saleReturn.aggregate({
         _sum: { refundTotal: true },
-        where: { tenantId, status: ReturnStatus.COMPLETED, createdAt: { gte: start, lte: end }, ...storeIdFilter }
+        where: { tenantId, status: ReturnStatus.COMPLETED, ...dateFilter, ...storeIdFilter }
       }),
       // Total Sales Count
       this.prisma.sale.count({
-        where: { tenantId, status: SaleStatus.COMPLETED, createdAt: { gte: start, lte: end }, ...storeIdFilter }
+        where: { tenantId, status: SaleStatus.COMPLETED, ...dateFilter, ...storeIdFilter }
       }),
       // Inventory Low Stock
       this.prisma.inventory.count({
@@ -69,39 +74,39 @@ export class DashboardService {
       }),
       // Purchase Count
       this.prisma.purchase.count({
-        where: { tenantId, createdAt: { gte: start, lte: end }, ...storeIdFilter }
+        where: { tenantId, ...dateFilter, ...storeIdFilter }
       }),
       // Purchase Aggregate
       this.prisma.purchase.aggregate({
         _sum: { grandTotal: true },
-        where: { tenantId, createdAt: { gte: start, lte: end }, ...storeIdFilter }
+        where: { tenantId, ...dateFilter, ...storeIdFilter }
       }),
       // Active Customers
       this.prisma.customer.count({
-        where: { tenantId, status: CustomerStatus.ACTIVE, createdAt: { lte: end } }
+        where: { tenantId, status: CustomerStatus.ACTIVE }
       }),
       // Active Suppliers
       this.prisma.supplier.count({
-        where: { tenantId, status: SupplierStatus.ACTIVE, createdAt: { lte: end } }
+        where: { tenantId, status: SupplierStatus.ACTIVE }
       }),
-      // Today Metrics (Using same start/end but let's assume it's for the requested date range which defaults to today anyway)
+      // Today Metrics (Always strictly today)
       this.prisma.sale.count({
-        where: { tenantId, status: SaleStatus.COMPLETED, createdAt: { gte: start, lte: end }, ...storeIdFilter }
+        where: { tenantId, status: SaleStatus.COMPLETED, createdAt: { gte: todayStart, lte: todayEnd }, ...storeIdFilter }
       }),
       this.prisma.customer.count({
-        where: { tenantId, status: CustomerStatus.ACTIVE, createdAt: { gte: start, lte: end } }
+        where: { tenantId, status: CustomerStatus.ACTIVE, createdAt: { gte: todayStart, lte: todayEnd } }
       }),
       this.prisma.saleReturn.count({
-        where: { tenantId, status: ReturnStatus.COMPLETED, createdAt: { gte: start, lte: end }, ...storeIdFilter }
+        where: { tenantId, status: ReturnStatus.COMPLETED, createdAt: { gte: todayStart, lte: todayEnd }, ...storeIdFilter }
       }),
       this.prisma.purchase.count({
-        where: { tenantId, createdAt: { gte: start, lte: end }, ...storeIdFilter }
+        where: { tenantId, createdAt: { gte: todayStart, lte: todayEnd }, ...storeIdFilter }
       })
     ]);
 
     // Top Selling Products (by quantity) - Need to fetch sale IDs first since groupBy doesn't support relation filters
     const matchingSales = await this.prisma.sale.findMany({
-      where: { tenantId, status: SaleStatus.COMPLETED, createdAt: { gte: start, lte: end }, ...storeIdFilter },
+      where: { tenantId, status: SaleStatus.COMPLETED, ...dateFilter, ...storeIdFilter },
       select: { id: true }
     });
     const saleIds = matchingSales.map(s => s.id);

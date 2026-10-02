@@ -21,6 +21,7 @@ export interface User {
   status: UserStatus;
   roleId: string;
   storeId: string | null;
+  pinCode?: string;
   role?: UserRole;
   store?: UserStore | null;
 }

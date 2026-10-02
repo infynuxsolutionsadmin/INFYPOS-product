@@ -13,6 +13,70 @@ export class ShiftsService {
     private auditService: AuditService,
   ) {}
 
+  async findAll(tenantId: string, query: any) {
+    const {
+      page = 1,
+      limit = 10,
+      storeId,
+      userId,
+      status,
+      startDate,
+      endDate,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
+
+    const skip = (page - 1) * limit;
+    const where: any = { tenantId };
+
+    if (storeId) {
+      where.storeId = storeId;
+    }
+
+    if (userId) {
+      where.openedById = userId;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        where.createdAt.lte = new Date(endDate);
+      }
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.shift.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+        include: {
+          store: { select: { id: true, name: true, code: true } },
+          openedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+          closedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+        },
+      }),
+      this.prisma.shift.count({ where }),
+    ]);
+
+    return {
+      items,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        page,
+        limit,
+      },
+    };
+  }
+
   async openShift(tenantId: string, storeId: string, userId: string, dto: OpenShiftDto) {
     if (!storeId) {
       throw new BadRequestException('You must be assigned to a store to open a shift.');

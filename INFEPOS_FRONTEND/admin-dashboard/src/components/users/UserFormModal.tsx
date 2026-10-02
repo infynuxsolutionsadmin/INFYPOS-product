@@ -20,6 +20,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+  const [generatedPin, setGeneratedPin] = useState<string | null>(null);
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -65,16 +66,20 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
         setRoles(rolesData);
         setStores(storesData.items);
       }).finally(() => setDataLoading(false));
+      setGeneratedPin(null);
     }
   }, [isOpen, user]);
 
   if (!isOpen) return null;
 
+  const selectedRole = roles.find(r => r.id === roleId);
+  const isCashier = selectedRole?.code === 'CASHIER';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!isEdit) {
+    if (!isEdit && !isCashier) {
       if (password.length < 8) {
         setError('Password must be at least 8 characters.');
         return;
@@ -99,14 +104,19 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
       } else {
         const payload: CreateUserPayload = {
           firstName,
-          email,
           roleId,
-          password,
         };
+        if (email) payload.email = email;
+        if (!isCashier && password) payload.password = password;
         if (lastName) payload.lastName = lastName;
         if (phone) payload.phone = phone;
         if (storeId) payload.storeId = storeId;
-        await createUser(payload);
+        const newUser = await createUser(payload);
+        if (newUser.pinCode) {
+          setGeneratedPin(newUser.pinCode);
+          onSuccess();
+          return; // Don't close modal yet
+        }
       }
       onSuccess();
       onClose();
@@ -130,7 +140,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex justify-between items-center mb-5 border-b pb-3">
               <h3 className="text-lg font-medium text-gray-900">
-                {isEdit ? 'Edit User' : 'Add New User'}
+                {generatedPin ? 'User Created Successfully' : (isEdit ? 'Edit User' : 'Add New User')}
               </h3>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
                 <X className="h-6 w-6" />
@@ -141,6 +151,31 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
               <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">{error}</div>
             )}
 
+            {generatedPin ? (
+              <div className="text-center py-6">
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                  <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-medium text-gray-900 mb-2">Cashier Account Created</h3>
+                <p className="text-gray-500 mb-6">
+                  Please provide this securely generated PIN to the cashier. They will need it to clock in.
+                </p>
+                <div className="bg-gray-100 p-6 rounded-lg inline-block shadow-inner mb-6">
+                  <span className="text-4xl font-mono font-bold tracking-widest text-blue-600">{generatedPin}</span>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 rounded-b-lg border-t mt-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-8 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:text-sm"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -168,10 +203,10 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700">Email {!isCashier && '*'}</label>
                   <input
                     type="email"
-                    required
+                    required={!isCashier}
                     maxLength={255}
                     disabled={isEdit}
                     value={email}
@@ -179,6 +214,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                   />
                   {isEdit && <p className="text-xs text-gray-400 mt-1">Email cannot be changed after creation.</p>}
+                  {isCashier && !isEdit && <p className="text-xs text-gray-400 mt-1">Optional for Cashiers</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Phone</label>
@@ -244,7 +280,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
                 </div>
               )}
 
-              {!isEdit && (
+              {!isEdit && !isCashier && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Password *</label>
@@ -276,6 +312,14 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
                 </div>
               )}
 
+              {!isEdit && isCashier && (
+                <div className="bg-blue-50 p-4 rounded-md flex">
+                  <p className="text-sm text-blue-700">
+                    A secure, unique 4-digit PIN will be automatically generated for this cashier instead of a password.
+                  </p>
+                </div>
+              )}
+
               <div className="bg-gray-50 px-4 py-3 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 rounded-b-lg border-t flex flex-row-reverse gap-3">
                 <button
                   type="submit"
@@ -294,6 +338,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       </div>

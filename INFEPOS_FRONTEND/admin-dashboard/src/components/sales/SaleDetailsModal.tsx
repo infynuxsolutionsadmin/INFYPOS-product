@@ -51,6 +51,44 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handlePrint = () => {
+    const printArea = document.getElementById('sale-receipt-print-area');
+    if (!printArea) return;
+    
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Print Receipt - ${sale?.saleNumber || 'Sale'}</title>
+            <style>
+              body { font-family: sans-serif; padding: 20px; color: #000; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f9f9f9; }
+              .text-right { text-align: right; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+              .totals { float: right; width: 300px; border: 1px solid #ddd; padding: 10px; }
+              .totals div { display: flex; justify-content: space-between; margin-bottom: 5px; }
+              .totals .grand-total { font-weight: bold; font-size: 1.1em; border-top: 1px solid #ddd; padding-top: 5px; }
+              .header { font-size: 1.2em; font-weight: bold; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+            </style>
+          </head>
+          <body>
+            <div class="header">Sale Receipt: ${sale?.saleNumber || ''}</div>
+            ${printArea.innerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -79,7 +117,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
             ) : error ? (
               <div className="bg-red-50 p-4 text-red-600 rounded text-sm">{error}</div>
             ) : sale ? (
-              <div className="space-y-6">
+              <div className="space-y-6" id="sale-receipt-print-area">
                 {/* Sale Info Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg">
                   <div>
@@ -200,6 +238,14 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
               className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
             >
               Close
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              disabled={!sale}
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+            >
+              Print Receipt
             </button>
           </div>
         </div>

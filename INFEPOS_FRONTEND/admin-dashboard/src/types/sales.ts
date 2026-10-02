@@ -59,6 +59,7 @@ export interface FindSalesQuery {
   endDate?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  search?: string;
 }
 
 export interface ReturnableItem {

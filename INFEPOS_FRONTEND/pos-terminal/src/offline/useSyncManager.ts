@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { syncOperations } from '../api/sync.api';
 import { getPendingSyncEvents, markSyncEventCompleted, isDesktopApp } from '../services/localDb';
+import { useSyncStore } from '../stores/syncStore';
 
 export const useSyncManager = () => {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
@@ -21,47 +22,85 @@ export const useSyncManager = () => {
   }, [handleOnline, handleOffline]);
 
   const fetchPendingCount = useCallback(async () => {
-    if (!isDesktopApp()) return;
+    let count = 0;
     try {
-      const pending = await getPendingSyncEvents();
-      setPendingCount(pending.length);
+      if (isDesktopApp()) {
+        const pendingDb = await getPendingSyncEvents();
+        count += pendingDb.length;
+      }
+      
+      const { getPendingEvents } = useSyncStore.getState();
+      count += getPendingEvents().length;
+      
+      setPendingCount(count);
     } catch (err) {
       console.error('Error fetching pending count', err);
     }
   }, []);
 
   const processSyncQueue = useCallback(async () => {
-    if (!isOnline || isSyncing || !isDesktopApp()) return;
+    if (!isOnline || isSyncing) return;
 
     try {
-      const pending = await getPendingSyncEvents();
-      if (pending.length === 0) {
-        setPendingCount(0);
-        return;
-      }
-
       setIsSyncing(true);
-
-      const payload = {
-        deviceId,
-        events: pending.map((e: any) => ({
+      let allEvents: any[] = [];
+      let dbPending: any[] = [];
+      
+      if (isDesktopApp()) {
+        dbPending = await getPendingSyncEvents();
+        allEvents = [...dbPending.map((e: any) => ({
           eventId: e.id,
           eventType: e.type,
           occurredAt: e.createdAt,
           payload: JSON.parse(e.payload),
-        })),
+          source: 'sqlite'
+        }))];
+      }
+
+      const { getPendingEvents, updateEventStatus } = useSyncStore.getState();
+      const webPending = getPendingEvents();
+      allEvents = [...allEvents, ...webPending.map((e) => ({
+        eventId: e.eventId,
+        eventType: e.eventType,
+        occurredAt: e.occurredAt,
+        payload: e.payload,
+        source: 'zustand'
+      }))];
+
+      if (allEvents.length === 0) {
+        setPendingCount(0);
+        return;
+      }
+
+      const payload = {
+        deviceId,
+        events: allEvents.map(({ source, ...event }) => {
+          if (event.eventType === 'SALE' && !event.payload.payments) {
+             event.payload.payments = [{
+                paymentMethod: event.payload.paymentMethod || 'CASH',
+                amount: event.payload.grandTotal || event.payload.amount || 9999.99 
+             }];
+             delete event.payload.paymentMethod;
+          }
+          return event;
+        }),
       };
 
       const response = await syncOperations(payload);
 
-      // Mark successful and already processed as COMPLETED
       const successIds = [
         ...response.processed.map((r: any) => r.eventId),
         ...response.alreadyProcessed.map((r: any) => r.eventId),
       ];
       
       for (const id of successIds) {
-        await markSyncEventCompleted(id);
+        // Find which source it belonged to
+        const eventItem = allEvents.find(e => e.eventId === id);
+        if (eventItem?.source === 'sqlite') {
+          await markSyncEventCompleted(id);
+        } else if (eventItem?.source === 'zustand') {
+          updateEventStatus(id, 'COMPLETED');
+        }
       }
       
     } catch (error: any) {

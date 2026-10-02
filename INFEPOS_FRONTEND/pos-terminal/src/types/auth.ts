@@ -1,5 +1,5 @@
 export interface LoginRequest {
-  storeCode: string;
+  tenantCode: string;
   email: string;
   password: string;
 }

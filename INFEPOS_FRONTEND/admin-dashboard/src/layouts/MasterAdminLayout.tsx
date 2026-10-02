@@ -3,7 +3,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 
 const MasterAdminLayout: React.FC = () => {
-  const { isAuthenticated, _hasHydrated, user } = useAuthStore();
+  const { isAuthenticated, _hasHydrated, user, clearAuth } = useAuthStore();
 
   if (!_hasHydrated) return null;
 
@@ -34,7 +34,15 @@ const MasterAdminLayout: React.FC = () => {
       <div className="flex flex-col w-0 flex-1 overflow-hidden">
         <header className="bg-white shadow relative z-10 h-16 flex items-center justify-between px-4">
            <div className="font-semibold text-lg">System Dashboard</div>
-           <div className="text-gray-600">{user?.email}</div>
+           <div className="flex items-center gap-4 text-gray-600">
+             <span>{user?.email}</span>
+             <button
+               onClick={() => clearAuth()}
+               className="text-sm px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded border border-red-200 transition-colors"
+             >
+               Logout
+             </button>
+           </div>
         </header>
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
           <div className="py-6 px-4 sm:px-6 md:px-8">

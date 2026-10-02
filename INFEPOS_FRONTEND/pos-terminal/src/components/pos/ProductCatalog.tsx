@@ -11,6 +11,7 @@ const ProductCatalog: React.FC = () => {
   const [search, setSearch] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -50,6 +51,28 @@ const ProductCatalog: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  const forceSyncCatalog = async () => {
+    setIsSyncing(true);
+    setError(null);
+    try {
+      // Force fetch latest from cloud and save to local
+      const { syncProductsToLocalDb } = await import('../../services/localDb');
+      const client = (await import('../../api/client')).default;
+      const res = await client.get('/products', { params: { status: 'ACTIVE', limit: 10000 } });
+      const cloudItems = res.data.data.items || [];
+      if (cloudItems.length > 0) {
+        await syncProductsToLocalDb(cloudItems);
+      }
+      // Re-fetch local to show updated catalog
+      fetchProducts(search, 1, selectedCategory);
+    } catch (err: any) {
+      console.error('Manual catalog sync failed:', err);
+      setError('Failed to sync catalog with cloud.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Debounced search
   useEffect(() => {
@@ -161,8 +184,33 @@ const ProductCatalog: React.FC = () => {
               }}
             >
               <X size={16} />
-            </button>
-          )}
+              </button>
+            )}
+          </div>
+          
+          <button
+            onClick={forceSyncCatalog}
+            disabled={isSyncing}
+            style={{
+              marginLeft: '0.75rem',
+              padding: '0 1rem',
+              height: '42px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.05)',
+              color: 'var(--pos-text)',
+              cursor: isSyncing ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontWeight: 500,
+              flexShrink: 0
+            }}
+            title="Force refresh catalog from cloud"
+          >
+            {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <ScanBarcode size={16} />}
+            <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Sync Catalog'}</span>
+          </button>
         </div>
 
         {/* Category filter pills */}

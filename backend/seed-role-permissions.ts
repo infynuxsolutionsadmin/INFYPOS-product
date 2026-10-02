@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 const ROLE_PERMISSIONS = {
   CASHIER: [
-    'shifts.open', 'shifts.close', 'shifts.xreport',
+    'shifts.open', 'shifts.close', 'shifts.xreport', 'shifts.zreport',
     'sales.create', 'sales.read',
     'products.read',
     'inventory.read',

@@ -1,6 +1,6 @@
 import client from './client';
 import type { Product, FindProductsQuery, PaginatedProducts, BackendResponse } from '../types/product';
-import { isDesktopApp, queryLocalDb } from '../services/localDb';
+import { isDesktopApp, queryLocalDb, syncProductsToLocalDb } from '../services/localDb';
 
 /**
  * GET /products
@@ -20,10 +20,10 @@ export const getProducts = async (query?: FindProductsQuery): Promise<PaginatedP
     const params: any[] = [];
 
     if (search) {
-      sql += ' AND (LOWER(name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(categoryId) LIKE ?)';
-      countSql += ' AND (LOWER(name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(categoryId) LIKE ?)';
+      sql += ' AND (LOWER(name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(barcode) LIKE ? OR LOWER(categoryId) LIKE ?)';
+      countSql += ' AND (LOWER(name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(barcode) LIKE ? OR LOWER(categoryId) LIKE ?)';
       const term = `%${search}%`;
-      params.push(term, term, term);
+      params.push(term, term, term, term);
     }
     
     if (category) {
@@ -48,8 +48,6 @@ export const getProducts = async (query?: FindProductsQuery): Promise<PaginatedP
           const cloudItems = response.data.data.items;
           
           if (cloudItems && cloudItems.length > 0) {
-            // dynamically import to avoid circular dependencies
-            const { syncProductsToLocalDb } = await import('../services/localDb');
             await syncProductsToLocalDb(cloudItems);
             
             // Return the cloud items immediately for this request

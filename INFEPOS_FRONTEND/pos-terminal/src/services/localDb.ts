@@ -22,7 +22,13 @@ export const queryLocalDb = async (sql: string, ...params: any[]) => {
 export const queueSyncEvent = async (type: string, payload: any) => {
   if (!isDesktopApp()) return false;
   
-  const id = crypto.randomUUID();
+  let id: string;
+  try {
+    id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  } catch (e) {
+    id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  }
+  
   const payloadStr = JSON.stringify(payload);
   
   await queryLocalDb(
@@ -49,8 +55,33 @@ export const syncProductsToLocalDb = async (products: any[]) => {
   // Basic sync: just insert or replace products in the local DB
   for (const p of products) {
     await queryLocalDb(
-      `INSERT OR REPLACE INTO products (id, name, price, vatRate, sku, categoryId) VALUES (?, ?, ?, ?, ?, ?)`,
-      p.id, p.name, p.sellingPrice || 0, p.vatRate || 20, p.sku || '', p.category?.name || p.categoryId || ''
+      `INSERT OR REPLACE INTO products (id, name, price, vatRate, sku, barcode, categoryId) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      p.id, p.name, p.sellingPrice || 0, p.vatRate || 20, p.sku || '', p.barcode || '', p.category?.name || p.categoryId || ''
     );
   }
+};
+
+export const syncCashiersToLocalDb = async (cashiers: any[]) => {
+  if (!isDesktopApp()) {
+    localStorage.setItem('pos-cashiers-cache', JSON.stringify(cashiers));
+    return;
+  }
+  
+  for (const c of cashiers) {
+    await queryLocalDb(
+      `INSERT OR REPLACE INTO cashiers (id, firstName, lastName, pinCodeHash) VALUES (?, ?, ?, ?)`,
+      c.id, c.firstName, c.lastName || '', c.pinCodeHash || ''
+    );
+  }
+};
+
+export const getLocalCashiers = async (): Promise<any[]> => {
+  if (!isDesktopApp()) {
+    try {
+      return JSON.parse(localStorage.getItem('pos-cashiers-cache') || '[]');
+    } catch {
+      return [];
+    }
+  }
+  return queryLocalDb(`SELECT * FROM cashiers`);
 };

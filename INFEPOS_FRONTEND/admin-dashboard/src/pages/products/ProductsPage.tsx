@@ -9,6 +9,36 @@ import Barcode from 'react-barcode';
 
 const BarcodeModal = ({ isOpen, onClose, product }: { isOpen: boolean, onClose: () => void, product: Product | null }) => {
   if (!isOpen || !product) return null;
+
+  const handlePrint = () => {
+    const printArea = document.getElementById('barcode-print-area');
+    if (!printArea) return;
+    
+    const printWindow = window.open('', '', 'width=600,height=400');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Print Barcode - ${product.name}</title>
+            <style>
+              body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; }
+              .product-name { font-size: 14px; margin-bottom: 10px; color: #555; }
+            </style>
+          </head>
+          <body>
+            ${printArea.innerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-75 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
@@ -19,12 +49,23 @@ const BarcodeModal = ({ isOpen, onClose, product }: { isOpen: boolean, onClose: 
           </button>
         </div>
         <div className="p-6 flex flex-col items-center justify-center">
-          <p className="text-sm text-gray-500 mb-4">{product.name}</p>
-          {product.barcode ? (
-             <Barcode value={product.barcode} width={2} height={100} displayValue={true} />
-          ) : (
-             <p className="text-red-500 font-medium">This product does not have a barcode assigned.</p>
-          )}
+          <div id="barcode-print-area" className="flex flex-col items-center">
+            <p className="text-sm text-gray-500 mb-4 product-name">{product.name}</p>
+            {product.barcode ? (
+               <Barcode value={product.barcode} width={2} height={100} displayValue={true} />
+            ) : (
+               <p className="text-red-500 font-medium">This product does not have a barcode assigned.</p>
+            )}
+          </div>
+        </div>
+        <div className="p-4 border-t border-gray-200 flex justify-end bg-gray-50 rounded-b-lg">
+           <button 
+             onClick={handlePrint}
+             disabled={!product.barcode}
+             className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+           >
+             Print Barcode
+           </button>
         </div>
       </div>
     </div>

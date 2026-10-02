@@ -44,4 +44,8 @@ export class FindSalesQueryDto {
   @Transform(({ value }) => value?.toLowerCase())
   @IsEnum(['asc', 'desc'])
   sortOrder?: 'asc' | 'desc' = 'desc';
+
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

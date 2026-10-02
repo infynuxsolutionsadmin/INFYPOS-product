@@ -30,6 +30,7 @@ function initDb() {
         price REAL NOT NULL,
         vatRate REAL NOT NULL,
         sku TEXT,
+        barcode TEXT,
         categoryId TEXT
       );
     `);
@@ -48,6 +49,23 @@ function initDb() {
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    db!.run(`
+      CREATE TABLE IF NOT EXISTS cashiers (
+        id TEXT PRIMARY KEY,
+        firstName TEXT NOT NULL,
+        lastName TEXT,
+        pinCodeHash TEXT
+      );
+    `);
+    
+    // Migration: Add barcode column if it doesn't exist
+    db!.all("PRAGMA table_info(products)", (err, columns) => {
+      if (!err && columns && !columns.some((c: any) => c.name === 'barcode')) {
+        db!.run("ALTER TABLE products ADD COLUMN barcode TEXT", (err) => {
+          if (!err) console.log("Added barcode column to products table");
+        });
+      }
+    });
   });
 }
 
@@ -97,23 +115,37 @@ ipcMain.handle('db:query', (event, sql, ...params) => {
     let stmt = statementCache.get(sql);
     
     if (!stmt) {
-      stmt = db.prepare(sql, (err) => {
-        if (err) return reject(err);
-      });
-      // Cache the compiled binary statement to eliminate future parsing overhead
-      statementCache.set(sql, stmt);
+      try {
+        stmt = db.prepare(sql, (err) => {
+          if (err) {
+            // Remove from cache if prepare failed
+            statementCache.delete(sql);
+            return reject(err);
+          }
+        });
+        // Cache the compiled binary statement
+        statementCache.set(sql, stmt);
+      } catch (err) {
+        return reject(err);
+      }
     }
     
-    if (sql.trim().toLowerCase().startsWith('select')) {
-      stmt.all(params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    } else {
-      stmt.run(params, function (err) {
-        if (err) reject(err);
-        else resolve({ changes: this.changes, lastInsertRowid: this.lastID });
-      });
-    }
+    // Wait for the next tick to ensure prepare callback is executed if it was just created
+    process.nextTick(() => {
+      // If stmt was deleted from cache, it means prepare failed
+      if (!statementCache.has(sql)) return;
+      
+      if (sql.trim().toLowerCase().startsWith('select') || sql.trim().toLowerCase().startsWith('pragma')) {
+        stmt!.all(params, (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        });
+      } else {
+        stmt!.run(params, function (err) {
+          if (err) reject(err);
+          else resolve({ changes: this.changes, lastInsertRowid: this.lastID });
+        });
+      }
+    });
   });
 });

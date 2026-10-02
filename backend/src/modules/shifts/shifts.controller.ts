@@ -1,7 +1,8 @@
-import { Controller, Post, Get, Body, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Req, UseGuards, Query } from '@nestjs/common';
 import { ShiftsService } from './shifts.service';
 import { OpenShiftDto } from './dto/open-shift.dto';
 import { CloseShiftDto } from './dto/close-shift.dto';
+import { FindShiftsQueryDto } from './dto/find-shifts-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -10,6 +11,18 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ShiftsController {
   constructor(private readonly shiftsService: ShiftsService) {}
+
+  @Get()
+  @Permissions('shifts.read')
+  async findAll(@Req() req, @Query() query: FindShiftsQueryDto) {
+    const result = await this.shiftsService.findAll(req.user.tenantId, query);
+    return {
+      success: true,
+      statusCode: 200,
+      timestamp: new Date().toISOString(),
+      data: result,
+    };
+  }
 
   @Post('open')
   @Permissions('shifts.open')

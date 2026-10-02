@@ -228,11 +228,14 @@ export class SalesService {
               create: saleItemsToCreate,
             },
             payments: {
-              create: dto.payments.map(p => ({
+              create: dto.payments ? dto.payments.map(p => ({
                 paymentMethod: p.paymentMethod,
                 amount: p.amount,
                 transactionReference: p.transactionReference
-              }))
+              })) : [{
+                paymentMethod: (dto as any).paymentMethod || PaymentMethod.CASH,
+                amount: grandTotal,
+              }]
             }
           },
           include: {
@@ -307,6 +310,7 @@ export class SalesService {
       endDate,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      search,
     } = query;
 
     const skip = (page - 1) * limit;
@@ -321,6 +325,20 @@ export class SalesService {
       if (startDate) where.createdAt.gte = new Date(startDate);
       if (endDate) where.createdAt.lte = new Date(endDate);
     }
+    
+    if (search) {
+      where.OR = [
+        { saleNumber: { contains: search, mode: 'insensitive' } },
+        { customerName: { contains: search, mode: 'insensitive' } },
+        {
+          items: {
+            some: {
+              productName: { contains: search, mode: 'insensitive' }
+            }
+          }
+        }
+      ];
+    }
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.sale.count({ where }),
@@ -331,13 +349,23 @@ export class SalesService {
         orderBy: {
           [sortBy]: sortOrder,
         },
+        include: {
+          payments: true
+        }
       }),
     ]);
 
     const pages = Math.ceil(total / limit);
 
+    const mappedItems = items.map(item => ({
+      ...item,
+      paymentMethod: item.payments && item.payments.length > 0 
+        ? (item.payments.length > 1 ? 'MULTI' : item.payments[0].paymentMethod) 
+        : 'UNKNOWN'
+    }));
+
     return {
-      items,
+      items: mappedItems,
       pagination: {
         page,
         limit,

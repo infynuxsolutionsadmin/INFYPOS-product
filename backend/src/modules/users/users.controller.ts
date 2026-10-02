@@ -63,4 +63,13 @@ export class UsersController {
   ) {
     return this.usersService.remove(tenantId, id, currentUserId);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('cashiers/:storeId')
+  async getCashiersForStore(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('storeId', ParseUUIDPipe) storeId: string,
+  ) {
+    return this.usersService.getCashiersForStore(tenantId, storeId);
+  }
 }

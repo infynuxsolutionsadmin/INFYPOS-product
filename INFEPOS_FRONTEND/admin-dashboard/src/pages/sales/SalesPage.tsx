@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, Search } from 'lucide-react';
+import { Eye, Search, Printer } from 'lucide-react';
 import type { Sale, FindSalesQuery, SaleStatus } from '../../types/sales';
 import { getSales } from '../../api/sales.api';
 import { useAuthStore } from '../../stores/authStore';
@@ -28,6 +28,7 @@ const SalesPage: React.FC = () => {
     status: undefined,
     startDate: undefined,
     endDate: undefined,
+    search: '',
   });
 
   const [totalPages, setTotalPages] = useState(1);
@@ -54,6 +55,7 @@ const SalesPage: React.FC = () => {
       if (query.endDate) params.endDate = query.endDate;
       if (query.sortBy) params.sortBy = query.sortBy;
       if (query.sortOrder) params.sortOrder = query.sortOrder;
+      if (query.search) params.search = query.search;
 
       const data = await getSales(params);
       setSales(data.items);
@@ -68,12 +70,20 @@ const SalesPage: React.FC = () => {
   }, [query, canRead]);
 
   useEffect(() => {
-    fetchSales();
+    const delayDebounceFn = setTimeout(() => {
+      fetchSales();
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
   }, [fetchSales]);
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     setQuery(prev => ({ ...prev, status: val ? (val as SaleStatus) : undefined, page: 1 }));
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(prev => ({ ...prev, search: e.target.value, page: 1 }));
   };
 
   const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
@@ -89,6 +99,43 @@ const SalesPage: React.FC = () => {
     setIsDetailsOpen(true);
   };
 
+  const handlePrint = () => {
+    const printArea = document.getElementById('sales-table-print-area');
+    if (!printArea) return;
+    
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Print Sales Page</title>
+            <style>
+              body { font-family: sans-serif; padding: 20px; color: #000; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f9f9f9; }
+              .text-right { text-align: right; }
+              .text-center { text-align: center; }
+              .sr-only { display: none; }
+              .header { font-size: 1.5em; font-weight: bold; margin-bottom: 20px; text-align: center; }
+              button { display: none; } /* Hide action buttons in print */
+            </style>
+          </head>
+          <body>
+            <div class="header">Sales Report</div>
+            ${printArea.innerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
       <div className="flex justify-between items-center mb-6">
@@ -96,7 +143,14 @@ const SalesPage: React.FC = () => {
           <h1 className="text-2xl font-semibold text-gray-900">Sales</h1>
           <p className="mt-1 text-sm text-gray-500">Manage and review sales transactions.</p>
         </div>
-        {/* Create Sale is not available in the Admin Dashboard — sales are created through the POS Terminal with an open shift */}
+        <button
+          onClick={handlePrint}
+          disabled={sales.length === 0}
+          className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+        >
+          <Printer className="-ml-1 mr-2 h-5 w-5 text-gray-500" aria-hidden="true" />
+          Print Page
+        </button>
       </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
@@ -134,8 +188,17 @@ const SalesPage: React.FC = () => {
               className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             />
           </div>
-          <div className="sm:ml-auto text-xs text-gray-400 italic self-end pb-2">
-            Note: Search by sale number or customer is not supported by the backend query API.
+          <div className="relative rounded-md shadow-sm flex-1 min-w-[200px]">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={query.search || ''}
+              onChange={handleSearchChange}
+              className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 px-3 border"
+              placeholder="Search by sale #, customer, or product..."
+            />
           </div>
         </div>
 
@@ -152,7 +215,7 @@ const SalesPage: React.FC = () => {
             <p className="text-sm mt-1 text-gray-400">Sales are created through the POS Terminal.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" id="sales-table-print-area">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>

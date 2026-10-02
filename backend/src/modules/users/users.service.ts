@@ -37,20 +37,46 @@ export class UsersService {
       }
     }
 
-    const existingUser = await this.prisma.user.findUnique({
-      where: {
-        tenantId_email: {
-          tenantId,
-          email: dto.email,
+    if (dto.email) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: {
+          tenantId_email: {
+            tenantId,
+            email: dto.email,
+          },
         },
-      },
-    });
+      });
 
-    if (existingUser) {
-      throw new ConflictException('Email already in use');
+      if (existingUser) {
+        throw new ConflictException('Email already in use');
+      }
     }
 
-    const passwordHash = await this.passwordService.hash(dto.password);
+    const passwordHash = dto.password ? await this.passwordService.hash(dto.password) : null;
+
+    let plainPinCode = null;
+    let pinCodeHash = null;
+
+    if (role.code === 'CASHIER' && dto.storeId) {
+      // Fetch all active cashiers in this store to guarantee uniqueness
+      const storeCashiers = await this.prisma.user.findMany({
+        where: { storeId: dto.storeId, role: { code: 'CASHIER' }, status: 'ACTIVE' },
+        select: { pinCodeHash: true }
+      });
+
+      let isUnique = false;
+      while (!isUnique) {
+        plainPinCode = Math.floor(1000 + Math.random() * 9000).toString();
+        isUnique = true;
+        for (const cashier of storeCashiers) {
+          if (cashier.pinCodeHash && await this.passwordService.compare(plainPinCode, cashier.pinCodeHash)) {
+            isUnique = false;
+            break;
+          }
+        }
+      }
+      pinCodeHash = await this.passwordService.hash(plainPinCode);
+    }
 
     const user = await this.prisma.user.create({
       data: {
@@ -60,6 +86,7 @@ export class UsersService {
         email: dto.email,
         phone: dto.phone,
         passwordHash,
+        pinCodeHash,
         roleId: dto.roleId,
         storeId: dto.storeId,
         status: UserStatus.ACTIVE,
@@ -75,7 +102,7 @@ export class UsersService {
       },
     });
 
-    return user;
+    return { ...user, pinCode: plainPinCode };
   }
 
   async findAll(tenantId: string, query: FindUsersQueryDto) {
@@ -163,6 +190,24 @@ export class UsersService {
         pages,
       },
     };
+  }
+
+  async getCashiersForStore(tenantId: string, storeId: string) {
+    const cashiers = await this.prisma.user.findMany({
+      where: {
+        tenantId,
+        storeId,
+        status: UserStatus.ACTIVE,
+        role: { code: 'CASHIER' }
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        pinCodeHash: true,
+      }
+    });
+    return cashiers;
   }
 
   async findOne(tenantId: string, id: string) {
@@ -257,6 +302,10 @@ export class UsersService {
 
         updates.storeId = dto.storeId;
       }
+    }
+
+    if (dto.pinCode) {
+      updates.pinCodeHash = await this.passwordService.hash(dto.pinCode);
     }
 
     if (Object.keys(updates).length === 0) {

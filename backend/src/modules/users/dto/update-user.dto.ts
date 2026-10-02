@@ -28,4 +28,8 @@ export class UpdateUserDto {
   @IsEnum(UserStatus)
   @IsOptional()
   status?: UserStatus;
+
+  @IsString()
+  @IsOptional()
+  pinCode?: string;
 }

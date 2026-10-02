@@ -20,9 +20,9 @@ export class CreateUserDto {
   lastName?: string;
 
   @IsEmail()
-  @IsNotEmpty()
+  @IsOptional()
   @MaxLength(255)
-  email: string;
+  email?: string;
 
   @IsString()
   @IsOptional()
@@ -38,8 +38,8 @@ export class CreateUserDto {
   storeId?: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MinLength(8)
   @MaxLength(100)
-  password: string;
+  password?: string;
 }
