@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, Settings, ShoppingCart, Store, ClipboardList, Shield, CornerUpLeft } from 'lucide-react';
-
+import { LayoutDashboard, Package, Users, Settings, ShoppingCart, Store, ClipboardList, Shield, CornerUpLeft, Clock } from 'lucide-react';
+import { useAuthStore } from '../../stores/authStore';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -10,13 +10,15 @@ const navigation = [
   { name: 'Inventory', href: '/inventory', icon: ClipboardList },
   { name: 'Sales', href: '/sales', icon: ShoppingCart },
   { name: 'Returns', href: '/sales-returns', icon: CornerUpLeft },
-
+  { name: 'Shifts', href: '/shifts', icon: Clock, permission: 'shifts.read' },
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Roles & Permissions', href: '/roles-permissions', icon: Shield },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 const Sidebar: React.FC = () => {
+  const { hasPermission } = useAuthStore();
+
   return (
     <div className="flex flex-col w-64 bg-gray-800 border-r border-gray-700">
       <div className="flex items-center justify-center h-16 bg-gray-900">
@@ -24,8 +26,10 @@ const Sidebar: React.FC = () => {
       </div>
       <div className="flex-1 overflow-y-auto">
         <nav className="px-2 py-4 space-y-1">
-          {navigation.map((item) => (
-            <NavLink
+          {navigation.map((item) => {
+            if (item.permission && !hasPermission(item.permission)) return null;
+            return (
+              <NavLink
               key={item.name}
               to={item.href}
               className={({ isActive }) =>
@@ -42,7 +46,8 @@ const Sidebar: React.FC = () => {
               />
               {item.name}
             </NavLink>
-          ))}
+            );
+          })}
         </nav>
       </div>
     </div>

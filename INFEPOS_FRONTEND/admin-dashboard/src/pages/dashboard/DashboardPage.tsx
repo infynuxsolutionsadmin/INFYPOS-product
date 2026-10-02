@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getDashboardSummary } from '../../api/dashboard.api';
 import { useAuthStore } from '../../stores/authStore';
 import type { DashboardSummary } from '../../types/dashboard';
@@ -13,25 +13,39 @@ const DashboardPage: React.FC = () => {
 
   const fmt = (n: any) => `£${Number(n || 0).toFixed(2)}`;
 
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      if (!canReadDashboard) {
-        setLoading(false);
-        setError('You do not have permission to view dashboard.');
-        return;
-      }
-      try {
+  const fetchDashboard = useCallback(async (isPolling = false) => {
+    if (!canReadDashboard) {
+      setLoading(false);
+      setError('You do not have permission to view dashboard.');
+      return;
+    }
+    try {
+      if (!isPolling) {
         setLoading(true);
-        const data = await getDashboardSummary({});
-        setSummary(data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || err.message || 'Failed to fetch dashboard');
-      } finally {
-        setLoading(false);
+        setError(null);
       }
-    };
-    fetchDashboard();
+      const data = await getDashboardSummary({});
+      setSummary(data);
+    } catch (err: any) {
+      if (!isPolling) {
+        setError(err.response?.data?.message || err.message || 'Failed to fetch dashboard');
+      } else {
+        console.error('Polling error:', err);
+      }
+    } finally {
+      if (!isPolling) setLoading(false);
+    }
   }, [canReadDashboard]);
+
+  useEffect(() => {
+    fetchDashboard();
+    
+    const interval = setInterval(() => {
+      fetchDashboard(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [fetchDashboard]);
 
   if (!canReadDashboard) {
     return <div className="p-4 text-red-500 text-center">{error || 'You do not have permission to view dashboard.'}</div>;

@@ -130,11 +130,11 @@ const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({ onClose }) => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0', color: 'var(--pos-danger)' }}>
                 <span>Discounts:</span>
-                <span>-{fmt(xReport.totalDiscounts)}</span>
+                <span>-{fmt(xReport.totalDiscounts || 0)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0', color: 'var(--pos-danger)' }}>
                 <span>Returns:</span>
-                <span>-{fmt(xReport.totalReturns)}</span>
+                <span>-{fmt(xReport.totalReturns || 0)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0' }}>
                 <span>Net Sales:</span>
@@ -144,7 +144,7 @@ const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({ onClose }) => {
               <div style={{ borderBottom: '1px dashed var(--pos-border)', margin: '1rem 0' }} />
               
               <h4 style={{ marginBottom: '0.5rem' }}>Payment Methods:</h4>
-              {Object.entries(xReport.payments).map(([method, amount]: [string, any]) => (
+              {Object.entries(xReport.paymentTotals || {}).map(([method, amount]: [string, any]) => (
                 <div key={method} style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0', paddingLeft: '1rem' }}>
                   <span>{method}:</span>
                   <span>{fmt(amount)}</span>
@@ -205,11 +205,11 @@ const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({ onClose }) => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0' }}>
                 <span>Total Discounts:</span>
-                <span>-{fmt(zReport.totalDiscounts)}</span>
+                <span>-{fmt(zReport.totalDiscounts || 0)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0' }}>
                 <span>Total Returns:</span>
-                <span>-{fmt(zReport.totalReturns)}</span>
+                <span>-{fmt(zReport.totalReturns || 0)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0', fontWeight: 'bold' }}>
                 <span>Net Sales:</span>
@@ -219,7 +219,7 @@ const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({ onClose }) => {
               <div style={{ borderBottom: '1px dashed #ccc', margin: '1rem 0' }} />
               
               <h4 style={{ margin: '0 0 0.5rem' }}>Payments</h4>
-              {Object.entries(zReport.payments).map(([method, amount]: [string, any]) => (
+              {Object.entries(zReport.paymentTotals || {}).map(([method, amount]: [string, any]) => (
                 <div key={method} style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0', paddingLeft: '1rem' }}>
                   <span>{method}:</span>
                   <span>{fmt(amount)}</span>

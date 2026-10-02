@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: infypos-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: infypos
+      POSTGRES_PASSWORD: infypos_dev_password
+      POSTGRES_DB: infypos
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - infypos_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infypos -d infypos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  infypos_postgres_data:

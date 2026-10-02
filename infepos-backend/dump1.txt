@@ -1,0 +1,331 @@
+Created At: 2026-08-10T11:58:16+05:30
+Completed At: 2026-08-10T11:58:17+05:30
+File Path: `file:///c:/Users/acer/Document/Infynux/INFYPOS/backend/prisma/schema.prisma`
+Total Lines: 942
+Total Bytes: 37837
+Showing lines 1 to 800
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: d       String             @map("store_id") @db.Uuid
+2:   receivedBy    String             @map("received_by") @db.Uuid
+3:   receiptNumber String             @map("receipt_number") @db.VarChar(50)
+4:   status        GoodsReceiptStatus @default(DRAFT)
+5:   notes         String?            @db.Text
+6:   receivedAt    DateTime           @default(now()) @map("received_at") @db.Timestamptz(6)
+7:   createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+8:   updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+9: 
+10:   tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+11:   purchase       Purchase           @relation(fields: [purchaseId], references: [id])
+12:   store          Store              @relation(fields: [storeId], references: [id])
+13:   receivedByUser User               @relation(fields: [receivedBy], references: [id])
+14:   items          GoodsReceiptItem[]
+15: 
+16:   @@unique([tenantId, receiptNumber])
+17:   @@index([tenantId])
+18:   @@index([purchaseId])
+19:   @@index([storeId])
+20:   @@index([status])
+21:   @@map("goods_receipts")
+22: }
+23: 
+24: model GoodsReceiptItem {
+25:   id               String   @id @default(uuid()) @db.Uuid
+26:   goodsReceiptId   String   @map("goods_receipt_id") @db.Uuid
+27:   purchaseItemId   String   @map("purchase_item_id") @db.Uuid
+28:   productId        String   @map("product_id") @db.Uuid
+29:   productName      String   @map("product_name") @db.VarChar(255)
+30:   sku              String   @db.VarChar(100)
+31:   receivedQuantity Decimal  @map("received_quantity") @db.Decimal(10, 2)
+32:   unitCost         Decimal  @map("unit_cost") @db.Decimal(10, 2)
+33:   vatRate          Decimal  @map("vat_rate") @db.Decimal(5, 2)
+34:   lineTotal        Decimal  @map("line_total") @db.Decimal(10, 2)
+35:   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+36: 
+37:   goodsReceipt GoodsReceipt @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
+38:   purchaseItem PurchaseItem @relation(fields: [purchaseItemId], references: [id])
+39:   product      Product      @relation(fields: [productId], references: [id])
+40: 
+41:   @@index([goodsReceiptId])
+42:   @@index([purchaseItemId])
+43:   @@index([productId])
+44:   @@map("goods_receipt_items")
+45: }
+46: 
+47: enum MovementType {
+48:   PURCHASE_RECEIPT
+49:   SALE
+50:   ADJUSTMENT
+51:   TRANSFER_IN
+52:   TRANSFER_OUT
+53:   RETURN_IN
+54:   RETURN_OUT
+55:   SALE_RETURN
+56: }
+57: 
+58: enum ReferenceType {
+59:   PURCHASE
+60:   SALE
+61:   TRANSFER
+62:   ADJUSTMENT
+63:   RETURN
+64: }
+65: 
+66: model StockMovement {
+67:   id            String        @id @default(uuid()) @db.Uuid
+68:   tenantId      String        @map("tenant_id") @db.Uuid
+69:   storeId       String        @map("store_id") @db.Uuid
+70:   productId     String        @map("product_id") @db.Uuid
+71:   inventoryId   String        @map("inventory_id") @db.Uuid
+72:   referenceType ReferenceType @map("reference_type")
+73:   referenceId   String        @map("reference_id") @db.VarChar(100)
+74:   movementType  MovementType  @map("movement_type")
+75:   quantity      Decimal       @db.Decimal(10, 2)
+76:   balanceBefore Decimal       @map("balance_before") @db.Decimal(10, 2)
+77:   balanceAfter  Decimal       @map("balance_after") @db.Decimal(10, 2)
+78:   remarks       String?       @db.Text
+79:   performedBy   String        @map("performed_by") @db.Uuid
+80:   createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+81: 
+82:   tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+83:   store           Store     @relation(fields: [storeId], references: [id])
+84:   product         Product   @relation(fields: [productId], references: [id])
+85:   inventory       Inventory @relation(fields: [inventoryId], references: [id])
+86:   performedByUser User      @relation(fields: [performedBy], references: [id])
+87: 
+88:   @@index([tenantId])
+89:   @@index([storeId])
+90:   @@index([productId])
+91:   @@index([inventoryId])
+92:   @@index([referenceId])
+93:   @@map("stock_movements")
+94: }
+95: 
+96: enum AdjustmentReason {
+97:   DAMAGED
+98:   EXPIRED
+99:   THEFT
+100:   LOST
+101:   FOUND
+102:   STOCK_COUNT
+103:   MANUAL
+104: }
+105: 
+106: enum AdjustmentStatus {
+107:   DRAFT
+108:   COMPLETED
+109:   CANCELLED
+110: }
+111: 
+112: model InventoryAdjustment {
+113:   id               String           @id @default(uuid()) @db.Uuid
+114:   tenantId         String           @map("tenant_id") @db.Uuid
+115:   storeId          String           @map("store_id") @db.Uuid
+116:   adjustmentNumber String           @map("adjustment_number") @db.VarChar(50)
+117:   reason           AdjustmentReason
+118:   status           AdjustmentStatus @default(DRAFT)
+119:   notes            String?          @db.Text
+120:   createdBy        String           @map("created_by") @db.Uuid
+121:   createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+122:   updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+123: 
+124:   tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+125:   store         Store                     @relation(fields: [storeId], references: [id])
+126:   createdByUser User                      @relation(fields: [createdBy], references: [id])
+127:   items         InventoryAdjustmentItem[]
+128: 
+129:   @@unique([tenantId, adjustmentNumber])
+130:   @@index([tenantId])
+131:   @@index([storeId])
+132:   @@index([status])
+133:   @@map("inventory_adjustments")
+134: }
+135: 
+136: model InventoryAdjustmentItem {
+137:   id             String   @id @default(uuid()) @db.Uuid
+138:   adjustmentId   String   @map("adjustment_id") @db.Uuid
+139:   productId      String   @map("product_id") @db.Uuid
+140:   productName    String   @map("product_name") @db.VarChar(255)
+141:   sku            String   @db.VarChar(100)
+142:   quantityChange Decimal  @map("quantity_change") @db.Decimal(10, 2)
+143:   unitCost       Decimal  @map("unit_cost") @db.Decimal(10, 2)
+144:   totalValue     Decimal  @map("total_value") @db.Decimal(10, 2)
+145:   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+146: 
+147:   adjustment InventoryAdjustment @relation(fields: [adjustmentId], references: [id], onDelete: Cascade)
+148:   product    Product             @relation(fields: [productId], references: [id])
+149: 
+150:   @@index([adjustmentId])
+151:   @@index([productId])
+152:   @@map("inventory_adjustment_items")
+153: }
+154: 
+155: enum TransferType {
+156:   STORE_TO_STORE
+157:   STORE_TO_WAREHOUSE
+158:   WAREHOUSE_TO_STORE
+159: }
+160: 
+161: enum TransferStatus {
+162:   DRAFT
+163:   SHIPPED
+164:   RECEIVED
+165:   CANCELLED
+166: }
+167: 
+168: model StockTransfer {
+169:   id                 String         @id @default(uuid()) @db.Uuid
+170:   tenantId           String         @map("tenant_id") @db.Uuid
+171:   transferNumber     String         @map("transfer_number") @db.VarChar(50)
+172:   transferType       TransferType   @default(STORE_TO_STORE) @map("transfer_type")
+173:   sourceStoreId      String         @map("source_store_id") @db.Uuid
+174:   destinationStoreId String         @map("destination_store_id") @db.Uuid
+175:   status             TransferStatus @default(DRAFT)
+176:   notes              String?        @db.Text
+177:   receivedNotes      String?        @map("received_notes") @db.Text
+178:   carrier            String?        @db.VarChar(100)
+179:   vehicleNumber      String?        @map("vehicle_number") @db.VarChar(100)
+180:   trackingNumber     String?        @map("tracking_number") @db.VarChar(100)
+181:   createdBy          String         @map("created_by") @db.Uuid
+182:   shippedBy          String?        @map("shipped_by") @db.Uuid
+183:   receivedBy         String?        @map("received_by") @db.Uuid
+184:   shippedAt          DateTime?      @map("shipped_at") @db.Timestamptz(6)
+185:   receivedAt         DateTime?      @map("received_at") @db.Timestamptz(6)
+186:   createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+187:   updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+188: 
+189:   tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+190:   sourceStore      Store               @relation("SourceTransfers", fields: [sourceStoreId], references: [id])
+191:   destinationStore Store               @relation("DestinationTransfers", fields: [destinationStoreId], references: [id])
+192:   createdByUser    User                @relation("TransferCreatedBy", fields: [createdBy], references: [id])
+193:   shippedByUser    User?               @relation("TransferShippedBy", fields: [shippedBy], references: [id])
+194:   receivedByUser   User?               @relation("TransferReceivedBy", fields: [receivedBy], references: [id])
+195:   items            StockTransferItem[]
+196: 
+197:   @@unique([tenantId, transferNumber])
+198:   @@index([tenantId])
+199:   @@index([sourceStoreId])
+200:   @@index([destinationStoreId])
+201:   @@index([status])
+202:   @@map("stock_transfers")
+203: }
+204: 
+205: model StockTransferItem {
+206:   id          String   @id @default(uuid()) @db.Uuid
+207:   transferId  String   @map("transfer_id") @db.Uuid
+208:   productId   String   @map("product_id") @db.Uuid
+209:   productName String   @map("product_name") @db.VarChar(255)
+210:   sku         String   @db.VarChar(100)
+211:   barcode     String?  @db.VarChar(100)
+212:   unit        String   @db.VarChar(50)
+213:   quantity    Decimal  @db.Decimal(10, 2)
+214:   unitCost    Decimal  @map("unit_cost") @db.Decimal(10, 2)
+215:   totalValue  Decimal  @map("total_value") @db.Decimal(10, 2)
+216:   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+217: 
+218:   transfer StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+219:   product  Product       @relation(fields: [productId], references: [id])
+220: 
+221:   @@index([transferId])
+222:   @@index([productId])
+223:   @@map("stock_transfer_items")
+224: }
+225: 
+226: enum CustomerType {
+227:   RETAIL
+228:   WHOLESALE
+229:   CORPORATE
+230: }
+231: 
+232: enum CustomerStatus {
+233:   ACTIVE
+234:   INACTIVE
+235:   BLOCKED
+236: }
+237: 
+238: enum CustomerTier {
+239:   STANDARD
+240:   SILVER
+241:   GOLD
+242:   PLATINUM
+243: }
+244: 
+245: model Customer {
+246:   id           String         @id @default(uuid()) @db.Uuid
+247:   tenantId     String         @map("tenant_id") @db.Uuid
+248:   customerCode String         @map("customer_code") @db.VarChar(100)
+249:   customerType CustomerType   @default(RETAIL) @map("customer_type")
+250:   firstName    String         @map("first_name") @db.VarChar(255)
+251:   lastName     String?        @map("last_name") @db.VarChar(255)
+252:   phone        String         @db.VarChar(50)
+253:   email        String?        @db.VarChar(255)
+254:   addressLine1 String?        @map("address_line_1") @db.VarChar(255)
+255:   addressLine2 String?        @map("address_line_2") @db.VarChar(255)
+256:   city         String?        @db.VarChar(100)
+257:   state        String?        @db.VarChar(100)
+258:   postalCode   String?        @map("postal_code") @db.VarChar(50)
+259:   country      String?        @db.VarChar(100)
+260:   dob          DateTime?      @db.Date
+261:   gender       String?        @db.VarChar(50)
+262:   gstNumber    String?        @map("gst_number") @db.VarChar(100)
+263:   status       CustomerStatus @default(ACTIVE)
+264: 
+265:   // Financial & Loyalty
+266:   creditLimit        Decimal      @default(0) @map("credit_limit") @db.Decimal(10, 2)
+267:   outstandingBalance Decimal      @default(0) @map("outstanding_balance") @db.Decimal(10, 2)
+268:   currentPoints      Decimal      @default(0) @map("current_points") @db.Decimal(10, 2)
+269:   lifetimePoints     Decimal      @default(0) @map("lifetime_points") @db.Decimal(10, 2)
+270:   tier               CustomerTier @default(STANDARD)
+271: 
+272:   // Marketing
+273:   marketingOptIn Boolean @default(false) @map("marketing_opt_in")
+274:   smsEnabled     Boolean @default(true) @map("sms_enabled")
+275:   emailEnabled   Boolean @default(true) @map("email_enabled")
+276: 
+277:   notes     String?  @db.Text
+278:   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+279:   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+280: 
+281:   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+282:   sales       Sale[]
+283:   saleReturns SaleReturn[]
+284: 
+285:   @@unique([tenantId, customerCode])
+286:   @@unique([tenantId, phone])
+287:   @@index([tenantId])
+288:   @@index([status])
+289:   @@index([customerType])
+290:   @@map("customers")
+291: }
+292: 
+293: enum ReturnType {
+294:   FULL_RETURN
+295:   PARTIAL_RETURN
+296: }
+297: 
+298: enum ReturnReason {
+299:   DEFECTIVE
+300:   WRONG_ITEM
+301:   CUSTOMER_CHANGE_MIND
+302:   OTHER
+303: }
+304: 
+305: enum ReturnStatus {
+306:   COMPLETED
+307:   CANCELLED
+308: }
+309: 
+310: model SaleReturn {
+311:   id             String        @id @default(uuid()) @db.Uuid
+312:   tenantId       String        @map("tenant_id") @db.Uuid
+313:   storeId        String        @map("store_id") @db.Uuid
+314:   userId         String        @map("user_id") @db.Uuid
+315:   customerId     String?       @map("customer_id") @db.Uuid
+316:   originalSaleId String        @map("original_sale_id") @db.Uuid
+317:   returnNumber   String        @map("return_number") @db.VarChar(50)
+318:   returnType     ReturnType    @default(FULL_RETURN) @map("return_type")
+319:   subtotal       Decimal       @db.Decimal(10, 2)
+320:   taxAmount      Decimal       @map("tax_amount") @db.Decimal(10, 2)
+321:   refundTotal    Decimal       @map("refund_total") @db.Decimal(10, 2)
+322:   refundMethod   PaymentMethod @default(CASH) @map("refund_method")
+323:   status         ReturnStatus  @default(COMPLETED)
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

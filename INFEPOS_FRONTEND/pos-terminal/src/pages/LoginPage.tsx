@@ -9,7 +9,7 @@ const LoginPage: React.FC = () => {
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const [form, setForm] = useState({
-    tenantCode: '',
+    storeCode: '',
     email: '',
     password: '',
   });
@@ -24,7 +24,7 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.tenantCode || !form.email || !form.password) {
+    if (!form.storeCode || !form.email || !form.password) {
       setError('All fields are required');
       return;
     }
@@ -134,18 +134,18 @@ const LoginPage: React.FC = () => {
             {/* Tenant Code */}
             <div>
               <label
-                htmlFor="tenantCode"
+                htmlFor="storeCode"
                 style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--pos-text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}
               >
                 Store Code
               </label>
               <input
-                id="tenantCode"
-                name="tenantCode"
+                id="storeCode"
+                name="storeCode"
                 type="text"
                 className="pos-input"
                 placeholder="Enter your store code"
-                value={form.tenantCode}
+                value={form.storeCode}
                 onChange={handleChange}
                 autoComplete="organization"
                 autoFocus

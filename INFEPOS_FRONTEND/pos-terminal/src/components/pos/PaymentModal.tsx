@@ -47,10 +47,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
       shiftId: currentShift?.id,
       storeId: user.storeId,
       discountAmount: parsedDiscount,
-      payments: [{
-        paymentMethod,
-        amount: finalTotal,
-      }],
+      paymentMethod,
       items: cartItems.map((i) => ({
         productId: i.product.id,
         quantity: i.quantity,
