@@ -18,10 +18,16 @@ async function bootstrap() {
   // Set Global API Route Prefix (e.g. /api/v1)
   app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`);
 
-  // Enable CORS
+  // Enable helmet for security headers
+  const helmet = require('helmet');
+  app.use(helmet());
+
+  // Enable CORS securely for production
   app.enableCors({
-    origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    origin: process.env.NODE_ENV === 'production' 
+      ? [configService.get<string>('app.frontendUrl', '')] 
+      : '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 

@@ -1,11 +1,12 @@
 import { useEffect, useCallback, useState } from 'react';
-import { useSyncStore } from '../stores/syncStore';
 import { syncOperations } from '../api/sync.api';
+import { getPendingSyncEvents, markSyncEventCompleted, isDesktopApp } from '../services/localDb';
 
 export const useSyncManager = () => {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const { events, deviceId, updateEventStatus, removeEvents, getPendingEvents } = useSyncStore();
+  const [pendingCount, setPendingCount] = useState<number>(0);
+  const deviceId = 'electron-pos'; // This would come from device registration in a real app
 
   const handleOnline = useCallback(() => setIsOnline(true), []);
   const handleOffline = useCallback(() => setIsOnline(false), []);
@@ -19,64 +20,76 @@ export const useSyncManager = () => {
     };
   }, [handleOnline, handleOffline]);
 
+  const fetchPendingCount = useCallback(async () => {
+    if (!isDesktopApp()) return;
+    try {
+      const pending = await getPendingSyncEvents();
+      setPendingCount(pending.length);
+    } catch (err) {
+      console.error('Error fetching pending count', err);
+    }
+  }, []);
+
   const processSyncQueue = useCallback(async () => {
-    if (!isOnline || isSyncing) return;
-
-    const pending = getPendingEvents();
-    if (pending.length === 0) return;
-
-    setIsSyncing(true);
-
-    // Mark as SYNCING
-    pending.forEach((e) => updateEventStatus(e.eventId, 'SYNCING'));
-
-    const payload = {
-      deviceId,
-      events: pending.map((e) => ({
-        eventId: e.eventId,
-        eventType: e.eventType,
-        occurredAt: e.occurredAt,
-        payload: e.payload,
-      })),
-    };
+    if (!isOnline || isSyncing || !isDesktopApp()) return;
 
     try {
-      const response = await syncOperations(payload);
-
-      // Remove successful and already processed
-      const successIds = [
-        ...response.processed.map((r) => r.eventId),
-        ...response.alreadyProcessed.map((r) => r.eventId),
-      ];
-      if (successIds.length > 0) {
-        removeEvents(successIds);
+      const pending = await getPendingSyncEvents();
+      if (pending.length === 0) {
+        setPendingCount(0);
+        return;
       }
 
-      // Mark failed
-      response.failed.forEach((f) => {
-        updateEventStatus(f.eventId, 'FAILED', f.error);
-      });
+      setIsSyncing(true);
+
+      const payload = {
+        deviceId,
+        events: pending.map((e: any) => ({
+          eventId: e.id,
+          eventType: e.type,
+          occurredAt: e.createdAt,
+          payload: JSON.parse(e.payload),
+        })),
+      };
+
+      const response = await syncOperations(payload);
+
+      // Mark successful and already processed as COMPLETED
+      const successIds = [
+        ...response.processed.map((r: any) => r.eventId),
+        ...response.alreadyProcessed.map((r: any) => r.eventId),
+      ];
+      
+      for (const id of successIds) {
+        await markSyncEventCompleted(id);
+      }
+      
     } catch (error: any) {
-      // Revert to FAILED if network call itself fails
-      pending.forEach((e) => {
-        updateEventStatus(e.eventId, 'FAILED', error?.message || 'Network error during sync');
-      });
+      console.error('Sync failed:', error);
     } finally {
       setIsSyncing(false);
+      fetchPendingCount(); // refresh count
     }
-  }, [isOnline, isSyncing, deviceId, getPendingEvents, updateEventStatus, removeEvents]);
+  }, [isOnline, isSyncing, fetchPendingCount]);
 
-  // Attempt sync when coming back online or when events change
+  // Poll for queue changes and try syncing if online
   useEffect(() => {
-    if (isOnline) {
-      processSyncQueue();
-    }
-  }, [isOnline, processSyncQueue, events.length]);
+    fetchPendingCount();
+    
+    const interval = setInterval(() => {
+      fetchPendingCount();
+      if (navigator.onLine) {
+        processSyncQueue();
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchPendingCount, processSyncQueue]);
 
   return {
     isOnline,
     isSyncing,
-    pendingCount: getPendingEvents().length,
+    pendingCount,
     processSyncQueue,
   };
 };

@@ -15,7 +15,7 @@ export class SyncController {
   @Post()
   async synchronize(
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('id') userId: string,
+    @CurrentUser('userId') userId: string,
     @Body() dto: SyncPayloadDto,
   ) {
     return this.syncService.processSync(tenantId, userId, dto);
