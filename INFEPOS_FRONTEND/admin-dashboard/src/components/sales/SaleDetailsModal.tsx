@@ -55,14 +55,14 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 transition-opacity" aria-hidden="true" onClick={onClose}>
-          <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
         </div>
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full relative z-10">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div className="inline-block align-bottom bg-white rounded-[30px] text-left overflow-hidden shadow-[0px_8px_40px_rgba(0,0,0,0.08)] border border-gray-100 transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full relative z-10">
+          <div className="bg-white px-6 pt-6 pb-6 sm:p-8 sm:pb-8">
             {/* Header */}
             <div className="flex justify-between items-center mb-5 border-b pb-3">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center gap-2">
+              <h3 className="text-xl font-bold text-[#1a1f36] flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-gray-500" />
                 Sale Details
                 {sale && <SaleStatusBadge status={sale.status} />}
@@ -84,7 +84,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg">
                   <div>
                     <dt className="text-xs font-medium text-gray-500 uppercase">Sale Number</dt>
-                    <dd className="mt-1 text-sm font-bold text-gray-900">{sale.saleNumber}</dd>
+                    <dd className="mt-1 text-sm font-semibold text-blue-600">{sale.saleNumber}</dd>
                   </div>
                   <div>
                     <dt className="text-xs font-medium text-gray-500 uppercase">Date</dt>
@@ -146,7 +146,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                             <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium text-gray-900">{Number(item.lineTotal).toFixed(2)}</td>
                             <td className="px-4 py-2 whitespace-nowrap text-right text-sm">
                               {Number(item.returnedQuantity) > 0 ? (
-                                <span className="text-orange-600 font-medium">{Number(item.returnedQuantity).toFixed(2)}</span>
+                                <span className="px-2 py-0.5 text-xs font-medium rounded bg-orange-100 text-orange-700">{Number(item.returnedQuantity).toFixed(2)}</span>
                               ) : (
                                 <span className="text-gray-400">-</span>
                               )}
@@ -183,7 +183,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                         <span>-{Number(sale.discountAmount).toFixed(2)}</span>
                       </div>
                     )}
-                    <div className="pt-2 border-t flex justify-between text-base font-bold text-gray-900">
+                    <div className="pt-2 border-t flex justify-between text-base font-bold text-green-700">
                       <span>Grand Total:</span>
                       <span>{Number(sale.grandTotal).toFixed(2)}</span>
                     </div>
@@ -193,7 +193,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
               </div>
             ) : null}
           </div>
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <div className="bg-slate-50/50 px-6 py-5 sm:px-8 sm:flex sm:flex-row-reverse border-t border-gray-100 rounded-b-[30px]">
             <button
               type="button"
               onClick={onClose}

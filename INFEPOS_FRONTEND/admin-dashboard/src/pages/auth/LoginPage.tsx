@@ -36,21 +36,21 @@ const LoginPage: React.FC = () => {
   return (
     <div className="sm:mx-auto sm:w-full sm:max-w-md">
       <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Sign in to INFYPOS</h2>
-      <div className="mt-8 bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="mt-8 bg-white py-8 px-4 shadow sm:rounded-3xl sm:px-10">
         <form className="space-y-6" onSubmit={handleSubmit}>
           {error && <div className="text-red-500 text-sm text-center">{error}</div>}
           <div>
             <label className="block text-sm font-medium text-gray-700">Tenant Code</label>
-            <input type="text" required value={tenantCode} onChange={e => setTenantCode(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            <input type="text" required value={tenantCode} onChange={e => setTenantCode(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-2xl shadow-sm py-2 px-3 focus:outline-none focus:ring-[#5B58F2] focus:border-[#5B58F2] sm:text-sm" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Email address</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-2xl shadow-sm py-2 px-3 focus:outline-none focus:ring-[#5B58F2] focus:border-[#5B58F2] sm:text-sm" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Password</label>
             <div className="relative mt-1">
-              <input type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              <input type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className="block w-full border border-gray-300 rounded-2xl shadow-sm py-2 px-3 focus:outline-none focus:ring-[#5B58F2] focus:border-[#5B58F2] sm:text-sm" />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
                 {showPassword ? (
                   <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -65,7 +65,7 @@ const LoginPage: React.FC = () => {
               </button>
             </div>
           </div>
-          <button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+          <button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-2xl shadow-sm text-sm font-medium text-white bg-[#5B58F2] hover:bg-[#4A47E5] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5B58F2] disabled:opacity-50">
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>

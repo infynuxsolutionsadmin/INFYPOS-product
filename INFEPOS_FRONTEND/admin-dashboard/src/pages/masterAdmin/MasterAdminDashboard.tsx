@@ -53,19 +53,19 @@ const MasterAdminDashboard: React.FC = () => {
           <button
             onClick={() => setIsModalOpen(true)}
             type="button"
-            className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-2xl shadow-sm text-sm font-medium text-white bg-[#5B58F2] hover:bg-[#4A47E5] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5B58F2] transition-colors"
           >
             Create New Tenant
           </button>
         </div>
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+      <div className="bg-white rounded-[24px] shadow-[0px_4px_24px_rgba(149,157,165,0.12)] border border-gray-100 overflow-hidden">
         {loading && tenants.length === 0 ? (
            <div className="p-10 text-center text-gray-500">Loading tenants...</div>
         ) : (
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-slate-50/50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Tenant Name
@@ -86,7 +86,7 @@ const MasterAdminDashboard: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {tenants.map((tenant) => (
-                <tr key={tenant.id} className="hover:bg-gray-50 transition-colors duration-150">
+                <tr key={tenant.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {tenant.name}
                   </td>
@@ -109,7 +109,7 @@ const MasterAdminDashboard: React.FC = () => {
                         setSelectedTenant(tenant);
                         setIsEditModalOpen(true);
                       }}
-                      className="text-blue-600 hover:text-blue-900 transition-colors"
+                      className="text-[#5B58F2] hover:text-blue-900 transition-colors"
                     >
                       Manage
                     </button>

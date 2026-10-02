@@ -8,20 +8,22 @@ import type { VatRate, UpdateStoreSettingsPayload } from '../../types/settings';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
-  <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
-    <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-      <span className="text-gray-400">{icon}</span>
-      <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
+  <div className="bg-white rounded-[30px] shadow-[0px_4px_24px_rgba(149,157,165,0.08)] border border-gray-100 overflow-hidden mb-6 transition-all">
+    <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3 bg-slate-50/30">
+      <div className="p-2 bg-indigo-50 text-indigo-500 rounded-xl">
+        {icon}
+      </div>
+      <h2 className="text-lg font-bold text-[#1a1f36]">{title}</h2>
     </div>
-    <div className="p-5">{children}</div>
+    <div className="p-6 sm:p-8">{children}</div>
   </div>
 );
 
 const Field: React.FC<{ label: string; children: React.ReactNode; hint?: string }> = ({ label, children, hint }) => (
-  <div>
-    <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+  <div className="mb-2">
+    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{label}</label>
     {children}
-    {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+    {hint && <p className="mt-1.5 text-xs text-gray-400">{hint}</p>}
   </div>
 );
 
@@ -30,7 +32,7 @@ const textInput = (value: string, onChange: (v: string) => void, props?: React.I
     type="text"
     value={value}
     onChange={e => onChange(e.target.value)}
-    className="block w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500"
+    className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm"
     {...props}
   />
 );
@@ -187,10 +189,12 @@ const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
-        <p className="mt-1 text-sm text-gray-500">Manage available system and business settings.</p>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pb-12">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1a1f36]">Settings</h1>
+          <p className="mt-1 text-sm text-gray-500">Manage available system and business settings.</p>
+        </div>
       </div>
 
       {/* VAT Settings — read-only reference data */}
@@ -198,7 +202,7 @@ const SettingsPage: React.FC = () => {
         <Section title="VAT Rates" icon={<Tag className="h-4 w-4" />}>
           {vatLoading ? (
             <div className="flex justify-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5B58F2]"></div>
             </div>
           ) : vatError ? (
             <div className="text-red-500 text-sm">{vatError}</div>
@@ -209,21 +213,21 @@ const SettingsPage: React.FC = () => {
               <p className="text-xs text-gray-500 mb-3">
                 These VAT rates are defined by the system and are read-only. Contact your system administrator to modify them.
               </p>
-              <div className="overflow-hidden border border-gray-200 rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
+              <div className="overflow-hidden border border-gray-100 rounded-[20px] shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                <table className="min-w-full divide-y divide-gray-100 text-sm">
+                  <thead className="bg-[#f8f9fc]">
                     <tr>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase">Rate (%)</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Code</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Rate (%)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
+                  <tbody className="divide-y divide-gray-50 bg-white">
                     {vatRates.map(v => (
-                      <tr key={v.code}>
-                        <td className="px-4 py-2.5 font-mono text-gray-700">{v.code}</td>
-                        <td className="px-4 py-2.5 text-gray-700">{v.name}</td>
-                        <td className="px-4 py-2.5 text-gray-700">{v.rate}%</td>
+                      <tr key={v.code} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap font-mono text-sm font-semibold text-[#5B58F2]">{v.code}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700">{v.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{v.rate}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -241,7 +245,7 @@ const SettingsPage: React.FC = () => {
           <div className="mb-5">
             <label className="block text-xs font-medium text-gray-500 mb-1">Select Store</label>
             {storesLoading ? (
-              <div className="h-9 bg-gray-100 rounded-md animate-pulse w-64" />
+              <div className="h-9 bg-gray-100 rounded-2xl animate-pulse w-64" />
             ) : stores.length === 0 ? (
               <p className="text-sm text-gray-400 italic">No stores found.</p>
             ) : (
@@ -249,7 +253,7 @@ const SettingsPage: React.FC = () => {
                 <select
                   value={selectedStoreId}
                   onChange={e => setSelectedStoreId(e.target.value)}
-                  className="block w-full border border-gray-300 rounded-md py-2 pl-3 pr-8 text-sm focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                  className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer"
                 >
                   {stores.map(s => (
                     <option key={s.id} value={s.id}>
@@ -264,30 +268,30 @@ const SettingsPage: React.FC = () => {
 
           {storeLoading ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-[#5B58F2]"></div>
             </div>
           ) : storeError ? (
             <div className="text-red-500 text-sm">{storeError}</div>
           ) : !storeData ? null : (
             <>
               {/* Read-only info */}
-              <div className="mb-5 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+              <div className="mb-8 bg-blue-50/50 border border-blue-100/50 rounded-[24px] px-6 py-5 grid grid-cols-2 sm:grid-cols-3 gap-6 text-sm">
                 <div>
-                  <p className="text-xs text-gray-400">Store Code</p>
-                  <p className="font-mono font-semibold text-gray-700">{storeData.code}</p>
+                  <p className="text-xs font-semibold text-blue-400 mb-1 uppercase tracking-wider">Store Code</p>
+                  <p className="font-mono font-bold text-blue-900 bg-blue-100/50 inline-block px-2 py-1 rounded-lg">{storeData.code}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Status</p>
-                  <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${storeData.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
+                  <p className="text-xs font-semibold text-blue-400 mb-1 uppercase tracking-wider">Status</p>
+                  <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${storeData.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                     {storeData.status}
                   </span>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Default Store</p>
-                  <p className="font-semibold text-gray-700">{storeData.isDefault ? 'Yes' : 'No'}</p>
+                  <p className="text-xs font-semibold text-blue-400 mb-1 uppercase tracking-wider">Default Store</p>
+                  <p className="font-bold text-blue-900">{storeData.isDefault ? 'Yes' : 'No'}</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mb-4 -mt-1">Store code, status, and default flag are managed in the Stores module.</p>
+              <p className="text-xs text-gray-400 mb-6 -mt-4 ml-2">Store code, status, and default flag are managed in the Stores module.</p>
 
               {/* Editable fields */}
               {canUpdateStores ? (
@@ -314,7 +318,7 @@ const SettingsPage: React.FC = () => {
                         type="email" value={email} maxLength={255}
                         onChange={e => setEmail(e.target.value)}
                         placeholder="store@example.com"
-                        className="block w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500"
+                        className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm"
                       />
                     </Field>
                     <Field label="Phone">
@@ -355,11 +359,11 @@ const SettingsPage: React.FC = () => {
                   </div>
 
                   {/* Save bar */}
-                  <div className="flex gap-3 pt-2 border-t border-gray-100">
+                  <div className="flex gap-4 pt-6 mt-4 border-t border-gray-100">
                     <button
                       onClick={handleStoreSave}
                       disabled={storeSaving || !name.trim()}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-bold rounded-full hover:from-indigo-600 hover:to-purple-700 shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:pointer-events-none"
                     >
                       <Save className="h-4 w-4" />
                       {storeSaving ? 'Saving...' : 'Save Store Settings'}
@@ -367,7 +371,7 @@ const SettingsPage: React.FC = () => {
                     <button
                       onClick={handleStoreReset}
                       disabled={storeSaving}
-                      className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-600 text-sm font-medium rounded-md hover:bg-gray-50 disabled:opacity-50"
+                      className="inline-flex items-center gap-2 px-6 py-2.5 border border-gray-200 text-gray-700 text-sm font-bold rounded-full hover:bg-gray-50 hover:-translate-y-0.5 transition-all shadow-sm disabled:opacity-50 disabled:pointer-events-none"
                     >
                       <RotateCcw className="h-4 w-4" />
                       Reset
@@ -378,7 +382,7 @@ const SettingsPage: React.FC = () => {
                 /* Read-only view for users without stores.update */
                 <div className="space-y-3 text-sm">
                   <p className="text-xs text-gray-400 italic">You have read-only access to store settings.</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50/50 border border-gray-200 rounded-3xl p-4">
                     {[
                       ['Name', storeData.name],
                       ['Email', storeData.email],
@@ -404,7 +408,7 @@ const SettingsPage: React.FC = () => {
 
       {/* No accessible settings */}
       {!canReadSettings && !canReadStores && (
-        <div className="bg-white border border-gray-200 rounded-lg p-10 text-center shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-3xl p-10 text-center shadow-sm">
           <Settings className="h-10 w-10 mx-auto text-gray-300 mb-3" />
           <p className="text-gray-500">You do not have permission to view settings.</p>
         </div>
