@@ -139,6 +139,7 @@ model User {
   phone                String?               @db.VarChar(50)
   passwordHash         String?               @map("password_hash") @db.VarChar(255)
   pinCodeHash          String?               @map("pin_code_hash") @db.VarChar(255)
+  pinCode              String?               @map("pin_code") @db.VarChar(10)
   status               UserStatus            @default(ACTIVE)
   lastLoginAt          DateTime?             @map("last_login_at") @db.Timestamptz(6)
   createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)

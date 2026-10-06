@@ -151,9 +151,30 @@ const POSHeader: React.FC = () => {
             <WifiOff size={14} color="var(--pos-danger)" />
           )}
           {pendingCount > 0 && (
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--pos-warning)' }}>
-              {pendingCount} Pending
-            </span>
+            <>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--pos-warning)' }}>
+                {pendingCount} Pending
+              </span>
+              <button 
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const { useSyncStore } = await import('../../stores/syncStore');
+                  const { getPendingSyncEvents, markSyncEventCompleted, isDesktopApp } = await import('../../services/localDb');
+                  const store = useSyncStore.getState();
+                  store.removeEvents(store.events.map((ev: any) => ev.eventId));
+                  if (isDesktopApp()) {
+                    const events = await getPendingSyncEvents();
+                    for (const ev of events) {
+                      await markSyncEventCompleted(ev.id);
+                    }
+                  }
+                  window.location.reload();
+                }}
+                style={{ fontSize: '0.65rem', background: '#ff3333', color: 'white', padding: '2px 6px', borderRadius: '4px', border: 'none', marginLeft: '8px' }}
+              >
+                Fix Sync
+              </button>
+            </>
           )}
         </div>
 

@@ -1,45 +1,16 @@
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database(':memory:');
+const path = require('path');
+const os = require('os');
+const dbPath = path.join(os.homedir(), 'AppData', 'Roaming', 'pos-terminal', 'pos-offline.sqlite');
 
-db.serialize(() => {
-  db.run(`CREATE TABLE sync_queue (id TEXT, type TEXT, payload TEXT, status TEXT)`);
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error(err);
+    process.exit(1);
+  }
 });
 
-const statementCache = new Map();
-
-function executeQuery(sql, ...params) {
-  return new Promise((resolve, reject) => {
-    let stmt = statementCache.get(sql);
-    
-    if (!stmt) {
-      stmt = db.prepare(sql, (err) => {
-        if (err) return reject(err);
-      });
-      statementCache.set(sql, stmt);
-    }
-    
-    if (sql.trim().toLowerCase().startsWith('select')) {
-      stmt.all(params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    } else {
-      stmt.run(params, function (err) {
-        if (err) reject(err);
-        else resolve({ changes: this.changes, lastInsertRowid: this.lastID });
-      });
-    }
-  });
-}
-
-async function test() {
-  try {
-    console.log(await executeQuery(`INSERT INTO sync_queue (id, type, payload, status) VALUES (?, ?, ?, 'PENDING')`, '1', 'SALE', '{}'));
-    console.log(await executeQuery(`INSERT INTO sync_queue (id, type, payload, status) VALUES (?, ?, ?, 'PENDING')`, '2', 'SALE', '{}'));
-    console.log(await executeQuery(`SELECT * FROM sync_queue`));
-  } catch(e) {
-    console.error('Error:', e);
-  }
-}
-
-test();
+db.all('SELECT id, name, sku, barcode FROM products', (err, rows) => {
+  console.log('Products:', rows);
+  db.close();
+});

@@ -61,9 +61,7 @@ const ProductCatalog: React.FC = () => {
       const client = (await import('../../api/client')).default;
       const res = await client.get('/products', { params: { status: 'ACTIVE', limit: 10000 } });
       const cloudItems = res.data.data.items || [];
-      if (cloudItems.length > 0) {
-        await syncProductsToLocalDb(cloudItems);
-      }
+      await syncProductsToLocalDb(cloudItems);
       // Re-fetch local to show updated catalog
       fetchProducts(search, 1, selectedCategory);
     } catch (err: any) {
@@ -152,8 +150,9 @@ const ProductCatalog: React.FC = () => {
           background: 'var(--pos-surface)',
         }}
       >
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1 }}>
+            <Search
             size={18}
             color="var(--pos-text-muted)"
             style={{ position: 'absolute', left: '0.875rem', pointerEvents: 'none' }}

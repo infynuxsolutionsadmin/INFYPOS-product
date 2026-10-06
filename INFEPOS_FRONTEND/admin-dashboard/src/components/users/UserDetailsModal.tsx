@@ -103,7 +103,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
                     {/* <ChevronUp className="w-4 h-4 text-gray-400" /> */}
                   </div>
                   <div className="p-4 sm:p-5 bg-white">
-                    <dl className="grid grid-cols-3 gap-x-4 gap-y-4">
+                    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-4">
                       <div>
                         <dt className="text-xs font-medium text-gray-400 mb-1">Role</dt>
                         <dd className="text-sm font-semibold text-[#1a1f36]">{user.role ? user.role.name : '—'}</dd>
@@ -125,6 +125,12 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
                       <div>
                         <dt className="text-xs font-medium text-gray-400 mb-2">Status</dt>
                         <dd><UserStatusBadge status={user.status} /></dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium text-gray-400 mb-1">PIN Code</dt>
+                        <dd className="text-sm font-mono font-bold tracking-widest text-[#1a1f36] bg-gray-50 px-2 py-1 rounded inline-block border border-gray-100">
+                          {user.pinCode || '—'}
+                        </dd>
                       </div>
                     </dl>
                   </div>

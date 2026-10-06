@@ -15,9 +15,28 @@ export const useSyncManager = () => {
   useEffect(() => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    const pingInterval = setInterval(async () => {
+      if (!navigator.onLine) {
+        setIsOnline(false);
+        return;
+      }
+      try {
+        const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        await fetch(baseUrl, { method: 'HEAD', signal: controller.signal });
+        clearTimeout(timeoutId);
+        setIsOnline(true);
+      } catch (err) {
+        setIsOnline(false);
+      }
+    }, 10000); // Check every 10 seconds
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearInterval(pingInterval);
     };
   }, [handleOnline, handleOffline]);
 
@@ -91,6 +110,7 @@ export const useSyncManager = () => {
       const successIds = [
         ...response.processed.map((r: any) => r.eventId),
         ...response.alreadyProcessed.map((r: any) => r.eventId),
+        ...response.failed.map((r: any) => r.eventId), // Also remove permanently failed events from queue
       ];
       
       for (const id of successIds) {
@@ -99,7 +119,8 @@ export const useSyncManager = () => {
         if (eventItem?.source === 'sqlite') {
           await markSyncEventCompleted(id);
         } else if (eventItem?.source === 'zustand') {
-          updateEventStatus(id, 'COMPLETED');
+          const { removeEvents } = useSyncStore.getState();
+          removeEvents([id]);
         }
       }
       

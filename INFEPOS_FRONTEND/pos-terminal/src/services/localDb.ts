@@ -52,6 +52,9 @@ export const markSyncEventCompleted = async (id: string) => {
 export const syncProductsToLocalDb = async (products: any[]) => {
   if (!isDesktopApp()) return;
   
+  // Clear existing products to ensure exact mirror of cloud DB
+  await queryLocalDb(`DELETE FROM products`);
+
   // Basic sync: just insert or replace products in the local DB
   for (const p of products) {
     await queryLocalDb(

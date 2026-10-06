@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import AuthLayout from '../layouts/AuthLayout';
 import AdminLayout from '../layouts/AdminLayout';
 import LoginPage from '../pages/auth/LoginPage';
+import LandingPage from '../pages/LandingPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import ProductsPage from '../pages/products/ProductsPage';
 import StoresPage from '../pages/stores/StoresPage';
@@ -57,9 +58,11 @@ const AppRoutes: React.FC = () => {
         <Route path="/roles-permissions" element={<RolesPermissionsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Route>
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      
+      {/* Landing Page */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

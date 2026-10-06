@@ -87,6 +87,7 @@ export class UsersService {
         phone: dto.phone,
         passwordHash,
         pinCodeHash,
+        pinCode: plainPinCode,
         roleId: dto.roleId,
         storeId: dto.storeId,
         status: UserStatus.ACTIVE,
@@ -158,6 +159,7 @@ export class UsersService {
           lastName: true,
           email: true,
           phone: true,
+          pinCode: true,
           status: true,
           roleId: true,
           storeId: true,
@@ -222,6 +224,7 @@ export class UsersService {
         lastName: true,
         email: true,
         phone: true,
+        pinCode: true,
         status: true,
         role: {
           select: {
@@ -306,6 +309,7 @@ export class UsersService {
 
     if (dto.pinCode) {
       updates.pinCodeHash = await this.passwordService.hash(dto.pinCode);
+      updates.pinCode = dto.pinCode;
     }
 
     if (Object.keys(updates).length === 0) {
