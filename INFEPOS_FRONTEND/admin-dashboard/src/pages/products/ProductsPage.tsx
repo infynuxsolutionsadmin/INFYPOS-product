@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Search, ScanBarcode, X, Monitor, Refrigerator, WashingMachine, Smartphone, Tv, Package } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, ScanBarcode, X, Monitor, Refrigerator, WashingMachine, Smartphone, Tv, Package, Upload, Download } from 'lucide-react';
 import type { Product, FindProductsQuery, ProductStatus } from '../../types/products';
 import { getProducts } from '../../api/products.api';
 import { useAuthStore } from '../../stores/authStore';
 import ProductFormModal from '../../components/products/ProductFormModal';
 import DeleteConfirmModal from '../../components/products/DeleteConfirmModal';
+import { BulkImportModal } from '../../components/products/BulkImportModal';
 import Barcode from 'react-barcode';
 
 const ProductIcon = ({ category, name }: { category?: string | null; name: string }) => {
@@ -106,7 +107,35 @@ const ProductsPage: React.FC = () => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  const handleExportCsv = () => {
+    if (products.length === 0) return;
+    
+    const headers = ['Name', 'SKU', 'Barcode', 'SellingPrice', 'CostPrice', 'VatRate', 'Category', 'Unit', 'Status'];
+    const rows = products.map(p => [
+      `"${(p.name || '').replace(/"/g, '""')}"`,
+      `"${p.sku || ''}"`,
+      `"${p.barcode || ''}"`,
+      p.sellingPrice || 0,
+      p.costPrice || 0,
+      p.vatRate || 20,
+      `"${(p.category || 'General').replace(/"/g, '""')}"`,
+      `"${p.unit || 'pcs'}"`,
+      p.status
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `infypos_products_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const openBarcodeModal = (product: Product) => {
     setSelectedProduct(product);
@@ -132,7 +161,7 @@ const ProductsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, canRead]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -172,20 +201,43 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-12">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#1a1f36]">Products</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage retail products, pricing, and inventory.</p>
+          <p className="mt-1 text-sm text-gray-500">Manage retail products, pricing, and bulk catalog onboarding.</p>
         </div>
-        {canCreate && (
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={openCreateModal}
-            className="inline-flex items-center justify-center px-6 py-2.5 border border-transparent shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] text-sm font-bold rounded-full text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 focus:outline-none hover:-translate-y-0.5 transition-all"
+            onClick={handleExportCsv}
+            disabled={products.length === 0}
+            className="inline-flex items-center justify-center px-4 py-2.5 border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold rounded-full text-gray-700 focus:outline-none transition-all shadow-sm disabled:opacity-50"
+            title="Export current view to CSV file"
           >
-            <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-            Add Product
+            <Download className="mr-1.5 h-4 w-4 text-gray-500" />
+            Export CSV
           </button>
-        )}
+
+          {canCreate && (
+            <>
+              <button
+                onClick={() => setIsImportModalOpen(true)}
+                className="inline-flex items-center justify-center px-4 py-2.5 border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-xs font-bold rounded-full text-indigo-700 focus:outline-none transition-all shadow-sm"
+                title="Bulk import 1,000+ products via CSV"
+              >
+                <Upload className="mr-1.5 h-4 w-4 text-indigo-600" />
+                Import CSV
+              </button>
+
+              <button
+                onClick={openCreateModal}
+                className="inline-flex items-center justify-center px-6 py-2.5 border border-transparent shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] text-xs font-bold rounded-full text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 focus:outline-none hover:-translate-y-0.5 transition-all"
+              >
+                <Plus className="-ml-1 mr-1.5 h-4 w-4" aria-hidden="true" />
+                Add Product
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-[24px] shadow-[0px_4px_24px_rgba(149,157,165,0.08)] border border-gray-100 p-6 mb-6 flex flex-col sm:flex-row gap-4 transition-all">
@@ -375,6 +427,12 @@ const ProductsPage: React.FC = () => {
         isOpen={isBarcodeModalOpen}
         onClose={() => setIsBarcodeModalOpen(false)}
         product={selectedProduct}
+      />
+
+      <BulkImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={fetchProducts}
       />
     </div>
   );

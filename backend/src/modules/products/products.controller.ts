@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -23,6 +24,19 @@ import { ProductsService } from './products.service';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
+
+  @Permissions('products.create')
+  @Post('bulk-import')
+  async bulkImport(
+    @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('id') currentUserId: string,
+    @Body() dto: { products: any[] },
+  ) {
+    if (!dto.products || !Array.isArray(dto.products)) {
+      throw new BadRequestException('products array is required');
+    }
+    return this.productsService.bulkImport(tenantId, currentUserId, dto.products);
+  }
 
   @Permissions('products.create')
   @Post()
