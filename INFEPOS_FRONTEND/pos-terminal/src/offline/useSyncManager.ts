@@ -169,6 +169,13 @@ export const useSyncManager = () => {
     }
   }, [isOnline, isSyncing, fetchPendingCount]);
 
+  // Auto-sync immediately as soon as internet connection is restored or pending items exist while online
+  useEffect(() => {
+    if (isOnline && pendingCount > 0 && !isSyncing) {
+      processSyncQueue();
+    }
+  }, [isOnline, pendingCount, isSyncing, processSyncQueue]);
+
   // Poll for queue changes and try syncing if online
   useEffect(() => {
     fetchPendingCount();
