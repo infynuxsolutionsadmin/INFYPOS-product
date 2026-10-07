@@ -42,12 +42,18 @@ export const useSyncStore = create<SyncState>()(
           status: 'PENDING',
         };
         set((state) => ({ events: [...state.events, event] }));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('sync-queue-updated'));
+        }
         return event;
       },
       removeEvents: (eventIds) => {
         set((state) => ({
           events: state.events.filter((e) => !eventIds.includes(e.eventId)),
         }));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('sync-queue-updated'));
+        }
       },
       updateEventStatus: (eventId, status, error) => {
         set((state) => ({

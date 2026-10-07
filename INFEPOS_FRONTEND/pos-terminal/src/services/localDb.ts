@@ -36,6 +36,10 @@ export const queueSyncEvent = async (type: string, payload: any) => {
     id, type, payloadStr
   );
   
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('sync-queue-updated'));
+  }
+  
   return id;
 };
 

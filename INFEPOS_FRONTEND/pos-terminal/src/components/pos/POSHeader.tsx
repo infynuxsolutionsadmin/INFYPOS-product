@@ -14,7 +14,7 @@ const POSHeader: React.FC = () => {
   const clearShift = useShiftStore((s) => s.clearShift);
   const navigate = useNavigate();
 
-  const { isOnline, isSyncing, pendingCount, processSyncQueue } = useSyncManager();
+  const { isOnline, isSyncing, pendingCount, processSyncQueue, checkConnectivity } = useSyncManager();
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -165,21 +165,27 @@ const POSHeader: React.FC = () => {
               <button 
                 onClick={async (e) => {
                   e.stopPropagation();
-                  const { useSyncStore } = await import('../../stores/syncStore');
-                  const { getPendingSyncEvents, markSyncEventCompleted, isDesktopApp } = await import('../../services/localDb');
-                  const store = useSyncStore.getState();
-                  store.removeEvents(store.events.map((ev: any) => ev.eventId));
-                  if (isDesktopApp()) {
-                    const events = await getPendingSyncEvents();
-                    for (const ev of events) {
-                      await markSyncEventCompleted(ev.id);
-                    }
+                  if (isOnline) {
+                    processSyncQueue();
+                  } else {
+                    checkConnectivity();
+                    alert(`Offline Mode: You have ${pendingCount} transaction(s) saved safely in local memory. They will sync automatically once internet connectivity is restored.`);
                   }
-                  window.location.reload();
                 }}
-                style={{ fontSize: '0.65rem', background: '#ff3333', color: 'white', padding: '2px 6px', borderRadius: '4px', border: 'none', marginLeft: '4px' }}
+                style={{ 
+                  fontSize: '0.65rem', 
+                  background: isOnline ? 'var(--pos-warning)' : '#4b5563', 
+                  color: 'white', 
+                  padding: '2px 8px', 
+                  borderRadius: '4px', 
+                  border: 'none', 
+                  marginLeft: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+                title={isOnline ? 'Sync pending transactions now' : 'View offline sync status'}
               >
-                Fix Sync
+                {isOnline ? 'Sync Now' : 'Info'}
               </button>
             </>
           )}

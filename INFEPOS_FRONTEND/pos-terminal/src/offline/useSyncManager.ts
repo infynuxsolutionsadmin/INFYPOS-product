@@ -173,20 +173,30 @@ export const useSyncManager = () => {
   useEffect(() => {
     fetchPendingCount();
     
+    const handleQueueUpdate = () => {
+      fetchPendingCount();
+    };
+
+    window.addEventListener('sync-queue-updated', handleQueueUpdate);
+
     const interval = setInterval(() => {
       fetchPendingCount();
-      if (navigator.onLine) {
+      if (isOnline) {
         processSyncQueue();
       }
     }, 10000); // Check every 10 seconds
 
-    return () => clearInterval(interval);
-  }, [fetchPendingCount, processSyncQueue]);
+    return () => {
+      window.removeEventListener('sync-queue-updated', handleQueueUpdate);
+      clearInterval(interval);
+    };
+  }, [fetchPendingCount, processSyncQueue, isOnline]);
 
   return {
     isOnline,
     isSyncing,
     pendingCount,
     processSyncQueue,
+    checkConnectivity,
   };
 };
