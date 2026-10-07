@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CreditCard, Banknote, Smartphone, Landmark, Loader2, AlertCircle } from 'lucide-react';
+import { X, CreditCard, Banknote, Smartphone, Landmark, Loader2, AlertCircle, Wallet, Lock, ArrowRight, Circle, CheckCircle2 } from 'lucide-react';
 import { useCartStore } from '../../stores/cartStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useShiftStore } from '../../stores/shiftStore';
@@ -13,11 +13,11 @@ interface PaymentModalProps {
   onSuccess: (sale: Sale, isOffline?: boolean) => void;
 }
 
-const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: React.ReactNode }[] = [
-  { id: 'CASH', label: 'Cash', icon: <Banknote size={24} /> },
-  { id: 'CARD', label: 'Card', icon: <CreditCard size={24} /> },
-  { id: 'UPI', label: 'UPI', icon: <Smartphone size={24} /> },
-  { id: 'BANK_TRANSFER', label: 'Bank', icon: <Landmark size={24} /> },
+const PAYMENT_METHODS: { id: PaymentMethod; label: string; desc: string; icon: React.ReactNode }[] = [
+  { id: 'CASH', label: 'Cash', desc: 'Receive cash from customer', icon: <Banknote size={22} /> },
+  { id: 'CARD', label: 'Card', desc: 'Pay securely with your card', icon: <CreditCard size={22} /> },
+  { id: 'UPI', label: 'UPI', desc: 'Pay using UPI apps', icon: <Smartphone size={22} /> },
+  { id: 'BANK_TRANSFER', label: 'Bank', desc: 'Direct bank transfer', icon: <Landmark size={22} /> },
 ];
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
@@ -119,7 +119,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        backgroundColor: 'rgba(0,0,0,0.5)',
         backdropFilter: 'blur(4px)',
         zIndex: 50,
         display: 'flex',
@@ -129,107 +129,181 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
       }}
     >
       <div
-        className="pos-card animate-fade-in"
+        className="animate-fade-in"
         style={{
           width: '100%',
-          maxWidth: '500px',
-          maxHeight: '90vh',
+          maxWidth: '740px',
+          maxHeight: '95vh',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          overflowY: 'auto',
+          background: '#ffffff',
+          borderRadius: '20px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem', borderBottom: '1px solid var(--pos-border)' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Payment</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--pos-text-muted)', cursor: 'pointer' }}>
-            <X size={24} />
-          </button>
+        <div style={{ padding: '1.5rem 2rem 1.25rem 2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <h2 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.25rem' }}>Payment Method</h2>
+              <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>Choose your preferred payment method to complete the transaction.</p>
+            </div>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem' }}>
+              <X size={28} />
+            </button>
+          </div>
         </div>
 
-        <div style={{ padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {error && (
-            <div style={{ display: 'flex', gap: '0.6rem', background: 'var(--pos-danger-light)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '0.75rem 1rem', color: '#fca5a5', fontSize: '0.875rem' }}>
-              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+        {error && (
+          <div style={{ padding: '0 2rem' }}>
+            <div style={{ display: 'flex', gap: '0.6rem', background: '#fee2e2', border: '1px solid #f87171', borderRadius: '10px', padding: '0.75rem 1rem', color: '#991b1b', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+              <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
               <span>{error}</span>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Amount Summary */}
-          <div style={{ background: 'var(--pos-surface-2)', borderRadius: 12, padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--pos-text-muted)' }}>
-              <span>Subtotal</span>
-              <span>{fmt(cartSummary.subtotal)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--pos-text-muted)' }}>
-              <span>VAT</span>
-              <span>{fmt(cartSummary.totalVat)}</span>
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-              <span style={{ color: 'var(--pos-text-muted)' }}>Discount</span>
-              <div style={{ position: 'relative', width: '100px' }}>
-                <span style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--pos-text-muted)' }}>£</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={discountAmount}
-                  onChange={(e) => setDiscountAmount(e.target.value)}
-                  className="pos-input"
-                  style={{ paddingLeft: '1.5rem', paddingRight: '0.5rem', height: '32px', fontSize: '0.9rem' }}
-                  placeholder="0.00"
-                />
+        {/* Amount Summary */}
+        <div style={{ padding: '0 2rem' }}>
+          <div style={{ 
+            background: '#f8fafc', 
+            borderRadius: '12px', 
+            padding: '1.25rem 1.75rem', 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                <Wallet size={24} />
+              </div>
+              <div>
+                <div style={{ color: '#475569', fontSize: '0.95rem', marginBottom: '0.15rem' }}>Total Amount Due</div>
+                <div style={{ fontSize: '2.25rem', fontWeight: 800, color: '#16A34A', lineHeight: 1 }}>{fmt(finalTotal)}</div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px dashed var(--pos-border)' }}>
-              <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>Amount Due</span>
-              <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--pos-accent)' }}>{fmt(finalTotal)}</span>
+            <div style={{ width: '1px', background: '#e2e8f0', alignSelf: 'stretch', margin: '0 1.5rem' }}></div>
+
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.9rem' }}>
+                <span>Subtotal</span>
+                <span style={{ color: '#334155', fontWeight: 500 }}>{fmt(cartSummary.subtotal)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.9rem' }}>
+                <span>VAT (20%)</span>
+                <span style={{ color: '#334155', fontWeight: 500 }}>{fmt(cartSummary.totalVat)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.9rem', alignItems: 'center' }}>
+                <span>Discount</span>
+                <div style={{ display: 'flex', alignItems: 'center', color: '#334155', fontWeight: 500 }}>
+                  <span style={{ marginRight: '2px' }}>£</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={discountAmount}
+                    onChange={(e) => setDiscountAmount(e.target.value)}
+                    style={{ 
+                      width: '80px', 
+                      background: 'transparent', 
+                      border: 'none', 
+                      borderBottom: '1px solid transparent', 
+                      color: '#334155', 
+                      fontWeight: 500, 
+                      fontSize: '0.9rem', 
+                      textAlign: 'right', 
+                      outline: 'none',
+                      transition: 'border-color 0.2s'
+                    }}
+                    onFocus={(e) => (e.target.style.borderBottomColor = '#cbd5e1')}
+                    onBlur={(e) => (e.target.style.borderBottomColor = 'transparent')}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Payment Methods */}
-          <div>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--pos-text-muted)', marginBottom: '0.75rem', textTransform: 'uppercase' }}>Select Payment Method</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
-              {PAYMENT_METHODS.map((method) => (
+        {/* Payment Methods */}
+        <div style={{ padding: '1.5rem 2rem 1.25rem 2rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Select Payment Method</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+            {PAYMENT_METHODS.map((method) => {
+              const isSelected = paymentMethod === method.id;
+              return (
                 <button
                   key={method.id}
                   onClick={() => setPaymentMethod(method.id)}
                   style={{
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '1rem',
-                    borderRadius: 12,
-                    background: paymentMethod === method.id ? 'var(--pos-accent-light)' : 'var(--pos-surface-2)',
-                    border: `2px solid ${paymentMethod === method.id ? 'var(--pos-accent)' : 'transparent'}`,
-                    color: paymentMethod === method.id ? 'var(--pos-accent)' : 'var(--pos-text)',
+                    padding: '1.25rem',
+                    borderRadius: '10px',
+                    background: isSelected ? '#f0f7ff' : '#ffffff',
+                    border: `2px solid ${isSelected ? '#3b82f6' : '#e2e8f0'}`,
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left'
                   }}
                 >
-                  {method.icon}
-                  <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{method.label}</span>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: isSelected ? '#dbeafe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSelected ? '#2563eb' : '#64748b', marginRight: '1rem', flexShrink: 0 }}>
+                    {method.icon}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#0f172a', marginBottom: '0.15rem' }}>{method.label}</div>
+                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{method.desc}</div>
+                  </div>
+                  <div style={{ marginLeft: '0.75rem', color: isSelected ? '#2563eb' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {isSelected ? (
+                      <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid #3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#3b82f6' }}></div>
+                      </div>
+                    ) : (
+                      <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid #cbd5e1' }}></div>
+                    )}
+                  </div>
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        <div style={{ padding: '1.25rem', borderTop: '1px solid var(--pos-border)', background: 'var(--pos-surface-2)' }}>
+        <div style={{ padding: '0 2rem 2rem 2rem' }}>
           <button
-            className="btn-pos btn-success"
-            style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}
             onClick={handleConfirm}
             disabled={loading}
+            style={{ 
+              width: '100%', 
+              background: '#16A34A', 
+              color: 'white', 
+              padding: '1rem', 
+              borderRadius: '10px', 
+              fontSize: '1.15rem', 
+              fontWeight: 600, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              border: 'none', 
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.8 : 1,
+              transition: 'background 0.2s'
+            }}
+            onMouseOver={(e) => !loading && (e.currentTarget.style.background = '#15803d')}
+            onMouseOut={(e) => !loading && (e.currentTarget.style.background = '#16A34A')}
           >
             {loading ? (
-              <><Loader2 size={20} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} /> Processing...</>
+              <Loader2 size={24} className="animate-spin" />
             ) : (
-              `Confirm Payment ${fmt(finalTotal)}`
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Lock size={20} />
+                  <span>Confirm Payment</span>
+                  <span style={{ margin: '0 0.25rem' }}>{fmt(finalTotal)}</span>
+                </div>
+                <ArrowRight size={24} style={{ position: 'absolute', right: 0 }} />
+              </div>
             )}
           </button>
         </div>
