@@ -327,7 +327,7 @@ const ProductCatalog: React.FC = () => {
                   onClick={() => handleAdd(product)}
                   style={{
                     background: isAdded ? 'var(--pos-success-light)' : 'var(--pos-surface)',
-                    border: `1px solid ${isAdded ? 'rgba(34,197,94,0.4)' : 'var(--pos-border)'}`,
+                    border: `1px solid ${isAdded ? 'rgba(22,163,74,0.4)' : 'var(--pos-border)'}`,
                     borderRadius: 12,
                     padding: '0.85rem',
                     cursor: 'pointer',
@@ -337,6 +337,7 @@ const ProductCatalog: React.FC = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.4rem',
+                    boxShadow: isAdded ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.04)',
                   }}
                   onMouseEnter={(e) => {
                     if (!isAdded) {
@@ -363,7 +364,7 @@ const ProductCatalog: React.FC = () => {
                     style={{
                       fontWeight: 600,
                       fontSize: '0.85rem',
-                      color: 'var(--pos-text)',
+                      color: '#294A73',
                       overflow: 'hidden',
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
@@ -375,7 +376,7 @@ const ProductCatalog: React.FC = () => {
                   </p>
 
                   {/* SKU / barcode */}
-                  <p style={{ fontSize: '0.68rem', color: 'var(--pos-text-dim)', fontFamily: 'monospace' }}>
+                  <p style={{ fontSize: '0.68rem', color: '#6B7A90', fontFamily: 'monospace' }}>
                     {product.sku}
                     {product.barcode && ` · ${product.barcode}`}
                   </p>
@@ -383,11 +384,11 @@ const ProductCatalog: React.FC = () => {
                   {/* Price + VAT indicator */}
                   <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                     <div>
-                      <p style={{ fontWeight: 800, fontSize: '1rem', color: isAdded ? 'var(--pos-success)' : 'var(--pos-accent)' }}>
+                      <p style={{ fontWeight: 800, fontSize: '1rem', color: isAdded ? 'var(--pos-success)' : '#000000' }}>
                         {isAdded ? '✓ Added' : fmt(product.sellingPrice)}
                       </p>
                       {!isAdded && (
-                        <p style={{ fontSize: '0.65rem', color: 'var(--pos-text-dim)' }}>
+                        <p style={{ fontSize: '0.65rem', color: '#8A94A6' }}>
                           VAT {product.vatRate}%
                         </p>
                       )}

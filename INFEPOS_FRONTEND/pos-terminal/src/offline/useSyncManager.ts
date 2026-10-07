@@ -113,7 +113,7 @@ export const useSyncManager = () => {
         }))];
       }
 
-      const { getPendingEvents, updateEventStatus } = useSyncStore.getState();
+      const { getPendingEvents } = useSyncStore.getState();
       const webPending = getPendingEvents();
       allEvents = [...allEvents, ...webPending.map((e) => ({
         eventId: e.eventId,

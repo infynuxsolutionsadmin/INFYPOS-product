@@ -134,11 +134,6 @@ const LoginPage: React.FC = () => {
     setError(null);
     try {
       const result = await login({
-        tenantCode: 'ignored_offline', // Tenant code might be needed by the backend if we don't have it, but wait, the backend login requires tenantCode.
-        // We need to pass the pairedTenantId or something to find the tenant. Actually `login` requires `tenantCode`.
-        // Let's assume we can fetch it, or we just require them to enter it? No, if paired we know the tenantId, but the login endpoint expects `tenantCode`.
-        // Wait, the POS has `form.tenantCode` from pairing, but we didn't save it. We should just require the tenantCode again? Or maybe they don't need it. 
-        // Let's add tenantCode to the managerForm.
         tenantCode: form.tenantCode,
         email: managerForm.email,
         password: managerForm.password
