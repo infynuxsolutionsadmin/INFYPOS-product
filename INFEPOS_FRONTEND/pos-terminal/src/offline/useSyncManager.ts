@@ -9,28 +9,65 @@ export const useSyncManager = () => {
   const [pendingCount, setPendingCount] = useState<number>(0);
   const deviceId = 'electron-pos'; // This would come from device registration in a real app
 
-  const handleOnline = useCallback(() => setIsOnline(true), []);
-  const handleOffline = useCallback(() => setIsOnline(false), []);
+  const checkConnectivity = useCallback(async () => {
+    if (!navigator.onLine) {
+      setIsOnline(false);
+      return;
+    }
+
+    try {
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
+      const isLocalhost = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      if (isLocalhost) {
+        // When connected locally to localhost backend, verify actual external internet / cloud access
+        try {
+          await fetch('https://www.google.com/favicon.ico', {
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-store',
+            signal: controller.signal,
+          });
+        } catch {
+          await fetch('https://1.1.1.1', {
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-store',
+            signal: controller.signal,
+          });
+        }
+      } else {
+        // Check cloud backend reachability
+        await fetch(baseUrl, { method: 'HEAD', signal: controller.signal });
+      }
+
+      clearTimeout(timeoutId);
+      setIsOnline(true);
+    } catch (err) {
+      setIsOnline(false);
+    }
+  }, []);
+
+  const handleOnline = useCallback(() => {
+    checkConnectivity();
+  }, [checkConnectivity]);
+
+  const handleOffline = useCallback(() => {
+    setIsOnline(false);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    const pingInterval = setInterval(async () => {
-      if (!navigator.onLine) {
-        setIsOnline(false);
-        return;
-      }
-      try {
-        const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        await fetch(baseUrl, { method: 'HEAD', signal: controller.signal });
-        clearTimeout(timeoutId);
-        setIsOnline(true);
-      } catch (err) {
-        setIsOnline(false);
-      }
+    // Perform immediate ping on mount
+    checkConnectivity();
+
+    const pingInterval = setInterval(() => {
+      checkConnectivity();
     }, 10000); // Check every 10 seconds
 
     return () => {
@@ -38,7 +75,7 @@ export const useSyncManager = () => {
       window.removeEventListener('offline', handleOffline);
       clearInterval(pingInterval);
     };
-  }, [handleOnline, handleOffline]);
+  }, [handleOnline, handleOffline, checkConnectivity]);
 
   const fetchPendingCount = useCallback(async () => {
     let count = 0;

@@ -134,13 +134,13 @@ const POSHeader: React.FC = () => {
             display: 'flex', 
             alignItems: 'center', 
             gap: '0.4rem', 
-            padding: '0.2rem 0.5rem', 
+            padding: '0.25rem 0.6rem', 
             borderRadius: 8, 
             background: isOnline ? (pendingCount > 0 ? 'var(--pos-warning-light)' : 'transparent') : 'var(--pos-danger-light)',
             border: `1px solid ${isOnline ? (pendingCount > 0 ? 'var(--pos-warning)' : 'transparent') : 'var(--pos-danger)'}`,
             cursor: pendingCount > 0 && isOnline ? 'pointer' : 'default',
           }}
-          title={isOnline ? (pendingCount > 0 ? 'Click to sync pending transactions' : 'Online') : 'Offline'}
+          title={isOnline ? (pendingCount > 0 ? 'Click to sync pending transactions' : 'Online') : 'Offline (No internet or cloud connection)'}
           onClick={() => { if (pendingCount > 0 && isOnline) processSyncQueue(); }}
         >
           {isSyncing ? (
@@ -150,10 +150,17 @@ const POSHeader: React.FC = () => {
           ) : (
             <WifiOff size={14} color="var(--pos-danger)" />
           )}
+
+          {!isOnline && (
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--pos-danger)' }}>
+              Offline
+            </span>
+          )}
+
           {pendingCount > 0 && (
             <>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--pos-warning)' }}>
-                {pendingCount} Pending
+                {isOnline ? `${pendingCount} Pending` : `(${pendingCount} Pending)`}
               </span>
               <button 
                 onClick={async (e) => {
@@ -170,7 +177,7 @@ const POSHeader: React.FC = () => {
                   }
                   window.location.reload();
                 }}
-                style={{ fontSize: '0.65rem', background: '#ff3333', color: 'white', padding: '2px 6px', borderRadius: '4px', border: 'none', marginLeft: '8px' }}
+                style={{ fontSize: '0.65rem', background: '#ff3333', color: 'white', padding: '2px 6px', borderRadius: '4px', border: 'none', marginLeft: '4px' }}
               >
                 Fix Sync
               </button>
