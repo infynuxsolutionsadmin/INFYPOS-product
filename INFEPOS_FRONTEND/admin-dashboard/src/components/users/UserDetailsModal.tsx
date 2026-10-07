@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User as UserIcon, Briefcase, ChevronUp } from 'lucide-react';
+import { X, User as UserIcon, Briefcase } from 'lucide-react';
 import type { User } from '../../types/users';
 import { getUserById } from '../../api/users.api';
 import UserStatusBadge from './UserStatusBadge';

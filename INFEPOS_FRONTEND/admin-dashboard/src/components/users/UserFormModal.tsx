@@ -29,9 +29,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
   const [roleId, setRoleId] = useState('');
   const [storeId, setStoreId] = useState('');
   const [status, setStatus] = useState<UserStatus>('ACTIVE');
+  const [generatedPin] = useState<string | null>(null);
   // Password only for create
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  const selectedRole = roles.find(r => r.id === roleId);
+  const isCashier = selectedRole?.code?.toUpperCase() === 'CASHIER' || selectedRole?.name?.toUpperCase() === 'CASHIER';
 
   useEffect(() => {
     if (isOpen) {

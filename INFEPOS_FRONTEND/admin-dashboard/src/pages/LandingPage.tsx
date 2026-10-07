@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Download, LogIn, Server, ShieldCheck, Zap, Mail, Phone, MapPin,
+  Download, LogIn, Server, ShieldCheck, Mail, Phone, MapPin,
   ArrowRight, CheckCircle2, BarChart3, RefreshCw, Wifi, Lock, ChevronDown,
-  Globe, Users, TrendingUp, ExternalLink, Code2, Video, Share2,
+  Globe, Users, TrendingUp,
   ScanBarcode, ShoppingCart, DollarSign, Search, Package, ClipboardList,
   Layers, Store, Receipt, Truck, PieChart, Bell, Tag, UserCheck,
   CreditCard, Boxes, FileText, Activity, Building2, ArrowUpDown,
-  Palette, X, Sparkles, Check, ChevronRight, Cpu, HardDrive, Sliders,
-  HelpCircle, FileCode, Radio, Monitor, Laptop, Smartphone
+  X, Sparkles, Cpu, HardDrive,
+  FileCode, Monitor, Laptop
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────────
@@ -385,7 +385,7 @@ const waveIconsRow2 = [
   { Icon: Users, label: 'Customers', color: '#ec4899' },
 ];
 
-interface WaveIconItem { Icon: React.FC<{ size?: number; color?: string }>; label: string; color: string; }
+// interface WaveIconItem { Icon: React.FC<{ size?: number; color?: string }>; label: string; color: string; }
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ICON WAVE STRIP — Smooth traveling sine wave, colorful circles
@@ -932,7 +932,7 @@ const InteractiveModal: React.FC<{
   const [storeCount, setStoreCount] = useState(5);
   const [terminalCount, setTerminalCount] = useState(15);
   const [deploymentMode, setDeploymentMode] = useState<'cloud' | 'on-premise'>('cloud');
-  const [slaTier, setSlaTier] = useState<'standard' | 'premium' | 'mission-critical'>('premium');
+  const [slaTier] = useState<'standard' | 'premium' | 'mission-critical'>('premium');
 
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
   const [selectedPlan, setSelectedPlan] = useState<'starter' | 'business' | 'enterprise'>('business');
@@ -1278,12 +1278,12 @@ const LandingPage: React.FC = () => {
   const [pastHero, setPastHero] = useState(false);
 
   // Theme State
-  const [themeId, setThemeId] = useState<ProjectThemeId>('cobalt');
+  const [themeId] = useState<ProjectThemeId>('cobalt');
   const currentTheme = PROJECT_THEMES[themeId];
 
   // Navigation Dropdown State
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const leaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Modal State
   const [activeModal, setActiveModal] = useState<'product' | 'use-case' | 'resource' | 'enterprise' | 'pricing' | null>(null);
