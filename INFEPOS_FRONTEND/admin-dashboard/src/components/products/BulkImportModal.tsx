@@ -14,6 +14,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
   const [parseError, setParseError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [importResult, setImportResult] = useState<BulkImportResult | null>(null);
+  const [progressStatus, setProgressStatus] = useState<string>('');
 
   if (!isOpen) return null;
 
@@ -132,8 +133,6 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,Col
 
     reader.readAsText(fileToParse);
   };
-
-  const [progressStatus, setProgressStatus] = useState<string>('');
 
   const handleImportSubmit = async () => {
     if (parsedData.length === 0) return;
