@@ -2,12 +2,15 @@ import client from './client';
 import type { CreateSaleRequest, Sale } from '../types/sale';
 import type { BackendResponse } from '../types/product';
 
-import { queueSyncEvent, isDesktopApp } from '../services/localDb';
+import { queueSyncEvent, isDesktopApp, decrementLocalProductStock } from '../services/localDb';
 
 export const createSale = async (data: CreateSaleRequest): Promise<Sale> => {
   if (isDesktopApp()) {
     // 1. Queue it locally for background sync
     const eventId = await queueSyncEvent('SALE', data);
+    
+    // 2. Decrement local stock immediately so POS UI reflects real-time remaining stock
+    await decrementLocalProductStock(data.items);
     
     // Calculate totals loosely for mock
     let grandTotal = data.payments.reduce((acc, p) => acc + p.amount, 0);

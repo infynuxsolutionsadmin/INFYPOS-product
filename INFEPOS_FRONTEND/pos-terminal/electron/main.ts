@@ -31,9 +31,11 @@ function initDb() {
         vatRate REAL NOT NULL,
         sku TEXT,
         barcode TEXT,
-        categoryId TEXT
+        categoryId TEXT,
+        stockQuantity REAL DEFAULT 0
       );
     `);
+    db!.run(`ALTER TABLE products ADD COLUMN stockQuantity REAL DEFAULT 0`, () => {});
     db!.run(`
       CREATE TABLE IF NOT EXISTS inventory (
         productId TEXT PRIMARY KEY,

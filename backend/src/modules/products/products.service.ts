@@ -54,7 +54,7 @@ export class ProductsService {
 
     const { vatBand, vatRate, ...dataToSave } = dto;
 
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: {
         tenantId,
         createdBy: currentUserId,
@@ -63,6 +63,32 @@ export class ProductsService {
       },
       select: this.getSelectFields(),
     });
+
+    // Auto-create inventory for active stores
+    const stores = await this.prisma.store.findMany({
+      where: { tenantId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+
+    for (const store of stores) {
+      await this.prisma.inventory.upsert({
+        where: { storeId_productId: { storeId: store.id, productId: product.id } },
+        create: {
+          tenantId,
+          storeId: store.id,
+          productId: product.id,
+          quantityOnHand: 100,
+          reservedQuantity: 0,
+          minimumStock: 5,
+          maximumStock: 1000,
+          reorderLevel: 10,
+          status: 'ACTIVE',
+        },
+        update: {},
+      });
+    }
+
+    return this.findOne(tenantId, product.id);
   }
 
   async findAll(tenantId: string, query: FindProductsQueryDto) {
@@ -242,6 +268,15 @@ export class ProductsService {
       updatedBy: true,
       createdAt: true,
       updatedAt: true,
+      inventories: {
+        select: {
+          storeId: true,
+          quantityOnHand: true,
+          reservedQuantity: true,
+          minimumStock: true,
+          status: true,
+        },
+      },
     };
   }
 
@@ -328,6 +363,54 @@ export class ProductsService {
         skipDuplicates: true,
       });
       imported += res.count;
+    }
+
+    // Auto-create Inventory records for all active stores
+    const stores = await this.prisma.store.findMany({
+      where: { tenantId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+
+    if (stores.length > 0) {
+      const allProducts = await this.prisma.product.findMany({
+        where: { tenantId },
+        select: { id: true },
+      });
+
+      const existingInv = await this.prisma.inventory.findMany({
+        where: { tenantId },
+        select: { storeId: true, productId: true },
+      });
+
+      const existingKeys = new Set(existingInv.map(i => `${i.storeId}_${i.productId}`));
+      const invToCreate: any[] = [];
+
+      for (const prod of allProducts) {
+        for (const store of stores) {
+          const key = `${store.id}_${prod.id}`;
+          if (!existingKeys.has(key)) {
+            invToCreate.push({
+              tenantId,
+              storeId: store.id,
+              productId: prod.id,
+              quantityOnHand: 100, // Default initial stock per store
+              reservedQuantity: 0,
+              minimumStock: 5,
+              maximumStock: 1000,
+              reorderLevel: 10,
+              status: 'ACTIVE',
+            });
+            existingKeys.add(key);
+          }
+        }
+      }
+
+      for (let i = 0; i < invToCreate.length; i += BATCH_SIZE) {
+        await this.prisma.inventory.createMany({
+          data: invToCreate.slice(i, i + BATCH_SIZE),
+          skipDuplicates: true,
+        });
+      }
     }
 
     return {

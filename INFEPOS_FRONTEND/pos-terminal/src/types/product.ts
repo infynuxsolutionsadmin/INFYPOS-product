@@ -15,6 +15,7 @@ export interface Product {
   imageUrl: string | null;
   trackInventory: boolean;
   status: ProductStatus;
+  stockQuantity?: number;
   createdBy: string | null;
   updatedBy: string | null;
   createdAt: string;

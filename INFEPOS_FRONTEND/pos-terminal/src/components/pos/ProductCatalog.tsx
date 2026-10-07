@@ -88,6 +88,14 @@ const ProductCatalog: React.FC = () => {
     fetchProducts(search, page, selectedCategory);
   }, [page]);
 
+  useEffect(() => {
+    const handleCatalogUpdate = () => {
+      fetchProducts(search, page, selectedCategory);
+    };
+    window.addEventListener('local-catalog-updated', handleCatalogUpdate);
+    return () => window.removeEventListener('local-catalog-updated', handleCatalogUpdate);
+  }, [fetchProducts, search, page, selectedCategory]);
+
   const handleAdd = useCallback((product: Product) => {
     addItem(product);
     setAddedIds((prev) => {
@@ -319,52 +327,71 @@ const ProductCatalog: React.FC = () => {
           >
             {products.map((product) => {
               const isAdded = addedIds.has(product.id);
+              const stock = product.stockQuantity !== undefined ? product.stockQuantity : 0;
+              const isOutOfStock = stock <= 0;
+
               return (
                 <button
                   key={product.id}
                   id={`product-card-${product.id}`}
                   type="button"
-                  onClick={() => handleAdd(product)}
+                  onClick={() => {
+                    if (isOutOfStock) {
+                      alert(`"${product.name}" is currently Out of Stock in this store.`);
+                      return;
+                    }
+                    handleAdd(product);
+                  }}
                   style={{
-                    background: isAdded ? 'var(--pos-success-light)' : 'var(--pos-surface)',
-                    border: `1px solid ${isAdded ? 'rgba(22,163,74,0.4)' : 'var(--pos-border)'}`,
+                    background: isAdded ? 'var(--pos-success-light)' : (isOutOfStock ? '#fef2f2' : 'var(--pos-surface)'),
+                    border: `1px solid ${isAdded ? 'rgba(22,163,74,0.4)' : (isOutOfStock ? '#fca5a5' : 'var(--pos-border)')}`,
                     borderRadius: 12,
                     padding: '0.85rem',
-                    cursor: 'pointer',
+                    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                     textAlign: 'left',
                     transition: 'all 0.15s ease',
                     transform: isAdded ? 'scale(0.97)' : 'scale(1)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.4rem',
+                    opacity: isOutOfStock ? 0.75 : 1,
                     boxShadow: isAdded ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.04)',
                   }}
                   onMouseEnter={(e) => {
-                    if (!isAdded) {
+                    if (!isAdded && !isOutOfStock) {
                       (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--pos-accent)';
                       (e.currentTarget as HTMLButtonElement).style.background = 'var(--pos-surface-2)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (!isAdded) {
+                    if (!isAdded && !isOutOfStock) {
                       (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--pos-border)';
                       (e.currentTarget as HTMLButtonElement).style.background = 'var(--pos-surface)';
                     }
                   }}
                 >
-                  {/* Category badge */}
-                  {product.category && (
-                    <span className="badge badge-blue" style={{ alignSelf: 'flex-start', fontSize: '0.65rem' }}>
-                      {product.category}
+                  {/* Category & Stock Badges */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    {product.category && (
+                      <span className="badge badge-blue" style={{ fontSize: '0.65rem' }}>
+                        {product.category}
+                      </span>
+                    )}
+
+                    <span 
+                      className={`badge ${isOutOfStock ? 'badge-red' : stock < 10 ? 'badge-yellow' : 'badge-green'}`}
+                      style={{ fontSize: '0.62rem', fontWeight: 700 }}
+                    >
+                      {isOutOfStock ? 'Out of Stock' : `${stock} in stock`}
                     </span>
-                  )}
+                  </div>
 
                   {/* Product name */}
                   <p
                     style={{
                       fontWeight: 600,
                       fontSize: '0.85rem',
-                      color: '#294A73',
+                      color: isOutOfStock ? '#991b1b' : '#294A73',
                       overflow: 'hidden',
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
@@ -384,7 +411,7 @@ const ProductCatalog: React.FC = () => {
                   {/* Price + VAT indicator */}
                   <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                     <div>
-                      <p style={{ fontWeight: 800, fontSize: '1rem', color: isAdded ? 'var(--pos-success)' : '#000000' }}>
+                      <p style={{ fontWeight: 800, fontSize: '1rem', color: isAdded ? 'var(--pos-success)' : (isOutOfStock ? '#991b1b' : '#000000') }}>
                         {isAdded ? '✓ Added' : fmt(product.sellingPrice)}
                       </p>
                       {!isAdded && (

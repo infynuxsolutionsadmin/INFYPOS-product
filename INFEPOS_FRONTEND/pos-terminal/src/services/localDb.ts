@@ -61,25 +61,53 @@ export const syncProductsToLocalDb = async (products: any[]) => {
     await queryLocalDb('DELETE FROM products');
 
     for (const p of products) {
+      const stock = p.inventories?.[0]?.quantityOnHand !== undefined 
+        ? parseFloat(p.inventories[0].quantityOnHand)
+        : (p.stockQuantity !== undefined ? parseFloat(p.stockQuantity) : 100);
+
       await queryLocalDb(
-        `INSERT OR REPLACE INTO products (id, name, price, vatRate, sku, barcode, categoryId) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO products (id, name, price, vatRate, sku, barcode, categoryId, stockQuantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         p.id,
         p.name || '',
-        p.sellingPrice || 0,
+        p.sellingPrice || p.price || 0,
         p.vatRate || 20,
         p.sku || '',
         p.barcode || '',
-        p.category?.name || p.category || p.categoryId || 'General'
+        p.category?.name || p.category || p.categoryId || 'General',
+        stock
       );
     }
 
     await queryLocalDb('COMMIT');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('local-catalog-updated'));
+    }
   } catch (err) {
     try {
       await queryLocalDb('ROLLBACK');
     } catch {}
     console.error('Failed to sync products to local database:', err);
     throw err;
+  }
+};
+
+export const decrementLocalProductStock = async (items: { productId: string; quantity: number }[]) => {
+  if (!isDesktopApp() || !items || items.length === 0) return;
+  try {
+    await queryLocalDb('BEGIN TRANSACTION');
+    for (const item of items) {
+      await queryLocalDb(
+        `UPDATE products SET stockQuantity = MAX(0, stockQuantity - ?) WHERE id = ?`,
+        item.quantity,
+        item.productId
+      );
+    }
+    await queryLocalDb('COMMIT');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('local-catalog-updated'));
+    }
+  } catch (err) {
+    try { await queryLocalDb('ROLLBACK'); } catch {}
   }
 };
 

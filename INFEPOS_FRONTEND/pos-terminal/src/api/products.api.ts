@@ -70,7 +70,8 @@ export const getProducts = async (query?: FindProductsQuery): Promise<PaginatedP
         items: items.map((row: any) => ({
           ...row,
           sellingPrice: row.price,
-          category: row.categoryId
+          category: row.categoryId,
+          stockQuantity: row.stockQuantity !== undefined ? parseFloat(row.stockQuantity) : 0,
         })),
         pagination: {
           total,
