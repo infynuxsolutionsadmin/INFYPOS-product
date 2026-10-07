@@ -2,22 +2,22 @@
 @import "tailwindcss";
 
 :root {
-  --pos-bg: #0f1117;
-  --pos-surface: #1a1d27;
-  --pos-surface-2: #22263a;
-  --pos-border: #2e3348;
-  --pos-accent: #6366f1;
-  --pos-accent-hover: #5254d4;
-  --pos-accent-light: rgba(99, 102, 241, 0.15);
-  --pos-success: #22c55e;
-  --pos-success-light: rgba(34, 197, 94, 0.15);
-  --pos-danger: #ef4444;
-  --pos-danger-light: rgba(239, 68, 68, 0.15);
-  --pos-warning: #f59e0b;
-  --pos-warning-light: rgba(245, 158, 11, 0.15);
-  --pos-text: #e8eaf0;
-  --pos-text-muted: #8b91a8;
-  --pos-text-dim: #5a6282;
+  --pos-bg: #F7F8FA;
+  --pos-surface: #FFFFFF;
+  --pos-surface-2: #F9FAFB;
+  --pos-border: #E5E7EB;
+  --pos-accent: #2563EB;
+  --pos-accent-hover: #1D4ED8;
+  --pos-accent-light: rgba(37, 99, 235, 0.1);
+  --pos-success: #16A34A;
+  --pos-success-light: rgba(22, 163, 74, 0.1);
+  --pos-danger: #DC2626;
+  --pos-danger-light: rgba(220, 38, 38, 0.1);
+  --pos-warning: #F59E0B;
+  --pos-warning-light: rgba(245, 158, 11, 0.1);
+  --pos-text: #172033;
+  --pos-text-muted: #64748B;
+  --pos-text-dim: #94A3B8;
 }
 
 * {
@@ -84,7 +84,7 @@ body {
 .btn-primary:hover:not(:disabled) {
   background: var(--pos-accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
 }
 .btn-primary:active:not(:disabled) {
   transform: translateY(0);
@@ -95,9 +95,9 @@ body {
   color: white;
 }
 .btn-success:hover:not(:disabled) {
-  background: #16a34a;
+  background: #15803d;
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
 }
 
 .btn-danger {
@@ -144,7 +144,8 @@ body {
 .pos-card {
   background: var(--pos-surface);
   border: 1px solid var(--pos-border);
-  border-radius: 14px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 /* Spinner */
