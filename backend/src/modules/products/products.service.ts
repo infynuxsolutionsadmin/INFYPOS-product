@@ -52,7 +52,21 @@ export class ProductsService {
       throw new BadRequestException('Either vatBand or vatRate is required');
     }
 
-    const { vatBand, vatRate, ...dataToSave } = dto;
+    const {
+      vatBand,
+      vatRate,
+      initialStock,
+      quantityOnHand,
+      minimumStock,
+      maximumStock,
+      reorderLevel,
+      ...dataToSave
+    } = dto;
+
+    const resolvedInitialStock = initialStock ?? quantityOnHand ?? 100;
+    const resolvedMinStock = minimumStock ?? 5;
+    const resolvedMaxStock = maximumStock ?? 1000;
+    const resolvedReorderLevel = reorderLevel ?? 10;
 
     const product = await this.prisma.product.create({
       data: {
@@ -77,11 +91,11 @@ export class ProductsService {
           tenantId,
           storeId: store.id,
           productId: product.id,
-          quantityOnHand: 100,
+          quantityOnHand: resolvedInitialStock,
           reservedQuantity: 0,
-          minimumStock: 5,
-          maximumStock: 1000,
-          reorderLevel: 10,
+          minimumStock: resolvedMinStock,
+          maximumStock: resolvedMaxStock,
+          reorderLevel: resolvedReorderLevel,
           status: 'ACTIVE',
         },
         update: {},
@@ -248,6 +262,31 @@ export class ProductsService {
     return this.findOne(tenantId, id);
   }
 
+  async deleteAll(tenantId: string) {
+    // 1. Delete all stock movements first (foreign key to inventory)
+    await this.prisma.stockMovement.deleteMany({ where: { tenantId } });
+
+    // 2. Delete all related item records referencing tenant's products
+    await this.prisma.inventoryAdjustmentItem.deleteMany({ where: { product: { tenantId } } });
+    await this.prisma.stockTransferItem.deleteMany({ where: { product: { tenantId } } });
+    await this.prisma.goodsReceiptItem.deleteMany({ where: { product: { tenantId } } });
+    await this.prisma.purchaseItem.deleteMany({ where: { product: { tenantId } } });
+    await this.prisma.saleReturnItem.deleteMany({ where: { product: { tenantId } } });
+    await this.prisma.saleItem.deleteMany({ where: { product: { tenantId } } });
+
+    // 3. Delete all inventories for tenant
+    await this.prisma.inventory.deleteMany({
+      where: { tenantId },
+    });
+
+    // 4. Delete all products for tenant
+    const result = await this.prisma.product.deleteMany({
+      where: { tenantId },
+    });
+
+    return { deletedCount: result.count };
+  }
+
   private getSelectFields() {
     return {
       id: true,
@@ -296,6 +335,12 @@ export class ProductsService {
     );
 
     const validItemsToInsert: any[] = [];
+    const skuMapToInventory = new Map<string, {
+      quantityOnHand: number;
+      minimumStock: number;
+      maximumStock: number;
+      reorderLevel: number;
+    }>();
 
     for (let index = 0; index < products.length; index++) {
       const item = products[index];
@@ -336,6 +381,26 @@ export class ProductsService {
       existingSkus.add(sku);
       if (barcode) existingBarcodes.add(barcode);
 
+      const parseStock = (val: any, fallback: number) => {
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          const num = parseInt(String(val), 10);
+          if (!isNaN(num) && num >= 0) return num;
+        }
+        return fallback;
+      };
+
+      const initialStock = parseStock(item.initialStock ?? item.quantityOnHand ?? item.stock ?? item.qty, 100);
+      const minimumStock = parseStock(item.minimumStock ?? item.minStock, 5);
+      const maximumStock = parseStock(item.maximumStock ?? item.maxStock, 1000);
+      const reorderLevel = parseStock(item.reorderLevel ?? item.reorder, 10);
+
+      skuMapToInventory.set(sku, {
+        quantityOnHand: initialStock,
+        minimumStock,
+        maximumStock,
+        reorderLevel,
+      });
+
       validItemsToInsert.push({
         tenantId,
         createdBy: currentUserId,
@@ -374,7 +439,7 @@ export class ProductsService {
     if (stores.length > 0) {
       const allProducts = await this.prisma.product.findMany({
         where: { tenantId },
-        select: { id: true },
+        select: { id: true, sku: true },
       });
 
       const existingInv = await this.prisma.inventory.findMany({
@@ -386,6 +451,12 @@ export class ProductsService {
       const invToCreate: any[] = [];
 
       for (const prod of allProducts) {
+        const invSettings = skuMapToInventory.get(prod.sku);
+        const quantityOnHand = invSettings?.quantityOnHand ?? 100;
+        const minimumStock = invSettings?.minimumStock ?? 5;
+        const maximumStock = invSettings?.maximumStock ?? 1000;
+        const reorderLevel = invSettings?.reorderLevel ?? 10;
+
         for (const store of stores) {
           const key = `${store.id}_${prod.id}`;
           if (!existingKeys.has(key)) {
@@ -393,11 +464,11 @@ export class ProductsService {
               tenantId,
               storeId: store.id,
               productId: prod.id,
-              quantityOnHand: 100, // Default initial stock per store
+              quantityOnHand,
               reservedQuantity: 0,
-              minimumStock: 5,
-              maximumStock: 1000,
-              reorderLevel: 10,
+              minimumStock,
+              maximumStock,
+              reorderLevel,
               status: 'ACTIVE',
             });
             existingKeys.add(key);

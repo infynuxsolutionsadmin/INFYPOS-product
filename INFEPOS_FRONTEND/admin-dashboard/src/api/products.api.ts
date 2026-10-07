@@ -37,6 +37,11 @@ export const deleteProduct = async (id: string): Promise<Product> => {
   return response.data.data;
 };
 
+export const deleteAllProducts = async (): Promise<{ deletedCount: number }> => {
+  const response = await client.delete<BackendResponse<{ deletedCount: number }>>('/products/delete-all');
+  return response.data.data;
+};
+
 export interface BulkImportResult {
   importedCount: number;
   skippedCount: number;

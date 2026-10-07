@@ -89,6 +89,7 @@ export class InventoryService {
       storeId,
       productId,
       status,
+      stockLevel,
       sortBy = 'createdAt',
       sortOrder = 'desc',
     } = query;
@@ -106,6 +107,14 @@ export class InventoryService {
       where.productId = productId;
     }
 
+    if (stockLevel === 'OUT_OF_STOCK') {
+      where.quantityOnHand = { lte: 0 };
+    } else if (stockLevel === 'LOW_STOCK') {
+      where.quantityOnHand = { gt: 0, lte: 10 };
+    } else if (stockLevel === 'IN_STOCK') {
+      where.quantityOnHand = { gt: 0 };
+    }
+
     if (search) {
       where.OR = [
         { product: { name: { contains: search, mode: 'insensitive' } } },
@@ -115,15 +124,20 @@ export class InventoryService {
       ];
     }
 
+    let orderBy: any = { [sortBy]: sortOrder };
+    if (sortBy === 'productName') {
+      orderBy = { product: { name: sortOrder } };
+    } else if (sortBy === 'storeName') {
+      orderBy = { store: { name: sortOrder } };
+    }
+
     const [total, items] = await this.prisma.$transaction([
       this.prisma.inventory.count({ where }),
       this.prisma.inventory.findMany({
         where,
         skip,
         take: limit,
-        orderBy: {
-          [sortBy]: sortOrder,
-        },
+        orderBy,
         include: this.getIncludeFields(),
       }),
     ]);

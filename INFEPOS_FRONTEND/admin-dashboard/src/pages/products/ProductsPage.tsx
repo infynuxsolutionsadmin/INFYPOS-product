@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/authStore';
 import ProductFormModal from '../../components/products/ProductFormModal';
 import DeleteConfirmModal from '../../components/products/DeleteConfirmModal';
 import { BulkImportModal } from '../../components/products/BulkImportModal';
+import { DeleteAllConfirmModal } from '../../components/products/DeleteAllConfirmModal';
 import Barcode from 'react-barcode';
 
 const ProductIcon = ({ category, name }: { category?: string | null; name: string }) => {
@@ -106,6 +107,7 @@ const ProductsPage: React.FC = () => {
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -207,6 +209,17 @@ const ProductsPage: React.FC = () => {
           <p className="mt-1 text-sm text-gray-500">Manage retail products, pricing, and bulk catalog onboarding.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
+          {canDelete && totalItems > 0 && (
+            <button
+              onClick={() => setIsDeleteAllModalOpen(true)}
+              className="inline-flex items-center justify-center px-4 py-2.5 border border-red-200 bg-red-50 hover:bg-red-100 text-xs font-bold rounded-full text-red-700 focus:outline-none transition-all shadow-sm"
+              title="Delete all products from catalog"
+            >
+              <Trash2 className="mr-1.5 h-4 w-4 text-red-600" />
+              Delete All ({totalItems})
+            </button>
+          )}
+
           <button
             onClick={handleExportCsv}
             disabled={products.length === 0}
@@ -433,6 +446,13 @@ const ProductsPage: React.FC = () => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onSuccess={fetchProducts}
+      />
+
+      <DeleteAllConfirmModal
+        isOpen={isDeleteAllModalOpen}
+        onClose={() => setIsDeleteAllModalOpen(false)}
+        onSuccess={fetchProducts}
+        totalProductsCount={totalItems}
       />
     </div>
   );

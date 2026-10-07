@@ -32,6 +32,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     imageUrl: '',
     trackInventory: true,
     status: 'ACTIVE' as ProductStatus,
+    initialStock: 100,
   });
 
   const [loading, setLoading] = useState(false);
@@ -69,6 +70,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         imageUrl: '',
         trackInventory: true,
         status: 'ACTIVE' as ProductStatus,
+        initialStock: 100,
       });
     }
     setError(null);
@@ -207,6 +209,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     <option value="DRAFT">Draft</option>
                   </select>
                 </div>
+                {!isEditing && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stock in Hand</label>
+                    <input type="number" min="0" name="initialStock" value={formData.initialStock ?? 100} onChange={handleChange} className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm" placeholder="100" />
+                  </div>
+                )}
               </div>
 
               <div className="sm:col-span-2">

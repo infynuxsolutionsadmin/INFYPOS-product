@@ -26,27 +26,57 @@ export class SyncService {
     };
 
     for (const event of dto.events) {
-      // 1. Check Idempotency
+      const storeId = event.payload?.storeId;
+      if (!storeId) {
+        results.failed.push({ eventId: event.eventId, status: 'FAILED', error: 'Missing storeId in payload' });
+        continue;
+      }
+
+      // 1. Claim processing lock atomically
       const existing = await this.prisma.syncEvent.findUnique({
         where: { tenantId_eventId: { tenantId, eventId: event.eventId } },
       });
 
       if (existing) {
-        if (existing.status === 'SUCCESS') {
+        if (existing.status === 'SUCCESS' || existing.status === 'PROCESSING') {
           results.alreadyProcessed.push({ eventId: event.eventId, status: 'ALREADY_PROCESSED' });
-          continue; // Already processed successfully
-        } else {
-          // If it previously FAILED, we allow a retry.
-          this.logger.log(`Retrying failed sync event: ${event.eventId}`);
+          continue;
         }
-      }
 
-      // We need storeId. Determine it from the payload if possible, otherwise we assume the payload has it.
-      // Sales and SaleReturn DTOs contain storeId.
-      const storeId = event.payload?.storeId;
-      if (!storeId) {
-        results.failed.push({ eventId: event.eventId, status: 'FAILED', error: 'Missing storeId in payload' });
-        continue;
+        // Atomically claim FAILED event for retry
+        const updated = await this.prisma.syncEvent.updateMany({
+          where: {
+            tenantId,
+            eventId: event.eventId,
+            status: 'FAILED',
+          },
+          data: {
+            status: 'PROCESSING',
+            errorMessage: null,
+          },
+        });
+
+        if (updated.count === 0) {
+          results.alreadyProcessed.push({ eventId: event.eventId, status: 'ALREADY_PROCESSED' });
+          continue;
+        }
+      } else {
+        // Atomically create event lock. Unique constraint (tenantId_eventId) will fail if concurrent request created it first.
+        try {
+          await this.prisma.syncEvent.create({
+            data: {
+              tenantId,
+              storeId,
+              eventId: event.eventId,
+              eventType: event.eventType,
+              payload: event.payload,
+              status: 'PROCESSING',
+            },
+          });
+        } catch (lockError) {
+          results.alreadyProcessed.push({ eventId: event.eventId, status: 'ALREADY_PROCESSED' });
+          continue;
+        }
       }
 
       try {
@@ -66,17 +96,9 @@ export class SyncService {
         }
 
         // 3. Mark as SUCCESS in SyncEvent
-        await this.prisma.syncEvent.upsert({
+        await this.prisma.syncEvent.update({
           where: { tenantId_eventId: { tenantId, eventId: event.eventId } },
-          create: {
-            tenantId,
-            storeId,
-            eventId: event.eventId,
-            eventType: event.eventType,
-            payload: event.payload,
-            status: 'SUCCESS',
-          },
-          update: {
+          data: {
             status: 'SUCCESS',
             errorMessage: null,
             payload: event.payload,
@@ -88,20 +110,11 @@ export class SyncService {
       } catch (error) {
         this.logger.error(`Failed to process event ${event.eventId}: ${error.message}`, error.stack);
         
-        // 4. Mark as FAILED in SyncEvent (so we don't lose the fact that a Till tried to send it)
+        // 4. Mark as FAILED in SyncEvent
         try {
-          await this.prisma.syncEvent.upsert({
+          await this.prisma.syncEvent.update({
             where: { tenantId_eventId: { tenantId, eventId: event.eventId } },
-            create: {
-              tenantId,
-              storeId,
-              eventId: event.eventId,
-              eventType: event.eventType,
-              payload: event.payload,
-              status: 'FAILED',
-              errorMessage: error.message || 'Unknown error',
-            },
-            update: {
+            data: {
               status: 'FAILED',
               errorMessage: error.message || 'Unknown error',
               payload: event.payload,

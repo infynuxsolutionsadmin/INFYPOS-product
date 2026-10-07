@@ -81,4 +81,35 @@ export class CreateProductDto {
   @IsEnum(ProductStatus)
   @IsOptional()
   status?: ProductStatus;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Transform(({ value }) => parseInt(value))
+  initialStock?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Transform(({ value }) => parseInt(value))
+  quantityOnHand?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Transform(({ value }) => parseInt(value))
+  minimumStock?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Transform(({ value }) => parseInt(value))
+  maximumStock?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Transform(({ value }) => parseInt(value))
+  reorderLevel?: number;
 }
+

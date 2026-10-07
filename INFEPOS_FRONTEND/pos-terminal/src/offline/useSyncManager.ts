@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { syncOperations } from '../api/sync.api';
 import { getPendingSyncEvents, markSyncEventCompleted, isDesktopApp } from '../services/localDb';
 import { useSyncStore } from '../stores/syncStore';
@@ -6,6 +6,7 @@ import { useSyncStore } from '../stores/syncStore';
 export const useSyncManager = () => {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const isSyncingRef = useRef<boolean>(false);
   const [pendingCount, setPendingCount] = useState<number>(0);
   const deviceId = 'electron-pos'; // This would come from device registration in a real app
 
@@ -83,10 +84,10 @@ export const useSyncManager = () => {
       if (isDesktopApp()) {
         const pendingDb = await getPendingSyncEvents();
         count += pendingDb.length;
+      } else {
+        const { getPendingEvents } = useSyncStore.getState();
+        count += getPendingEvents().length;
       }
-      
-      const { getPendingEvents } = useSyncStore.getState();
-      count += getPendingEvents().length;
       
       setPendingCount(count);
     } catch (err) {
@@ -95,9 +96,10 @@ export const useSyncManager = () => {
   }, []);
 
   const processSyncQueue = useCallback(async () => {
-    if (!isOnline || isSyncing) return;
+    if (!isOnline || isSyncingRef.current) return;
 
     try {
+      isSyncingRef.current = true;
       setIsSyncing(true);
       let allEvents: any[] = [];
       let dbPending: any[] = [];
@@ -111,17 +113,17 @@ export const useSyncManager = () => {
           payload: JSON.parse(e.payload),
           source: 'sqlite'
         }))];
+      } else {
+        const { getPendingEvents } = useSyncStore.getState();
+        const webPending = getPendingEvents();
+        allEvents = [...webPending.map((e) => ({
+          eventId: e.eventId,
+          eventType: e.eventType,
+          occurredAt: e.occurredAt,
+          payload: e.payload,
+          source: 'zustand'
+        }))];
       }
-
-      const { getPendingEvents } = useSyncStore.getState();
-      const webPending = getPendingEvents();
-      allEvents = [...allEvents, ...webPending.map((e) => ({
-        eventId: e.eventId,
-        eventType: e.eventType,
-        occurredAt: e.occurredAt,
-        payload: e.payload,
-        source: 'zustand'
-      }))];
 
       if (allEvents.length === 0) {
         setPendingCount(0);
@@ -164,17 +166,18 @@ export const useSyncManager = () => {
     } catch (error: any) {
       console.error('Sync failed:', error);
     } finally {
+      isSyncingRef.current = false;
       setIsSyncing(false);
       fetchPendingCount(); // refresh count
     }
-  }, [isOnline, isSyncing, fetchPendingCount]);
+  }, [isOnline, fetchPendingCount]);
 
   // Auto-sync immediately as soon as internet connection is restored or pending items exist while online
   useEffect(() => {
-    if (isOnline && pendingCount > 0 && !isSyncing) {
+    if (isOnline && pendingCount > 0 && !isSyncingRef.current) {
       processSyncQueue();
     }
-  }, [isOnline, pendingCount, isSyncing, processSyncQueue]);
+  }, [isOnline, pendingCount, processSyncQueue]);
 
   // Poll for queue changes and try syncing if online
   useEffect(() => {

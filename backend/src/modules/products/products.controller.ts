@@ -78,6 +78,12 @@ export class ProductsController {
   }
 
   @Permissions('products.delete')
+  @Delete('delete-all')
+  async deleteAll(@CurrentUser('tenantId') tenantId: string) {
+    return this.productsService.deleteAll(tenantId);
+  }
+
+  @Permissions('products.delete')
   @Delete(':id')
   async remove(
     @CurrentUser('tenantId') tenantId: string,

@@ -51,14 +51,10 @@ export const createSale = async (data: CreateSaleRequest): Promise<Sale> => {
       }))
     };
     
-    // 3. Try to sync immediately if online, but don't block the UI if it fails
-    client.post<BackendResponse<Sale>>('/sales', data)
-      .then(() => {
-        console.log('Sale synced to cloud instantly');
-      })
-      .catch(err => {
-        console.log('Sale queued for offline sync:', err.message);
-      });
+    // Notify background sync manager to sync the queued item idempotently
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('sync-queue-updated'));
+    }
       
     return mockSale;
   }

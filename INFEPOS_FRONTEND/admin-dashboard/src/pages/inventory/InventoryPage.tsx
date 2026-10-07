@@ -25,6 +25,9 @@ const InventoryPage: React.FC = () => {
     search: '',
     status: undefined,
     storeId: undefined,
+    stockLevel: undefined,
+    sortBy: 'quantityOnHand',
+    sortOrder: 'asc',
   });
   
   const [totalPages, setTotalPages] = useState(1);
@@ -89,6 +92,21 @@ const InventoryPage: React.FC = () => {
     setQuery(prev => ({ ...prev, storeId: val || undefined, page: 1 }));
   };
 
+  const handleStockLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setQuery(prev => ({ ...prev, stockLevel: val || undefined, page: 1 }));
+  };
+
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (!val) {
+      setQuery(prev => ({ ...prev, sortBy: undefined, sortOrder: undefined, page: 1 }));
+      return;
+    }
+    const [sortBy, sortOrder] = val.split('-') as [string, 'asc' | 'desc'];
+    setQuery(prev => ({ ...prev, sortBy, sortOrder, page: 1 }));
+  };
+
   const handlePageChange = (newPage: number) => {
     setQuery(prev => ({ ...prev, page: newPage }));
   };
@@ -146,7 +164,7 @@ const InventoryPage: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-[24px] shadow-[0px_4px_24px_rgba(149,157,165,0.12)] border border-gray-100 overflow-hidden mb-6">
-        <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row gap-4 flex-wrap">
+        <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row gap-4 flex-wrap items-center">
           <div className="relative rounded-2xl shadow-sm flex-1 min-w-[200px] max-w-sm">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
@@ -159,11 +177,11 @@ const InventoryPage: React.FC = () => {
               placeholder="Search Product or SKU..."
             />
           </div>
-          <div className="w-full sm:w-56">
+          <div className="w-full sm:w-48">
             <select
               value={query.storeId || ''}
               onChange={handleStoreChange}
-              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer"
+              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer font-medium"
             >
               <option value="">All Stores</option>
               {stores.map(s => (
@@ -171,15 +189,41 @@ const InventoryPage: React.FC = () => {
               ))}
             </select>
           </div>
-          <div className="w-full sm:w-56">
+          <div className="w-full sm:w-44">
             <select
               value={query.status || ''}
               onChange={handleStatusChange}
-              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer"
+              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer font-medium"
             >
               <option value="">All Statuses</option>
               <option value="ACTIVE">Active</option>
               <option value="INACTIVE">Inactive</option>
+            </select>
+          </div>
+          <div className="w-full sm:w-44">
+            <select
+              value={query.stockLevel || ''}
+              onChange={handleStockLevelChange}
+              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer font-medium"
+            >
+              <option value="">All Stock Levels</option>
+              <option value="IN_STOCK">In Stock</option>
+              <option value="LOW_STOCK">Low Stock</option>
+              <option value="OUT_OF_STOCK">Out of Stock</option>
+            </select>
+          </div>
+          <div className="w-full sm:w-56">
+            <select
+              value={query.sortBy && query.sortOrder ? `${query.sortBy}-${query.sortOrder}` : 'quantityOnHand-asc'}
+              onChange={handleSortChange}
+              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer font-medium"
+            >
+              <option value="quantityOnHand-asc">Stock: Low to High</option>
+              <option value="quantityOnHand-desc">Stock: High to Low</option>
+              <option value="createdAt-desc">Newest Added</option>
+              <option value="createdAt-asc">Oldest Added</option>
+              <option value="productName-asc">Product Name: A to Z</option>
+              <option value="productName-desc">Product Name: Z to A</option>
             </select>
           </div>
         </div>

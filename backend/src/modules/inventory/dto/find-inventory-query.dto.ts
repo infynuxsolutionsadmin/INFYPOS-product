@@ -33,6 +33,10 @@ export class FindInventoryQueryDto {
 
   @IsOptional()
   @IsString()
+  stockLevel?: string;
+
+  @IsOptional()
+  @IsString()
   sortBy?: string = 'createdAt';
 
   @IsOptional()

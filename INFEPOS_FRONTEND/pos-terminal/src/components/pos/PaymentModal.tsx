@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useShiftStore } from '../../stores/shiftStore';
 import { createSale } from '../../api/sales.api';
 import { useSyncStore } from '../../stores/syncStore';
+import { isDesktopApp } from '../../services/localDb';
 import type { PaymentMethod, Sale } from '../../types/sale';
 
 interface PaymentModalProps {
@@ -62,8 +63,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
       onSuccess(sale, false);
     } catch (err: any) {
       // Check if it's a network error (no response)
-      if (!err.response) {
-        // Handle offline sale
+      if (!err.response && !isDesktopApp()) {
+        // Handle offline sale for browser mode
         const syncEvent = addSyncEvent('SALE', payload);
         
         // Construct a mock Sale object to show on Receipt

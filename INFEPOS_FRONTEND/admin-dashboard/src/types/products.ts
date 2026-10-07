@@ -36,6 +36,10 @@ export interface CreateProductRequest {
   imageUrl?: string;
   trackInventory?: boolean;
   status?: ProductStatus;
+  initialStock?: number;
+  minimumStock?: number;
+  maximumStock?: number;
+  reorderLevel?: number;
 }
 
 export type UpdateProductRequest = Partial<CreateProductRequest>;

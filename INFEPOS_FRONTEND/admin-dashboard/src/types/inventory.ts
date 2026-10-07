@@ -56,6 +56,7 @@ export interface FindInventoryQuery {
   storeId?: string;
   productId?: string;
   status?: InventoryStatus;
+  stockLevel?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
