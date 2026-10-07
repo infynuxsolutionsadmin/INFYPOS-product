@@ -133,16 +133,46 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,Col
     reader.readAsText(fileToParse);
   };
 
+  const [progressStatus, setProgressStatus] = useState<string>('');
+
   const handleImportSubmit = async () => {
     if (parsedData.length === 0) return;
 
     setLoading(true);
     setParseError(null);
+    setProgressStatus('Starting import...');
+
+    let totalImported = 0;
+    let totalSkipped = 0;
+    const allErrors: string[] = [];
+
+    const CHUNK_SIZE = 1000;
+    const totalChunks = Math.ceil(parsedData.length / CHUNK_SIZE);
 
     try {
-      const result = await bulkImportProducts(parsedData);
-      setImportResult(result);
-      if (result.importedCount > 0) {
+      for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+        const chunk = parsedData.slice(chunkIdx * CHUNK_SIZE, (chunkIdx + 1) * CHUNK_SIZE);
+        const startNum = chunkIdx * CHUNK_SIZE + 1;
+        const endNum = Math.min((chunkIdx + 1) * CHUNK_SIZE, parsedData.length);
+
+        setProgressStatus(`Importing items ${startNum} to ${endNum} of ${parsedData.length} (${Math.round((endNum / parsedData.length) * 100)}%)...`);
+
+        const result = await bulkImportProducts(chunk);
+        totalImported += result.importedCount;
+        totalSkipped += result.skippedCount;
+        if (result.errors && result.errors.length > 0) {
+          allErrors.push(...result.errors);
+        }
+      }
+
+      setImportResult({
+        importedCount: totalImported,
+        skippedCount: totalSkipped,
+        totalProcessed: parsedData.length,
+        errors: allErrors.slice(0, 50),
+      });
+
+      if (totalImported > 0) {
         onSuccess();
       }
     } catch (err: any) {
@@ -150,6 +180,7 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,Col
       setParseError(Array.isArray(msg) ? msg.join(', ') : msg);
     } finally {
       setLoading(false);
+      setProgressStatus('');
     }
   };
 
@@ -317,7 +348,7 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,Col
                   {loading ? (
                     <>
                       <RefreshCw className="h-4 w-4 animate-spin" />
-                      Importing {parsedData.length} Products...
+                      {progressStatus || `Importing ${parsedData.length} Products...`}
                     </>
                   ) : (
                     <>

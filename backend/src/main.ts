@@ -18,6 +18,11 @@ async function bootstrap() {
   // Set Global API Route Prefix (e.g. /api/v1)
   app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`);
 
+  // Increase payload limit for large bulk product imports
+  const express = require('express');
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
   // Enable helmet for security headers
   const helmet = require('helmet');
   app.use(helmet());

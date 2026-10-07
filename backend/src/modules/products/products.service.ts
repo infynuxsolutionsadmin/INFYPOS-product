@@ -260,74 +260,79 @@ export class ProductsService {
       existingProducts.filter(p => p.barcode).map(p => p.barcode!.toUpperCase())
     );
 
+    const validItemsToInsert: any[] = [];
+
     for (let index = 0; index < products.length; index++) {
       const item = products[index];
       const rowNum = index + 1;
 
-      try {
-        if (!item.name || typeof item.name !== 'string' || item.name.trim() === '') {
-          errors.push(`Row ${rowNum}: Product name is required.`);
-          skipped++;
-          continue;
-        }
-
-        const name = item.name.trim();
-        const sellingPrice = parseFloat(item.sellingPrice) || 0;
-        const costPrice = parseFloat(item.costPrice) || 0;
-        const vatRate = item.vatRate !== undefined ? parseFloat(item.vatRate) : 20;
-
-        let sku = item.sku ? String(item.sku).trim().toUpperCase() : '';
-        if (!sku) {
-          sku = 'PRD-' + Math.floor(100000 + Math.random() * 900000);
-          while (existingSkus.has(sku)) {
-            sku = 'PRD-' + Math.floor(100000 + Math.random() * 900000);
-          }
-        }
-
-        if (existingSkus.has(sku)) {
-          errors.push(`Row ${rowNum} (${name}): SKU '${sku}' already exists.`);
-          skipped++;
-          continue;
-        }
-
-        let barcode = item.barcode ? String(item.barcode).trim().toUpperCase() : null;
-        if (barcode && existingBarcodes.has(barcode)) {
-          errors.push(`Row ${rowNum} (${name}): Barcode '${barcode}' already exists.`);
-          skipped++;
-          continue;
-        }
-
-        await this.prisma.product.create({
-          data: {
-            tenantId,
-            createdBy: currentUserId,
-            name,
-            sku,
-            barcode,
-            sellingPrice,
-            costPrice,
-            vatRate,
-            category: item.category || 'General',
-            brand: item.brand || null,
-            unit: item.unit || 'pcs',
-            description: item.description || null,
-            status: ProductStatus.ACTIVE,
-            trackInventory: true,
-          },
-        });
-
-        existingSkus.add(sku);
-        if (barcode) existingBarcodes.add(barcode);
-        imported++;
-      } catch (err: any) {
-        errors.push(`Row ${rowNum} (${item.name || 'Unknown'}): ${err.message || 'Failed to import'}`);
+      if (!item.name || typeof item.name !== 'string' || item.name.trim() === '') {
+        errors.push(`Row ${rowNum}: Product name is required.`);
         skipped++;
+        continue;
       }
+
+      const name = item.name.trim();
+      const sellingPrice = parseFloat(item.sellingPrice) || 0;
+      const costPrice = parseFloat(item.costPrice) || 0;
+      const vatRate = item.vatRate !== undefined ? parseFloat(item.vatRate) : 20;
+
+      let sku = item.sku ? String(item.sku).trim().toUpperCase() : '';
+      if (!sku) {
+        sku = 'PRD-' + Math.floor(100000 + Math.random() * 900000);
+        while (existingSkus.has(sku)) {
+          sku = 'PRD-' + Math.floor(100000 + Math.random() * 900000);
+        }
+      }
+
+      if (existingSkus.has(sku)) {
+        errors.push(`Row ${rowNum} (${name}): SKU '${sku}' already exists.`);
+        skipped++;
+        continue;
+      }
+
+      let barcode = item.barcode ? String(item.barcode).trim().toUpperCase() : null;
+      if (barcode && existingBarcodes.has(barcode)) {
+        errors.push(`Row ${rowNum} (${name}): Barcode '${barcode}' already exists.`);
+        skipped++;
+        continue;
+      }
+
+      existingSkus.add(sku);
+      if (barcode) existingBarcodes.add(barcode);
+
+      validItemsToInsert.push({
+        tenantId,
+        createdBy: currentUserId,
+        name,
+        sku,
+        barcode,
+        sellingPrice,
+        costPrice,
+        vatRate,
+        category: item.category || 'General',
+        brand: item.brand || null,
+        unit: item.unit || 'pcs',
+        description: item.description || null,
+        status: ProductStatus.ACTIVE,
+        trackInventory: true,
+      });
+    }
+
+    // High-performance batch insert in chunks of 500
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < validItemsToInsert.length; i += BATCH_SIZE) {
+      const batch = validItemsToInsert.slice(i, i + BATCH_SIZE);
+      const res = await this.prisma.product.createMany({
+        data: batch,
+        skipDuplicates: true,
+      });
+      imported += res.count;
     }
 
     return {
       importedCount: imported,
-      skippedCount: skipped,
+      skippedCount: skipped + (validItemsToInsert.length - imported),
       totalProcessed: products.length,
       errors: errors.slice(0, 50),
     };
