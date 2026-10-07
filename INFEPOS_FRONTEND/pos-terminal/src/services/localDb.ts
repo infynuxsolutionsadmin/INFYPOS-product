@@ -54,17 +54,32 @@ export const markSyncEventCompleted = async (id: string) => {
 };
 
 export const syncProductsToLocalDb = async (products: any[]) => {
-  if (!isDesktopApp()) return;
+  if (!isDesktopApp() || !products || products.length === 0) return;
   
-  // Clear existing products to ensure exact mirror of cloud DB
-  await queryLocalDb(`DELETE FROM products`);
+  try {
+    await queryLocalDb('BEGIN TRANSACTION');
+    await queryLocalDb('DELETE FROM products');
 
-  // Basic sync: just insert or replace products in the local DB
-  for (const p of products) {
-    await queryLocalDb(
-      `INSERT OR REPLACE INTO products (id, name, price, vatRate, sku, barcode, categoryId) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      p.id, p.name, p.sellingPrice || 0, p.vatRate || 20, p.sku || '', p.barcode || '', p.category?.name || p.categoryId || ''
-    );
+    for (const p of products) {
+      await queryLocalDb(
+        `INSERT OR REPLACE INTO products (id, name, price, vatRate, sku, barcode, categoryId) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        p.id,
+        p.name || '',
+        p.sellingPrice || 0,
+        p.vatRate || 20,
+        p.sku || '',
+        p.barcode || '',
+        p.category?.name || p.category || p.categoryId || 'General'
+      );
+    }
+
+    await queryLocalDb('COMMIT');
+  } catch (err) {
+    try {
+      await queryLocalDb('ROLLBACK');
+    } catch {}
+    console.error('Failed to sync products to local database:', err);
+    throw err;
   }
 };
 
