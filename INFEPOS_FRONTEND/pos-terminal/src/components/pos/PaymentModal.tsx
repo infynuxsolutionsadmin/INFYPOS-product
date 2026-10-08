@@ -30,6 +30,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [discountAmount, setDiscountAmount] = useState<string>('');
+  const [customerPhone, setCustomerPhone] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +48,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
     const payload = {
       shiftId: currentShift?.id,
       storeId: user.storeId,
+      customerPhone: customerPhone.trim() || undefined,
       discountAmount: parsedDiscount,
       payments: [{
         paymentMethod,
@@ -163,8 +165,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
           </div>
         )}
 
-        {/* Amount Summary */}
-        <div style={{ padding: '0 2rem' }}>
+        {/* Customer & Amount Summary */}
+        <div style={{ padding: '0 2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Customer Input */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '1rem 1.75rem', borderRadius: '12px' }}>
+            <span style={{ color: '#475569', fontWeight: 600 }}>Customer Phone <span style={{fontSize: '0.8rem', fontWeight: 400}}>(Optional)</span></span>
+            <input
+              type="tel"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              className="pos-input"
+              style={{ width: '160px', height: '36px', fontSize: '0.95rem', padding: '0 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+              placeholder="+1 234..."
+            />
+          </div>
+
           <div style={{ 
             background: '#f8fafc', 
             borderRadius: '12px', 

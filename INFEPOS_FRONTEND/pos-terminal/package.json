@@ -9,7 +9,30 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "electron": "vite build && electron ."
+    "electron": "vite build && electron .",
+    "package": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.infynux.infepos",
+    "productName": "INFEPOS Terminal",
+    "directories": {
+      "output": "release/"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -31,6 +54,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",

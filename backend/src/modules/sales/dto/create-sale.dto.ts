@@ -52,6 +52,10 @@ export class CreateSaleDto {
   @IsOptional()
   customerId?: string;
 
+  @IsString()
+  @IsOptional()
+  customerPhone?: string;
+
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @IsOptional()

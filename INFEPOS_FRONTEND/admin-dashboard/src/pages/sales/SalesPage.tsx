@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, Search } from 'lucide-react';
+import { Eye, Search, CornerUpLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { Sale, FindSalesQuery, SaleStatus } from '../../types/sales';
 import { getSales } from '../../api/sales.api';
 import { useAuthStore } from '../../stores/authStore';
@@ -96,7 +97,12 @@ const SalesPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-[#1a1f36]">Sales</h1>
           <p className="mt-1 text-sm text-gray-500">Manage and review sales transactions.</p>
         </div>
-        {/* Create Sale is not available in the Admin Dashboard — sales are created through the POS Terminal with an open shift */}
+        <div className="flex gap-3">
+          <Link to="/sales-returns" className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50 hover:text-[#5B58F2] hover:border-[#5B58F2] shadow-sm transition-all">
+            <CornerUpLeft className="w-4 h-4" />
+            View Returns
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-[24px] shadow-[0px_4px_24px_rgba(149,157,165,0.12)] border border-gray-100 overflow-hidden mb-6">

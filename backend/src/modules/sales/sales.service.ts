@@ -81,6 +81,26 @@ export class SalesService {
         if (customer.status === 'BLOCKED') {
           throw new ForbiddenException('Customer is blocked from making purchases');
         }
+      } else if (dto.customerPhone) {
+        customer = await this.prisma.customer.findFirst({
+          where: { phone: dto.customerPhone, tenantId },
+        });
+        if (!customer) {
+          // Auto-create a basic customer record for the offline till sync
+          customer = await this.prisma.customer.create({
+            data: {
+              tenantId,
+              customerCode: `CUST-${Date.now()}`,
+              firstName: 'Retail',
+              lastName: 'Customer',
+              phone: dto.customerPhone,
+              customerType: 'RETAIL',
+              status: 'ACTIVE',
+            }
+          });
+        } else if (customer.status === 'BLOCKED') {
+          throw new ForbiddenException('Customer is blocked from making purchases');
+        }
       }
 
       return await this.prisma.$transaction(async (tx) => {

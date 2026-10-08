@@ -1575,7 +1575,7 @@ const LandingPage: React.FC = () => {
             </button>
 
             <button
-              onClick={() => alert('Downloading INFEPOS Terminal...')}
+              onClick={() => window.location.href = 'https://github.com/naveend07ec/pos-download/releases/download/v1.0.0/INFEPOS.Terminal.Setup.0.0.0.exe'}
               className={`hidden sm:flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg ${pastHero
                   ? 'bg-slate-900 text-white hover:bg-black'
                   : 'bg-black/40 hover:bg-black/60 text-white border border-white/20 backdrop-blur-xl shadow-black/30'
@@ -1630,7 +1630,7 @@ const LandingPage: React.FC = () => {
           {/* Dual Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
             <button
-              onClick={() => alert('Downloading INFEPOS Terminal App...')}
+              onClick={() => window.location.href = 'https://github.com/naveend07ec/pos-download/releases/download/v1.0.0/INFEPOS.Terminal.Setup.0.0.0.exe'}
               className="flex items-center gap-2.5 px-9 py-4 bg-black/45 hover:bg-black/65 text-white border border-white/20 hover:border-white/35 backdrop-blur-xl rounded-full font-semibold text-base shadow-2xl shadow-black/40 transition-all hover:scale-105 hover:-translate-y-0.5"
             >
               Download App <Download size={18} />
@@ -1759,7 +1759,7 @@ const LandingPage: React.FC = () => {
               </ul>
               <div className="pt-4">
                 <button
-                  onClick={() => alert('Downloading INFEPOS Terminal App...')}
+                  onClick={() => window.location.href = 'https://github.com/naveend07ec/pos-download/releases/download/v1.0.0/INFEPOS.Terminal.Setup.0.0.0.exe'}
                   className="px-7 py-3.5 bg-slate-900 text-white rounded-full font-semibold text-sm shadow-md hover:bg-black transition-all hover:scale-105"
                 >
                   Download Till App &rarr;
@@ -1991,7 +1991,7 @@ const LandingPage: React.FC = () => {
                 ))}
               </ul>
               <button
-                onClick={() => alert('Downloading POS Terminal...')}
+                onClick={() => window.location.href = 'https://github.com/naveend07ec/pos-download/releases/download/v1.0.0/INFEPOS.Terminal.Setup.0.0.0.exe'}
                 className="flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-500 transition-all hover:scale-105 shadow-xl"
               >
                 Download POS App <Download size={18} />
@@ -2084,7 +2084,7 @@ const LandingPage: React.FC = () => {
 
               <div className="flex flex-wrap items-center gap-4 pt-2">
                 <button
-                  onClick={() => alert('Downloading INFEPOS Terminal for Windows...')}
+                  onClick={() => window.location.href = 'https://github.com/naveend07ec/pos-download/releases/download/v1.0.0/INFEPOS.Terminal.Setup.0.0.0.exe'}
                   className="px-8 py-4 bg-white text-slate-950 rounded-full font-semibold text-base shadow-2xl hover:bg-slate-100 transition-all hover:scale-105"
                 >
                   Download for Windows

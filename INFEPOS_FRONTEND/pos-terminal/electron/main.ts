@@ -1,8 +1,10 @@
-import './polyfill';
+import './polyfill.js';
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+
+import type * as sqlite3Types from 'sqlite3';
 
 const require = createRequire(import.meta.url);
 const sqlite3 = require('sqlite3').verbose();
@@ -12,17 +14,17 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV === 'development';
 
 let mainWindow: BrowserWindow | null = null;
-let db: sqlite3.Database | null = null;
+let db: sqlite3Types.Database | null = null;
 
 function initDb() {
   const dbPath = path.join(app.getPath('userData'), 'pos-offline.sqlite');
-  db = new sqlite3.Database(dbPath, (err) => {
+  db = new sqlite3.Database(dbPath, (err: Error | null) => {
     if (err) console.error('Database open error:', err);
     else console.log('SQLite database opened at', dbPath);
   });
 
   // Create tables for offline data
-  db.serialize(() => {
+  db!.serialize(() => {
     db!.run(`
       CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
@@ -61,9 +63,9 @@ function initDb() {
     `);
     
     // Migration: Add barcode column if it doesn't exist
-    db!.all("PRAGMA table_info(products)", (err, columns) => {
+    db!.all("PRAGMA table_info(products)", (err: Error | null, columns: any[]) => {
       if (!err && columns && !columns.some((c: any) => c.name === 'barcode')) {
-        db!.run("ALTER TABLE products ADD COLUMN barcode TEXT", (err) => {
+        db!.run("ALTER TABLE products ADD COLUMN barcode TEXT", (err: Error | null) => {
           if (!err) console.log("Added barcode column to products table");
         });
       }
@@ -107,9 +109,9 @@ app.on('window-all-closed', () => {
 });
 
 // Statement Cache for Optimization
-const statementCache = new Map<string, sqlite3.Statement>();
+const statementCache = new Map<string, sqlite3Types.Statement>();
 
-ipcMain.handle('db:query', (event, sql, ...params) => {
+ipcMain.handle('db:query', (_event, sql, ...params) => {
   return new Promise((resolve, reject) => {
     if (!db) return reject(new Error('DB not initialized'));
     
@@ -118,7 +120,7 @@ ipcMain.handle('db:query', (event, sql, ...params) => {
     
     if (!stmt) {
       try {
-        stmt = db.prepare(sql, (err) => {
+        stmt = db.prepare(sql, (err: Error | null) => {
           if (err) {
             // Remove from cache if prepare failed
             statementCache.delete(sql);
@@ -138,12 +140,12 @@ ipcMain.handle('db:query', (event, sql, ...params) => {
       if (!statementCache.has(sql)) return;
       
       if (sql.trim().toLowerCase().startsWith('select') || sql.trim().toLowerCase().startsWith('pragma')) {
-        stmt!.all(params, (err, rows) => {
+        stmt!.all(params, (err: Error | null, rows: any[]) => {
           if (err) reject(err);
           else resolve(rows);
         });
       } else {
-        stmt!.run(params, function (err) {
+        stmt!.run(params, function (this: sqlite3Types.RunResult, err: Error | null) {
           if (err) reject(err);
           else resolve({ changes: this.changes, lastInsertRowid: this.lastID });
         });

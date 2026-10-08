@@ -9,7 +9,8 @@ const navigation = [
   { name: 'Stores', href: '/stores' },
   { name: 'Inventory', href: '/inventory' },
   { name: 'Sales', href: '/sales' },
-  { name: 'Returns', href: '/sales-returns' },
+  { name: 'Suppliers', href: '/suppliers' },
+  { name: 'Customers', href: '/customers' },
   { name: 'Shifts', href: '/shifts', permission: 'shifts.read' },
   { name: 'Users', href: '/users' },
   { name: 'Roles & Perms', href: '/roles-permissions' },
@@ -42,7 +43,7 @@ const Header: React.FC = () => {
                 key={item.name}
                 to={item.href}
                 className={({ isActive }) =>
-                  `px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors duration-200 ${
+                  `px-3 py-1.5 rounded-full text-[0.85rem] font-medium whitespace-nowrap transition-colors duration-200 ${
                     isActive
                       ? 'bg-[#5B58F2] text-white shadow-md'
                       : 'text-gray-300 hover:text-white hover:bg-gray-800'
@@ -56,14 +57,14 @@ const Header: React.FC = () => {
         </nav>
 
         {/* Profile Area */}
-        <div className="flex items-center space-x-4 bg-white px-4 py-2 rounded-full shadow-[0_4px_15px_rgb(0,0,0,0.02)]">
-          <span className="text-sm font-medium text-gray-700">{user?.email || 'Admin User'}</span>
+        <div className="flex items-center">
           <button
             onClick={clearAuth}
-            className="p-1.5 rounded-full bg-gray-100 text-gray-500 hover:text-red-500 hover:bg-red-50 transition-colors focus:outline-none"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-all focus:outline-none shadow-sm text-sm font-bold"
             title="Logout"
           >
             <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </div>

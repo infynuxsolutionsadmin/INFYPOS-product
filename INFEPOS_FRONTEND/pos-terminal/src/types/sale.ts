@@ -9,6 +9,7 @@ export interface CreateSaleRequest {
   shiftId?: string;
   storeId: string;
   customerId?: string;
+  customerPhone?: string;
   discountAmount?: number;
   payments: Array<{
     paymentMethod: PaymentMethod;
