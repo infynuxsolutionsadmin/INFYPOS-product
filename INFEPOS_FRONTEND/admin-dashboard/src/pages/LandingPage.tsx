@@ -231,7 +231,7 @@ const TypewriterHeading: React.FC<{
             return (
               <span key={i} className="inline-flex items-baseline">
                 <span className={`font-black ${isDarkTheme ? 'text-white' : 'text-slate-900'}`}>INF</span>
-                <span className="font-display font-extrabold bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">
+                <span className="font-display italic font-extrabold bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">
                   EPOS
                 </span>
               </span>
@@ -254,7 +254,7 @@ const TypewriterHeading: React.FC<{
 };
 
 /* ─────────────────────────────────────────────────────────────────
-   INFEPOS BRAND LOGO TEXT — Modern Distinct INF + EPOS (Gradient)
+   INFEPOS BRAND LOGO TEXT — Modern Distinct INF + EPOS (Gradient Italic)
 ───────────────────────────────────────────────────────────────── */
 const InfeposLogoText: React.FC<{
   textSize?: string;
@@ -263,7 +263,7 @@ const InfeposLogoText: React.FC<{
   return (
     <span className={`${textSize} tracking-tight inline-flex items-baseline`}>
       <span className={`font-black ${isHeroTheme ? 'text-white' : 'text-slate-950'}`}>INF</span>
-      <span className={`font-display font-extrabold ${isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}`}>
+      <span className={`font-display italic font-extrabold ${isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}`}>
         EPOS
       </span>
     </span>
@@ -2847,7 +2847,7 @@ const LandingPage: React.FC = () => {
           <div className="border-t border-slate-100 py-10 md:py-14 text-center select-none overflow-hidden">
             <h1 className="text-[13vw] md:text-[12vw] leading-none pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-baseline justify-center">
               <span className="font-thunder font-black text-slate-950 tracking-wider">INF</span>
-              <span className="font-display font-extrabold bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent tracking-tight">EPOS</span>
+              <span className="font-display italic font-extrabold bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent tracking-tight">EPOS</span>
             </h1>
           </div>
 
