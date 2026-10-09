@@ -935,6 +935,67 @@ const LaptopHardwareMockup: React.FC<{ children: React.ReactNode }> = ({ childre
     </div>
   );
 };
+/* ─────────────────────────────────────────────────────────────────
+   REAL HARDWARE IMAGE INTERACTIVE OVERLAY — Live Apps Inside hero-transparent.png Screens
+───────────────────────────────────────────────────────────────── */
+const RealHardwareImageInteractiveOverlay: React.FC = () => {
+  return (
+    <div className="relative w-full max-w-6xl mx-auto flex flex-col items-center">
+      {/* Ambient Backlight Glow behind 3D Hardware */}
+      <div className="absolute inset-0 bg-gradient-to-r from-sky-400/25 via-blue-500/20 to-indigo-500/25 rounded-full blur-3xl pointer-events-none transform scale-95" />
+
+      {/* Desktop View — Live interactive screens embedded inside hero-transparent.png */}
+      <div className="relative w-full aspect-[1200/780] hidden md:block select-none overflow-hidden">
+        {/* Underlay Real 3D Hardware Image (hero-transparent.png) */}
+        <img
+          src="/hero-transparent.png"
+          alt="INFEPOS Real Hardware Showcase"
+          className="absolute inset-0 w-full h-full object-contain z-0 pointer-events-none drop-shadow-2xl"
+        />
+
+        {/* 1. Left Till Machine Screen Overlay — Perspective fitted over real 3D POS Till screen */}
+        <div
+          className="absolute z-10 overflow-hidden rounded-[0.9rem] shadow-xl transition-all duration-300 hover:z-30 hover:ring-2 ring-blue-400/50"
+          style={{
+            top: '13.8%',
+            left: '11.2%',
+            width: '37.2%',
+            height: '44.5%',
+            transform: 'perspective(1000px) rotateX(19.2deg) rotateY(16.2deg) rotateZ(-5.6deg) skewY(-2.2deg)',
+            transformOrigin: 'top left',
+          }}
+        >
+          <div className="w-full h-full transform scale-[0.85] origin-top-left overflow-hidden">
+            <AnimatedTillAppPreviewCard frameless={true} />
+          </div>
+        </div>
+
+        {/* 2. Right Laptop Display Screen Overlay — Perspective fitted over real 3D Laptop screen */}
+        <div
+          className="absolute z-10 overflow-hidden rounded-[0.6rem] shadow-xl transition-all duration-300 hover:z-30 hover:ring-2 ring-blue-400/50"
+          style={{
+            top: '24.0%',
+            right: '4.8%',
+            width: '36.8%',
+            height: '45.8%',
+            transform: 'perspective(1000px) rotateX(17.2deg) rotateY(-14.5deg) rotateZ(3.0deg) skewY(1.5deg)',
+            transformOrigin: 'top right',
+          }}
+        >
+          <div className="w-full h-full transform scale-[0.83] origin-top-left overflow-hidden">
+            <AnimatedDashboardPreviewCard frameless={true} />
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile/Tablet View — Stacked Live Cards */}
+      <div className="relative z-10 grid grid-cols-1 gap-8 w-full md:hidden px-2">
+        <AnimatedTillAppPreviewCard />
+        <AnimatedDashboardPreviewCard />
+      </div>
+    </div>
+  );
+};
 
 
 
@@ -2306,26 +2367,9 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Showcase — Side-by-Side 3D Hardware Devices (Till Terminal + Laptop) with Live Apps inside */}
-        <div className="relative z-10 w-full flex justify-center items-center pt-2 pb-12 px-4 sm:px-6">
-          <div className="relative max-w-7xl w-full">
-            {/* Subtle ambient backlight glow behind hardware */}
-            <div className="absolute inset-0 bg-sky-400/20 rounded-full blur-3xl transform scale-95 pointer-events-none" />
-
-            {/* Side-by-side interactive hardware device mockups */}
-            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-end">
-              <div className="transform hover:scale-[1.01] transition-transform duration-500">
-                <PosTillHardwareMockup>
-                  <AnimatedTillAppPreviewCard frameless={true} />
-                </PosTillHardwareMockup>
-              </div>
-              <div className="transform hover:scale-[1.01] transition-transform duration-500">
-                <LaptopHardwareMockup>
-                  <AnimatedDashboardPreviewCard frameless={true} />
-                </LaptopHardwareMockup>
-              </div>
-            </div>
-          </div>
+        {/* Hero Showcase — Real 3D Hardware Photo (hero-transparent.png) with Live Interactive Apps inside Screens */}
+        <div className="relative z-10 w-full flex justify-center items-center pt-2 pb-12 px-2 sm:px-6">
+          <RealHardwareImageInteractiveOverlay />
         </div>
       </section>
 
