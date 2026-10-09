@@ -273,7 +273,7 @@ const InfeposLogoText: React.FC<{
 /* ─────────────────────────────────────────────────────────────────
    ANIMATED DASHBOARD PREVIEW CARD — Frameless Antigravity Style
 ───────────────────────────────────────────────────────────────── */
-const AnimatedDashboardPreviewCard: React.FC = () => {
+const AnimatedDashboardPreviewCard: React.FC<{ frameless?: boolean }> = ({ frameless = false }) => {
   const [activeTab, setActiveTab] = useState<'Dashboard' | 'Products' | 'Stores' | 'Inventory' | 'Sales'>('Dashboard');
   const [salesCount, setSalesCount] = useState(95);
   const [netRevenue, setNetRevenue] = useState(133689698.70);
@@ -323,14 +323,8 @@ const AnimatedDashboardPreviewCard: React.FC = () => {
     { day: 'Sun', rev: 26100, height: '82%' },
   ];
 
-  return (
-    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-blue-100/70 via-sky-50 to-indigo-100/70 p-4 sm:p-7 shadow-2xl border border-blue-100/50 overflow-hidden group">
-      {/* Antigravity ambient background glows */}
-      <div className="absolute -top-12 -right-12 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-sky-300/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-gradient-to-tr from-amber-300/20 to-emerald-300/20 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Main Inner App Canvas (Clean frameless white card) */}
-      <div className="relative bg-white text-slate-900 rounded-3xl p-5 sm:p-7 shadow-xl border border-slate-200/70 min-h-[480px] flex flex-col justify-between select-none overflow-hidden">
+  const innerCanvas = (
+    <div className={`relative bg-white text-slate-900 ${frameless ? 'rounded-2xl p-4 sm:p-6 border-0 shadow-none' : 'rounded-3xl p-5 sm:p-7 shadow-xl border border-slate-200/70'} min-h-[480px] flex flex-col justify-between select-none overflow-hidden`}>
 
         {/* Top Header & Pill Nav */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
@@ -605,6 +599,16 @@ const AnimatedDashboardPreviewCard: React.FC = () => {
           </div>
         )}
       </div>
+  );
+
+  if (frameless) return innerCanvas;
+
+  return (
+    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-blue-100/70 via-sky-50 to-indigo-100/70 p-4 sm:p-7 shadow-2xl border border-blue-100/50 overflow-hidden group">
+      {/* Antigravity ambient background glows */}
+      <div className="absolute -top-12 -right-12 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-sky-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-gradient-to-tr from-amber-300/20 to-emerald-300/20 rounded-full blur-3xl pointer-events-none" />
+      {innerCanvas}
     </div>
   );
 };
@@ -619,7 +623,7 @@ interface TillCartItem {
   qty: number;
 }
 
-const AnimatedTillAppPreviewCard: React.FC = () => {
+const AnimatedTillAppPreviewCard: React.FC<{ frameless?: boolean }> = ({ frameless = false }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [cart, setCart] = useState<TillCartItem[]>([
     { id: 'p2', name: 'Dabur Lip Balm 50ml', price: 7.25, qty: 1 },
@@ -676,14 +680,8 @@ const AnimatedTillAppPreviewCard: React.FC = () => {
 
   const totalAmount = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
 
-  return (
-    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-emerald-100/70 via-sky-50 to-blue-100/70 p-4 sm:p-7 shadow-2xl border border-emerald-100/50 overflow-hidden group">
-      {/* Antigravity ambient background glows */}
-      <div className="absolute -top-12 -left-12 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-teal-300/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-12 -right-12 w-80 h-80 bg-gradient-to-tr from-sky-400/20 to-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Main Inner POS App Canvas (Clean frameless white card) */}
-      <div className="relative bg-white text-slate-900 rounded-3xl p-4 sm:p-6 shadow-xl border border-slate-200/70 min-h-[480px] flex flex-col justify-between select-none overflow-hidden">
+  const innerCanvas = (
+    <div className={`relative bg-white text-slate-900 ${frameless ? 'rounded-2xl p-4 sm:p-5 border-0 shadow-none' : 'rounded-3xl p-4 sm:p-6 shadow-xl border border-slate-200/70'} min-h-[480px] flex flex-col justify-between select-none overflow-hidden`}>
 
         {/* POS Top Header Bar (Matching Screenshot 3) */}
         <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
@@ -828,6 +826,16 @@ const AnimatedTillAppPreviewCard: React.FC = () => {
           </div>
         )}
       </div>
+  );
+
+  if (frameless) return innerCanvas;
+
+  return (
+    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-emerald-100/70 via-sky-50 to-blue-100/70 p-4 sm:p-7 shadow-2xl border border-emerald-100/50 overflow-hidden group">
+      {/* Antigravity ambient background glows */}
+      <div className="absolute -top-12 -left-12 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-teal-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-12 -right-12 w-80 h-80 bg-gradient-to-tr from-sky-400/20 to-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
+      {innerCanvas}
     </div>
   );
 };
@@ -2592,9 +2600,26 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Showcase — Interactive Live Apps Embedded inside hero-transparent.png 3D Hardware */}
-        <div className="relative z-10 w-full flex justify-center items-center pt-2 pb-12 px-2 sm:px-6">
-          <HeroHardwareImageOverlayShowcase />
+        {/* Hero Showcase — Side-by-Side 3D Hardware Devices (Till Terminal + Laptop) with Live Apps inside */}
+        <div className="relative z-10 w-full flex justify-center items-center pt-2 pb-12 px-4 sm:px-6">
+          <div className="relative max-w-7xl w-full">
+            {/* Subtle ambient backlight glow behind hardware */}
+            <div className="absolute inset-0 bg-sky-400/20 rounded-full blur-3xl transform scale-95 pointer-events-none" />
+
+            {/* Side-by-side interactive hardware device mockups */}
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-end">
+              <div className="transform hover:scale-[1.01] transition-transform duration-500">
+                <PosTillHardwareMockup>
+                  <AnimatedTillAppPreviewCard frameless={true} />
+                </PosTillHardwareMockup>
+              </div>
+              <div className="transform hover:scale-[1.01] transition-transform duration-500">
+                <LaptopHardwareMockup>
+                  <AnimatedDashboardPreviewCard frameless={true} />
+                </LaptopHardwareMockup>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
