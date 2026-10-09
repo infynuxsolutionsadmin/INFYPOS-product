@@ -92,7 +92,7 @@ app.on("window-all-closed", () => {
 	if (process.platform !== "darwin") app.quit();
 });
 var statementCache = /* @__PURE__ */ new Map();
-ipcMain.handle("db:query", (_event, sql, ...params) => {
+ipcMain.handle("db:query", (event, sql, ...params) => {
 	return new Promise((resolve, reject) => {
 		if (!db) return reject(/* @__PURE__ */ new Error("DB not initialized"));
 		let stmt = statementCache.get(sql);
