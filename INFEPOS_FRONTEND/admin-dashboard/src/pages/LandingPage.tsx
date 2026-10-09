@@ -941,50 +941,66 @@ const LaptopHardwareMockup: React.FC<{ children: React.ReactNode }> = ({ childre
 const RealHardwareImageInteractiveOverlay: React.FC = () => {
   return (
     <div className="relative w-full max-w-6xl mx-auto flex flex-col items-center">
-      {/* Ambient Backlight Glow behind 3D Hardware */}
+      {/* Ambient Backlight Glow */}
       <div className="absolute inset-0 bg-gradient-to-r from-sky-400/25 via-blue-500/20 to-indigo-500/25 rounded-full blur-3xl pointer-events-none transform scale-95" />
 
-      {/* Desktop View — Live interactive screens embedded inside hero-transparent.png */}
+      {/* Desktop View — Live interactive screens overlaid on hardware photo */}
       <div className="relative w-full aspect-[1200/780] hidden md:block select-none overflow-hidden">
-        {/* Underlay Real 3D Hardware Image (hero-transparent.png) */}
+        {/* Hardware image sits at z-10 as base layer */}
         <img
           src="/hero-transparent.png"
           alt="INFEPOS Real Hardware Showcase"
-          className="absolute inset-0 w-full h-full object-contain z-0 pointer-events-none drop-shadow-2xl"
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-2xl"
+          style={{ zIndex: 10 }}
         />
 
-        {/* 1. Left Till Machine Screen Overlay — Perspective fitted over real 3D POS Till screen */}
+        {/* ── 1. POS TILL SCREEN OVERLAY (z-30 — sits on top of image) ──
+            The POS till screen in hero-transparent.png occupies approximately:
+              top-left:  (3.5%, 10%)
+              top-right: (43%, 6.5%)
+              bot-right: (45%, 62%)
+              bot-left:  (3.5%, 65%)
+            The screen is tilted: rotateY(+) right side closer, rotateX top away,
+            rotateZ slight CCW. We position at top-left corner, then apply the
+            matching CSS 3D perspective to cover the screen area exactly.         */}
         <div
-          className="absolute z-10 overflow-hidden rounded-[0.9rem] shadow-xl transition-all duration-300 hover:z-30 hover:ring-2 ring-blue-400/50"
+          className="absolute overflow-hidden"
           style={{
-            top: '13.8%',
-            left: '11.2%',
-            width: '37.2%',
-            height: '44.5%',
-            transform: 'perspective(1000px) rotateX(19.2deg) rotateY(16.2deg) rotateZ(-5.6deg) skewY(-2.2deg)',
+            zIndex: 30,
+            top: '8%',
+            left: '3.2%',
+            width: '43%',
+            height: '59%',
+            transform: 'perspective(700px) rotateX(22deg) rotateY(17deg) rotateZ(-5.5deg)',
             transformOrigin: 'top left',
+            borderRadius: '8px',
           }}
         >
-          <div className="w-full h-full transform scale-[0.85] origin-top-left overflow-hidden">
-            <AnimatedTillAppPreviewCard frameless={true} />
-          </div>
+          <AnimatedTillAppPreviewCard frameless={true} />
         </div>
 
-        {/* 2. Right Laptop Display Screen Overlay — Perspective fitted over real 3D Laptop screen */}
+        {/* ── 2. LAPTOP SCREEN OVERLAY (z-30 — sits on top of image) ──
+            The laptop screen in hero-transparent.png occupies approximately:
+              top-left:  (58%, 21%)
+              top-right: (97%, 16%)
+              bot-right: (97%, 68%)
+              bot-left:  (58%, 71%)
+            The screen is tilted: rotateY(-) left side closer, rotateX top away,
+            rotateZ slight CW.                                                    */}
         <div
-          className="absolute z-10 overflow-hidden rounded-[0.6rem] shadow-xl transition-all duration-300 hover:z-30 hover:ring-2 ring-blue-400/50"
+          className="absolute overflow-hidden"
           style={{
-            top: '24.0%',
-            right: '4.8%',
-            width: '36.8%',
-            height: '45.8%',
-            transform: 'perspective(1000px) rotateX(17.2deg) rotateY(-14.5deg) rotateZ(3.0deg) skewY(1.5deg)',
-            transformOrigin: 'top right',
+            zIndex: 30,
+            top: '18%',
+            left: '57.5%',
+            width: '40.5%',
+            height: '53%',
+            transform: 'perspective(700px) rotateX(19deg) rotateY(-16deg) rotateZ(4deg)',
+            transformOrigin: 'top left',
+            borderRadius: '6px',
           }}
         >
-          <div className="w-full h-full transform scale-[0.83] origin-top-left overflow-hidden">
-            <AnimatedDashboardPreviewCard frameless={true} />
-          </div>
+          <AnimatedDashboardPreviewCard frameless={true} />
         </div>
       </div>
 
@@ -996,6 +1012,8 @@ const RealHardwareImageInteractiveOverlay: React.FC = () => {
     </div>
   );
 };
+
+
 
 
 
