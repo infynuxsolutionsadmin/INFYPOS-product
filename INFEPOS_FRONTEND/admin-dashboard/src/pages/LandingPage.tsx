@@ -2115,28 +2115,32 @@ const LandingPage: React.FC = () => {
 
           </nav>
 
-          {/* Right Action Buttons */}
+          {/* Right Action Buttons — 3D Glossy Bubble Style */}
           <div className="flex items-center gap-3">
+            {/* Admin Login Glossy 3D Bubble Button */}
             <button
               onClick={() => navigate('/login')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 active:scale-95 shadow-md ${pastHero
-                  ? `${currentTheme.primaryBtn} shadow-blue-600/20`
-                  : 'bg-white text-blue-600 hover:bg-blue-50 shadow-black/10'
-                }`}
+              className={`relative overflow-hidden flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_8px_25px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.9)] hover:shadow-[0_12px_30px_rgba(37,99,235,0.4),inset_0_2px_6px_rgba(255,255,255,1)] ${
+                pastHero
+                  ? `${currentTheme.primaryBtn} shadow-blue-600/30 border border-white/20`
+                  : 'bg-gradient-to-b from-white via-slate-50 to-slate-100 text-blue-600 border border-white/90'
+              } before:absolute before:top-0.5 before:inset-x-3 before:h-[45%] before:bg-gradient-to-b before:from-white/80 before:to-transparent before:rounded-full before:pointer-events-none`}
             >
-              <LogIn size={14} />
-              <span>Admin Login</span>
+              <LogIn size={15} className="relative z-10 stroke-[2.5]" />
+              <span className="relative z-10">Admin Login</span>
             </button>
 
+            {/* Download Terminal Glossy 3D Bubble Button */}
             <button
               onClick={() => window.location.href = 'https://github.com/naveend07ec/pos-download/releases/download/v1.0.0/INFEPOS.Terminal.Setup.0.0.0.exe'}
-              className={`hidden sm:flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg ${pastHero
-                  ? 'bg-slate-900 text-white hover:bg-black'
-                  : 'bg-black/40 hover:bg-black/60 text-white border border-white/20 backdrop-blur-xl shadow-black/30'
-                }`}
+              className={`hidden sm:flex relative overflow-hidden items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_8px_25px_rgba(15,23,42,0.4),inset_0_2px_4px_rgba(255,255,255,0.35)] hover:shadow-[0_12px_32px_rgba(15,23,42,0.6),inset_0_2px_6px_rgba(255,255,255,0.5)] ${
+                pastHero
+                  ? 'bg-gradient-to-b from-slate-800 to-slate-950 text-white border border-slate-700/60'
+                  : 'bg-gradient-to-b from-slate-900/90 via-blue-950/95 to-slate-950 text-white border border-white/25 backdrop-blur-xl'
+              } before:absolute before:top-0.5 before:inset-x-3 before:h-[45%] before:bg-gradient-to-b before:from-white/40 before:to-transparent before:rounded-full before:pointer-events-none`}
             >
-              <Download size={13} />
-              <span>Download</span>
+              <Download size={14} className="relative z-10 stroke-[2.5]" />
+              <span className="relative z-10">Download</span>
             </button>
           </div>
         </div>
