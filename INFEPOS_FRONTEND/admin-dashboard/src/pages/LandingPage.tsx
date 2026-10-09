@@ -2200,17 +2200,21 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Showcase — Crisp transparent PNG directly below CTA buttons */}
-        <div className="relative z-10 w-full flex justify-center items-center overflow-hidden pt-0 pb-0">
-          <div className="relative max-w-7xl w-full px-2 flex justify-center">
-            {/* Subtle ambient glow behind hardware */}
+        {/* Hero Showcase — Interactive Dual App Cards (Till Terminal + Admin Dashboard) */}
+        <div className="relative z-10 w-full flex justify-center items-center pt-4 pb-8 px-4 sm:px-6">
+          <div className="relative max-w-7xl w-full">
+            {/* Subtle ambient glow behind cards */}
             <div className="absolute inset-0 bg-sky-400/20 rounded-full blur-3xl transform scale-95 pointer-events-none" />
 
-            <img
-              src="/hero-transparent.png"
-              alt="INFEPOS POS Terminal and Admin Dashboard Showcase"
-              className="relative z-10 w-full max-w-6xl h-auto object-contain transform hover:scale-[1.01] transition-transform duration-700 ease-out drop-shadow-2xl"
-            />
+            {/* Side-by-side interactive components */}
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+              <div className="transform hover:scale-[1.01] transition-transform duration-500">
+                <AnimatedTillAppPreviewCard />
+              </div>
+              <div className="transform hover:scale-[1.01] transition-transform duration-500">
+                <AnimatedDashboardPreviewCard />
+              </div>
+            </div>
           </div>
         </div>
       </section>

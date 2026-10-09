@@ -21,25 +21,25 @@ export const queryLocalDb = async (sql: string, ...params: any[]) => {
 
 export const queueSyncEvent = async (type: string, payload: any) => {
   if (!isDesktopApp()) return false;
-  
+
   let id: string;
   try {
     id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   } catch (e) {
     id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
-  
+
   const payloadStr = JSON.stringify(payload);
-  
+
   await queryLocalDb(
     `INSERT INTO sync_queue (id, type, payload, status) VALUES (?, ?, ?, 'PENDING')`,
     id, type, payloadStr
   );
-  
+
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('sync-queue-updated'));
   }
-  
+
   return id;
 };
 
@@ -55,7 +55,7 @@ export const markSyncEventCompleted = async (id: string) => {
 
 export const syncProductsToLocalDb = async (products: any[]) => {
   if (!isDesktopApp() || !products || products.length === 0) return;
-  
+
   try {
     await queryLocalDb('BEGIN TRANSACTION');
     await queryLocalDb('DELETE FROM products');
@@ -63,7 +63,7 @@ export const syncProductsToLocalDb = async (products: any[]) => {
     for (const p of products) {
       if (p.status === 'INACTIVE') continue;
 
-      const stock = p.inventories?.[0]?.quantityOnHand !== undefined 
+      const stock = p.inventories?.[0]?.quantityOnHand !== undefined
         ? parseFloat(p.inventories[0].quantityOnHand)
         : (p.stockQuantity !== undefined ? parseFloat(p.stockQuantity) : 100);
 
@@ -88,7 +88,7 @@ export const syncProductsToLocalDb = async (products: any[]) => {
   } catch (err) {
     try {
       await queryLocalDb('ROLLBACK');
-    } catch {}
+    } catch { }
     console.error('Failed to sync products to local database:', err);
     throw err;
   }
@@ -110,7 +110,7 @@ export const decrementLocalProductStock = async (items: { productId: string; qua
       window.dispatchEvent(new Event('local-catalog-updated'));
     }
   } catch (err) {
-    try { await queryLocalDb('ROLLBACK'); } catch {}
+    try { await queryLocalDb('ROLLBACK'); } catch { }
   }
 };
 
@@ -119,7 +119,7 @@ export const syncCashiersToLocalDb = async (cashiers: any[]) => {
     localStorage.setItem('pos-cashiers-cache', JSON.stringify(cashiers));
     return;
   }
-  
+
   for (const c of cashiers) {
     await queryLocalDb(
       `INSERT OR REPLACE INTO cashiers (id, firstName, lastName, pinCodeHash) VALUES (?, ?, ?, ?)`,
