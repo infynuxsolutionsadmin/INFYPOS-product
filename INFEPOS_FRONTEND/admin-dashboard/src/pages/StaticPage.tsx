@@ -9,7 +9,7 @@ const InfeposLogoText: React.FC<{
   return (
     <span className={`${textSize} font-['Orbitron'] font-black tracking-[0.12em] inline-flex items-center leading-none select-none uppercase ${isHeroTheme ? 'text-white' : 'text-slate-950'}`}>
       <span>INF</span>
-      <svg viewBox="0 0 100 82" className="inline-block h-[0.74em] w-auto align-middle mx-[0.08em] -mt-[0.08em]" fill="none">
+      <svg viewBox="0 0 78 70" className="inline-block h-[0.67em] w-auto align-middle mx-[0.05em]" fill="none">
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#2563eb" />
@@ -19,11 +19,11 @@ const InfeposLogoText: React.FC<{
           </linearGradient>
         </defs>
         {/* Top Bar */}
-        <rect x="0" y="0" width="100" height="20" rx="5" fill="currentColor" />
+        <rect x="0" y="0" width="78" height="18" rx="4" fill="currentColor" />
         {/* Middle Violet-Blue Bar */}
-        <rect x="0" y="31" width="100" height="20" rx="5" fill={`url(#${gradId})`} />
+        <rect x="0" y="26" width="78" height="18" rx="4" fill={`url(#${gradId})`} />
         {/* Bottom Bar */}
-        <rect x="0" y="62" width="100" height="20" rx="5" fill="currentColor" />
+        <rect x="0" y="52" width="78" height="18" rx="4" fill="currentColor" />
       </svg>
       <span>POS</span>
     </span>
