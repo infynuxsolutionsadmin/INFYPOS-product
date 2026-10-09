@@ -2115,14 +2115,14 @@ const LandingPage: React.FC = () => {
 
           </nav>
 
-          {/* Right Action Buttons — 3D Glossy Bubble Style */}
+          {/* Right Action Buttons — Lighter 3D Glossy Bubble Style */}
           <div className="flex items-center gap-3">
             {/* Admin Login Glossy 3D Bubble Button */}
             <button
               onClick={() => navigate('/login')}
-              className={`relative overflow-hidden flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_8px_25px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.9)] hover:shadow-[0_12px_30px_rgba(37,99,235,0.4),inset_0_2px_6px_rgba(255,255,255,1)] ${
+              className={`relative overflow-hidden flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_8px_25px_rgba(0,0,0,0.18),inset_0_2px_4px_rgba(255,255,255,0.9)] hover:shadow-[0_12px_30px_rgba(56,189,248,0.45),inset_0_2px_6px_rgba(255,255,255,1)] ${
                 pastHero
-                  ? `${currentTheme.primaryBtn} shadow-blue-600/30 border border-white/20`
+                  ? 'bg-gradient-to-b from-sky-400 via-blue-500 to-indigo-600 text-white border border-sky-300/40 shadow-blue-500/30'
                   : 'bg-gradient-to-b from-white via-slate-50 to-slate-100 text-blue-600 border border-white/90'
               } before:absolute before:top-0.5 before:inset-x-3 before:h-[45%] before:bg-gradient-to-b before:from-white/80 before:to-transparent before:rounded-full before:pointer-events-none`}
             >
@@ -2133,11 +2133,11 @@ const LandingPage: React.FC = () => {
             {/* Download Terminal Glossy 3D Bubble Button */}
             <button
               onClick={() => window.location.href = 'https://github.com/naveend07ec/pos-download/releases/download/v1.0.0/INFEPOS.Terminal.Setup.0.0.0.exe'}
-              className={`hidden sm:flex relative overflow-hidden items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_8px_25px_rgba(15,23,42,0.4),inset_0_2px_4px_rgba(255,255,255,0.35)] hover:shadow-[0_12px_32px_rgba(15,23,42,0.6),inset_0_2px_6px_rgba(255,255,255,0.5)] ${
+              className={`hidden sm:flex relative overflow-hidden items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_8px_22px_rgba(15,23,42,0.3),inset_0_2px_4px_rgba(255,255,255,0.45)] hover:shadow-[0_12px_28px_rgba(15,23,42,0.45),inset_0_2px_6px_rgba(255,255,255,0.6)] ${
                 pastHero
-                  ? 'bg-gradient-to-b from-slate-800 to-slate-950 text-white border border-slate-700/60'
-                  : 'bg-gradient-to-b from-slate-900/90 via-blue-950/95 to-slate-950 text-white border border-white/25 backdrop-blur-xl'
-              } before:absolute before:top-0.5 before:inset-x-3 before:h-[45%] before:bg-gradient-to-b before:from-white/40 before:to-transparent before:rounded-full before:pointer-events-none`}
+                  ? 'bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900 text-white border border-slate-600/60'
+                  : 'bg-gradient-to-b from-slate-800/90 via-slate-900/95 to-slate-950/90 text-white border border-white/35 backdrop-blur-xl'
+              } before:absolute before:top-0.5 before:inset-x-3 before:h-[45%] before:bg-gradient-to-b before:from-white/50 before:to-transparent before:rounded-full before:pointer-events-none`}
             >
               <Download size={14} className="relative z-10 stroke-[2.5]" />
               <span className="relative z-10">Download</span>
