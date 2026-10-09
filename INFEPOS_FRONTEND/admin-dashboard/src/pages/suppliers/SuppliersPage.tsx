@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Eye } from 'lucide-react';
 import type { Supplier, FindSuppliersQuery, SupplierStatus } from '../../types/suppliers';
 import { getSuppliers } from '../../api/suppliers.api';
 import { useAuthStore } from '../../stores/authStore';
 import SupplierFormModal from '../../components/suppliers/SupplierFormModal';
 import DeleteSupplierConfirmModal from '../../components/suppliers/DeleteSupplierConfirmModal';
+import SupplierDetailsModal from '../../components/suppliers/SupplierDetailsModal';
 
 const SuppliersPage: React.FC = () => {
   const { hasPermission } = useAuthStore();
@@ -29,6 +30,7 @@ const SuppliersPage: React.FC = () => {
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   const fetchSuppliers = useCallback(async () => {
@@ -86,6 +88,11 @@ const SuppliersPage: React.FC = () => {
   const openDeleteModal = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
     setIsDeleteModalOpen(true);
+  };
+
+  const openDetailsModal = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+    setIsDetailsModalOpen(true);
   };
 
   return (
@@ -159,6 +166,7 @@ const SuppliersPage: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="relative px-6 py-3">
                     <span className="sr-only">Actions</span>
@@ -179,6 +187,24 @@ const SuppliersPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {item.city ? `${item.city}${item.country ? `, ${item.country}` : ''}` : '-'}
                     </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate">
+                      {item.suppliedProducts && item.suppliedProducts.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {item.suppliedProducts.slice(0, 3).map((prod, idx) => (
+                            <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                              {prod}
+                            </span>
+                          ))}
+                          {item.suppliedProducts.length > 3 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                              +{item.suppliedProducts.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         item.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
@@ -187,6 +213,11 @@ const SuppliersPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {canRead && (
+                        <button onClick={() => openDetailsModal(item)} className="text-indigo-600 hover:text-indigo-900 mr-3">
+                          <Eye className="h-5 w-5 inline" />
+                        </button>
+                      )}
                       {canUpdate && (
                         <button onClick={() => openEditModal(item)} className="text-gray-600 hover:text-blue-900 mr-3">
                           <Edit2 className="h-5 w-5 inline" />
@@ -248,6 +279,12 @@ const SuppliersPage: React.FC = () => {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onSuccess={fetchSuppliers}
+        supplier={selectedSupplier}
+      />
+
+      <SupplierDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
         supplier={selectedSupplier}
       />
     </div>

@@ -196,21 +196,18 @@ const LoginPage: React.FC = () => {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: 18,
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              width: 100,
+              height: 100,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 1rem',
-              boxShadow: '0 8px 32px rgba(99,102,241,0.4)',
+              margin: '0 auto 0.5rem',
             }}
           >
-            <Monitor size={30} color="white" />
+            <img src="/logo.png" alt="INFEPOS Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--pos-text)', letterSpacing: '-0.02em' }}>
-            INFYPOS
+            INFEPOS
           </h1>
           <p style={{ color: 'var(--pos-text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
             {isPaired ? 'Select Cashier to Clock In' : 'Device Registration'}

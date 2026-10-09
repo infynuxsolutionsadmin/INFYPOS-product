@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Edit, Trash2, Search, Shield } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Search, Shield, Users as UsersIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { Role, FindRolesQuery, RoleStatus } from '../../types/roles';
 import { getRoles, getRoleById } from '../../api/roles.api';
 import { useAuthStore } from '../../stores/authStore';
@@ -81,10 +82,19 @@ const RolesPermissionsPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-12">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-[#1a1f36]">Roles &amp; Permissions</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage roles and control access permissions.</p>
+          <h1 className="text-2xl font-bold text-[#1a1f36] mb-1">User Management</h1>
+          <p className="text-sm text-gray-500 mb-5">Manage staff accounts, assign roles, and control access permissions across your organization.</p>
+          
+          <div className="inline-flex bg-gray-100/80 p-1.5 rounded-xl border border-gray-200">
+            <Link to="/users" className="px-5 py-2 rounded-lg text-sm font-medium transition-all text-gray-500 hover:text-gray-900 hover:bg-gray-200/50 flex items-center gap-2">
+              <UsersIcon className="w-4 h-4" /> Users
+            </Link>
+            <Link to="/roles-permissions" className="px-5 py-2 rounded-lg text-sm font-bold transition-all bg-white text-[#5B58F2] shadow-sm flex items-center gap-2 border border-gray-200/50">
+              <Shield className="w-4 h-4" /> Roles & Permissions
+            </Link>
+          </div>
         </div>
         {canCreate && (
           <button

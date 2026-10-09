@@ -408,6 +408,7 @@ model Supplier {
   creditLimit           Decimal?       @map("credit_limit") @db.Decimal(10, 2)
   notes                 String?        @db.Text
   status                SupplierStatus @default(ACTIVE)
+  suppliedProducts      String[]       @default([]) @map("supplied_products")
   createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 

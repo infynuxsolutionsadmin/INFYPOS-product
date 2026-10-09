@@ -18,6 +18,7 @@ export interface Supplier {
   paymentTerms: string | null;
   creditLimit: string | number | null;
   notes: string | null;
+  suppliedProducts: string[];
   status: SupplierStatus;
   createdAt: string;
   updatedAt: string;
@@ -39,6 +40,7 @@ export interface CreateSupplierRequest {
   paymentTerms?: string;
   creditLimit?: number;
   notes?: string;
+  suppliedProducts?: string[];
 }
 
 export interface UpdateSupplierRequest {
@@ -58,6 +60,7 @@ export interface UpdateSupplierRequest {
   creditLimit?: number;
   notes?: string;
   status?: SupplierStatus;
+  suppliedProducts?: string[];
 }
 
 export interface FindSuppliersQuery {

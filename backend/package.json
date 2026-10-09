@@ -15,6 +15,11 @@
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "seed": "ts-node prisma/seed.ts"
   },
+  "overrides": {
+    "proxy-addr": "^2.0.8",
+    "body-parser": "1.20.8",
+    "qs": "6.16.0"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",
     "@aws-sdk/client-ses": "^3.1106.0",

@@ -85,3 +85,9 @@ structure.txt
 src-structure.txt
 prisma-structure.txt
 trash/
+
+# Large Installers & Binary Build Outputs
+*.exe
+release/
+INFEPOS_FRONTEND/admin-dashboard/public/downloads/
+INFEPOS_FRONTEND/pos-terminal/release/

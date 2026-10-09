@@ -4,6 +4,7 @@ import AuthLayout from '../layouts/AuthLayout';
 import AdminLayout from '../layouts/AdminLayout';
 import LoginPage from '../pages/auth/LoginPage';
 import LandingPage from '../pages/LandingPage';
+import StaticPage from '../pages/StaticPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import ProductsPage from '../pages/products/ProductsPage';
 import StoresPage from '../pages/stores/StoresPage';
@@ -62,6 +63,16 @@ const AppRoutes: React.FC = () => {
       
       {/* Landing Page */}
       <Route path="/" element={<LandingPage />} />
+      
+      {/* Static Footer Pages */}
+      <Route path="/about" element={<StaticPage title="About Infynux" />} />
+      <Route path="/info/products" element={<StaticPage title="Products" />} />
+      <Route path="/privacy" element={<StaticPage title="Privacy Policy" />} />
+      <Route path="/terms" element={<StaticPage title="Terms of Service" />} />
+      <Route path="/blog" element={<StaticPage title="Blog" />} />
+      <Route path="/pricing-details" element={<StaticPage title="Pricing Details" />} />
+      <Route path="/use-cases-details" element={<StaticPage title="Use Cases" />} />
+      <Route path="/docs" element={<StaticPage title="Documentation" />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

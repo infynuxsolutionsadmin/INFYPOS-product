@@ -1,0 +1,29 @@
+meta {
+  name: 01 Get Current User (me)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/users/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("Response has user id", function() {
+    const data = res.body.data || res.body;
+    expect(data.id).to.be.a("string");
+  });
+  test("Response has email", function() {
+    const data = res.body.data || res.body;
+    expect(data.email).to.be.a("string");
+  });
+}

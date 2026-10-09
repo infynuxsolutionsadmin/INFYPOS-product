@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, IsArray } from 'class-validator';
 
 export class CreateSupplierDto {
   @IsString()
@@ -60,4 +60,9 @@ export class CreateSupplierDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  suppliedProducts?: string[];
 }

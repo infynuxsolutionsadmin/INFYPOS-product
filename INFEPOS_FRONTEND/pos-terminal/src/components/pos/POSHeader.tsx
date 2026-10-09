@@ -63,22 +63,22 @@ const POSHeader: React.FC = () => {
       }}
     >
       {/* Left: Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0', flexShrink: 0 }}>
         <div
           style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            width: 96,
+            height: 96,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            marginLeft: '-0.5rem',
+            marginRight: '-1.2rem'
           }}
         >
-          <Monitor size={17} color="white" />
+          <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scale(1.5)' }} />
         </div>
         <div>
-          <p style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.1, letterSpacing: '-0.02em' }}>INFYPOS</p>
+          <p style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.1, letterSpacing: '-0.02em' }}>INFEPOS</p>
           <p style={{ fontSize: '0.65rem', color: 'var(--pos-text-dim)', lineHeight: 1 }}>POS Terminal</p>
         </div>
       </div>

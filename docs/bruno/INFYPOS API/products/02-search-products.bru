@@ -1,0 +1,30 @@
+meta {
+  name: 02 Search Products
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/products
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+params:query {
+  page: 1
+  limit: 10
+  search: a
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("Response is valid", function() {
+    expect(res.body).to.have.property("data");
+  });
+}

@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsEnum, IsNumber, IsOptional, IsString, IsArray } from 'class-validator';
 import { SupplierStatus } from '@prisma/client';
 
 export class UpdateSupplierDto {
@@ -65,4 +65,9 @@ export class UpdateSupplierDto {
   @IsEnum(SupplierStatus)
   @IsOptional()
   status?: SupplierStatus;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  suppliedProducts?: string[];
 }

@@ -35,7 +35,10 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
     creditLimit: '',
     notes: '',
     status: 'ACTIVE',
+    suppliedProducts: [],
   });
+
+  const [productsStr, setProductsStr] = useState<string>('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +46,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
   useEffect(() => {
     if (supplier) {
       setFormData({ ...supplier });
+      setProductsStr(supplier.suppliedProducts ? supplier.suppliedProducts.join(', ') : '');
     } else {
       setFormData({
         supplierCode: '',
@@ -61,7 +65,9 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
         creditLimit: '',
         notes: '',
         status: 'ACTIVE',
+        suppliedProducts: [],
       });
+      setProductsStr('');
     }
     setError(null);
   }, [supplier, isOpen]);
@@ -97,6 +103,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
           creditLimit: formData.creditLimit ? Number(formData.creditLimit) : undefined,
           notes: formData.notes || undefined,
           status: formData.status as SupplierStatus,
+          suppliedProducts: productsStr ? productsStr.split(',').map(s => s.trim()).filter(Boolean) : [],
         };
         await updateSupplier(supplier.id, payload);
       } else {
@@ -116,6 +123,7 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
           paymentTerms: formData.paymentTerms || undefined,
           creditLimit: formData.creditLimit ? Number(formData.creditLimit) : undefined,
           notes: formData.notes || undefined,
+          suppliedProducts: productsStr ? productsStr.split(',').map(s => s.trim()).filter(Boolean) : [],
         };
         await createSupplier(payload);
       }
@@ -228,6 +236,11 @@ const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Credit Limit</label>
                   <input type="number" step="0.01" min="0" name="creditLimit" value={formData.creditLimit || ''} onChange={handleChange} className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm" />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Supplied Products (comma separated)</label>
+                <input type="text" placeholder="e.g. Milk, Bread, Cheese" value={productsStr} onChange={(e) => setProductsStr(e.target.value)} className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm" />
               </div>
 
               <div>

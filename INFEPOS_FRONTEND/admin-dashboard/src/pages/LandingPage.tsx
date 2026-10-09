@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Download, LogIn, Server, ShieldCheck, Mail, Phone, MapPin,
   ArrowRight, CheckCircle2, BarChart3, RefreshCw, Wifi, Lock, ChevronDown,
@@ -273,6 +273,568 @@ const InfeposLogoText: React.FC<{
          EPOS
       </span>
     </span>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────
+   ANIMATED DASHBOARD PREVIEW CARD — Frameless Antigravity Style
+───────────────────────────────────────────────────────────────── */
+const AnimatedDashboardPreviewCard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'Dashboard' | 'Products' | 'Stores' | 'Inventory' | 'Sales'>('Dashboard');
+  const [salesCount, setSalesCount] = useState(95);
+  const [netRevenue, setNetRevenue] = useState(133689698.70);
+  const [todaySales, setTodaySales] = useState(2);
+  const [liveToast, setLiveToast] = useState<{ id: number; text: string; amount: string } | null>(null);
+  const [hoveredBar, setHoveredBar] = useState<number | null>(null);
+
+  // Simulated live transaction tick
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const items = [
+        { name: 'Organic Coffee 250g', price: 4.50 },
+        { name: 'Pastry Box Assorted', price: 12.00 },
+        { name: 'Wireless POS Scanner', price: 89.00 },
+        { name: 'Espresso Beans 1kg', price: 24.00 },
+        { name: 'Artisan Tea Blend', price: 6.80 },
+      ];
+      const randomItem = items[Math.floor(Math.random() * items.length)];
+
+      setSalesCount(prev => prev + 1);
+      setTodaySales(prev => prev + 1);
+      setNetRevenue(prev => prev + randomItem.price);
+
+      setLiveToast({
+        id: Date.now(),
+        text: `New sale: ${randomItem.name}`,
+        amount: `+£${randomItem.price.toFixed(2)}`
+      });
+
+      const timer = setTimeout(() => {
+        setLiveToast(null);
+      }, 3500);
+
+      return () => clearTimeout(timer);
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const chartData = [
+    { day: 'Mon', rev: 14200, height: '45%' },
+    { day: 'Tue', rev: 18900, height: '60%' },
+    { day: 'Wed', rev: 22400, height: '75%' },
+    { day: 'Thu', rev: 19800, height: '65%' },
+    { day: 'Fri', rev: 28900, height: '90%' },
+    { day: 'Sat', rev: 34500, height: '100%' },
+    { day: 'Sun', rev: 26100, height: '82%' },
+  ];
+
+  return (
+    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-blue-100/70 via-sky-50 to-indigo-100/70 p-4 sm:p-7 shadow-2xl border border-blue-100/50 overflow-hidden group">
+      {/* Antigravity ambient background glows */}
+      <div className="absolute -top-12 -right-12 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-sky-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-gradient-to-tr from-amber-300/20 to-emerald-300/20 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Main Inner App Canvas (Clean frameless white card) */}
+      <div className="relative bg-white text-slate-900 rounded-3xl p-5 sm:p-7 shadow-xl border border-slate-200/70 min-h-[480px] flex flex-col justify-between select-none overflow-hidden">
+
+        {/* Top Header & Pill Nav */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 flex items-center justify-center bg-blue-600 rounded-xl text-white font-bold text-xs shadow-md shadow-blue-500/20">
+              iE
+            </div>
+            <div>
+              <div className="font-extrabold text-slate-950 text-sm tracking-tight leading-none">INFEPOS</div>
+              <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Admin Dashboard</div>
+            </div>
+          </div>
+
+          {/* Interactive Navigation Pills */}
+          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-full text-xs font-semibold text-slate-600 border border-slate-200/60 overflow-x-auto max-w-full">
+            {(['Dashboard', 'Products', 'Stores', 'Inventory', 'Sales'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3.5 py-1.5 rounded-full transition-all duration-300 ${
+                  activeTab === tab
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 font-bold scale-105'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden md:flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Live Cloud Sync</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Dashboard Content View */}
+        {activeTab === 'Dashboard' && (
+          <div className="space-y-4 pt-3 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-extrabold text-slate-950 tracking-tight">Dashboard</h3>
+                <p className="text-xs text-slate-400 font-medium">Financial Overview</p>
+              </div>
+              <div className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                GBP (£)
+              </div>
+            </div>
+
+            {/* Financial Overview 4 Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">🛒</div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">TOTAL SALES</span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight flex items-baseline gap-2">
+                  <span>{salesCount}</span>
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100/80 px-1.5 py-0.5 rounded-md">+14%</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-7 h-7 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">£</div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">NET REVENUE</span>
+                </div>
+                <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight truncate">
+                  £{netRevenue.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">💷</div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">GROSS REVENUE</span>
+                </div>
+                <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight truncate">
+                  £134,651,498.70
+                </div>
+              </div>
+
+              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">🛍️</div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">AVG BASKET</span>
+                </div>
+                <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight truncate">
+                  £1,417,384.20
+                </div>
+              </div>
+            </div>
+
+            {/* Weekly Revenue Chart */}
+            <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/60">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-800">Weekly Revenue Telemetry</span>
+                <span className="text-[10px] font-semibold text-blue-600 bg-blue-100/80 px-2.5 py-0.5 rounded-full">Real-Time</span>
+              </div>
+
+              <div className="h-28 flex items-end justify-between gap-2 pt-2 px-2 border-b border-slate-200/60">
+                {chartData.map((item, index) => (
+                  <div
+                    key={item.day}
+                    className="flex-1 flex flex-col items-center gap-1 group/bar cursor-pointer"
+                    onMouseEnter={() => setHoveredBar(index)}
+                    onMouseLeave={() => setHoveredBar(null)}
+                  >
+                    <div className={`text-[9px] font-bold text-white bg-slate-900 px-1.5 py-0.5 rounded transition-opacity ${
+                      hoveredBar === index ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}>
+                      £{item.rev.toLocaleString()}
+                    </div>
+                    <div className="w-full bg-slate-200/70 rounded-t-lg h-20 relative overflow-hidden flex items-end">
+                      <div
+                        style={{ height: item.height }}
+                        className={`w-full rounded-t-lg transition-all duration-500 ${
+                          hoveredBar === index
+                            ? 'bg-gradient-to-t from-blue-600 to-sky-400 shadow-md'
+                            : 'bg-gradient-to-t from-blue-600 to-blue-500 group-hover/bar:bg-blue-600'
+                        }`}
+                      />
+                    </div>
+                    <span className="text-[10px] font-semibold text-slate-500">{item.day}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Today's Activity */}
+            <div>
+              <p className="text-[11px] font-bold text-slate-400 mb-2 uppercase tracking-wider">Today's Activity</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
+                  <div>
+                    <div className="text-[9px] font-semibold text-slate-400">TODAY'S SALES</div>
+                    <div className="text-lg font-black text-slate-950">{todaySales}</div>
+                  </div>
+                  <div className="w-6 h-6 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center font-bold text-xs">📊</div>
+                </div>
+
+                <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
+                  <div>
+                    <div className="text-[9px] font-semibold text-slate-400">TODAY'S RETURNS</div>
+                    <div className="text-lg font-black text-slate-950">0</div>
+                  </div>
+                  <div className="w-6 h-6 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs">↩️</div>
+                </div>
+
+                <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
+                  <div>
+                    <div className="text-[9px] font-semibold text-slate-400">CUSTOMERS</div>
+                    <div className="text-lg font-black text-slate-950">14</div>
+                  </div>
+                  <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">👥</div>
+                </div>
+
+                <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
+                  <div>
+                    <div className="text-[9px] font-semibold text-slate-400">ACTIVE POS</div>
+                    <div className="text-lg font-black text-emerald-600">12 / 12</div>
+                  </div>
+                  <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">💻</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Products View */}
+        {activeTab === 'Products' && (
+          <div className="space-y-3 pt-2 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-950 tracking-tight">Product Catalog</h3>
+                <p className="text-xs text-slate-400 font-medium">1,200 active SKUs across stores</p>
+              </div>
+              <button className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-md shadow-blue-500/20">
+                + Add SKU
+              </button>
+            </div>
+
+            <div className="bg-slate-50/80 rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-100/80 border-b border-slate-200/60 text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                    <th className="p-2.5">Product</th>
+                    <th className="p-2.5">Category</th>
+                    <th className="p-2.5">Price</th>
+                    <th className="p-2.5">Stock</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  <tr className="hover:bg-white transition-colors">
+                    <td className="p-2.5 font-bold text-slate-950">Organic Coffee 250g</td>
+                    <td className="p-2.5 text-slate-400">Beverages</td>
+                    <td className="p-2.5 font-extrabold text-slate-950">£4.50</td>
+                    <td className="p-2.5"><span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold rounded-full text-[9px]">In Stock (142)</span></td>
+                  </tr>
+                  <tr className="hover:bg-white transition-colors">
+                    <td className="p-2.5 font-bold text-slate-950">Pastry Box (Assorted)</td>
+                    <td className="p-2.5 text-slate-400">Bakery</td>
+                    <td className="p-2.5 font-extrabold text-slate-950">£12.00</td>
+                    <td className="p-2.5"><span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold rounded-full text-[9px]">In Stock (48)</span></td>
+                  </tr>
+                  <tr className="hover:bg-white transition-colors">
+                    <td className="p-2.5 font-bold text-slate-950">Wireless Thermal Printer</td>
+                    <td className="p-2.5 text-slate-400">Hardware</td>
+                    <td className="p-2.5 font-extrabold text-slate-950">£149.00</td>
+                    <td className="p-2.5"><span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold rounded-full text-[9px]">Low Stock (3)</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Stores View */}
+        {activeTab === 'Stores' && (
+          <div className="space-y-3 pt-2 animate-fadeIn">
+            <div>
+              <h3 className="text-lg font-extrabold text-slate-950 tracking-tight">Multi-Store Locations</h3>
+              <p className="text-xs text-slate-400 font-medium">3 store locations online</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {[
+                { name: 'London Central Store', terminals: 5, status: 'Active', rev: '£42,890' },
+                { name: 'Manchester Hub', terminals: 4, status: 'Active', rev: '£31,450' },
+                { name: 'Edinburgh Store', terminals: 3, status: 'Active', rev: '£28,120' },
+              ].map(store => (
+                <div key={store.name} className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/60 shadow-sm space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">{store.status}</span>
+                  </div>
+                  <div className="font-bold text-slate-950 text-xs">{store.name}</div>
+                  <div className="text-[10px] text-slate-400">{store.terminals} Terminals Online</div>
+                  <div className="pt-1.5 border-t border-slate-200/60 flex justify-between items-center text-[10px]">
+                    <span className="text-slate-400">Sales</span>
+                    <span className="font-extrabold text-blue-600">{store.rev}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Other Tabs */}
+        {(activeTab === 'Inventory' || activeTab === 'Sales') && (
+          <div className="space-y-3 animate-fadeIn py-8 text-center">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg mx-auto mb-1">
+              ⚡
+            </div>
+            <h4 className="text-base font-bold text-slate-950">Real-Time {activeTab} Engine</h4>
+            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+              Automated FIFO batch tracking, stock transfer workflows, and live store sync.
+            </p>
+          </div>
+        )}
+
+        {/* Floating Toast */}
+        {liveToast && (
+          <div className="absolute bottom-4 right-4 bg-slate-950 text-white px-3.5 py-2 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-2.5 animate-bounce">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <div className="text-[11px]">
+              <div className="font-bold text-white">{liveToast.text}</div>
+              <div className="text-[9px] text-emerald-400 font-semibold">{liveToast.amount} • POS Synced</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────
+   ANIMATED TILL APP PREVIEW CARD — Real POS Terminal Replica
+───────────────────────────────────────────────────────────────── */
+interface TillCartItem {
+  id: string;
+  name: string;
+  price: number;
+  qty: number;
+}
+
+const AnimatedTillAppPreviewCard: React.FC = () => {
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [cart, setCart] = useState<TillCartItem[]>([
+    { id: 'p2', name: 'Dabur Lip Balm 50ml', price: 7.25, qty: 1 },
+    { id: 'p3', name: 'Aavin Buttermilk 200ml', price: 1.25, qty: 2 },
+  ]);
+  const [checkoutToast, setCheckoutToast] = useState<string | null>(null);
+  const [scanningItem, setScanningItem] = useState<string | null>(null);
+
+  const products = [
+    { id: 'p1', name: 'Harpic Dishwash 5kg', cat: 'Home Care', price: 8.00, stock: 97, vat: '18%' },
+    { id: 'p2', name: 'Dabur Lip Balm 50ml', cat: 'Personal Care', price: 7.25, stock: 98, vat: '18%' },
+    { id: 'p3', name: 'Aavin Buttermilk 200ml', cat: 'Dairy', price: 1.25, stock: 96, vat: '5%' },
+    { id: 'p4', name: 'Coca-Cola Mango 200ml', cat: 'Beverages', price: 3.50, stock: 97, vat: '12%' },
+    { id: 'p5', name: 'Bingo Bhujia 100g', cat: 'Snacks', price: 2.10, stock: 97, vat: '12%' },
+    { id: 'p6', name: 'Aashirvaad Coffee 10kg', cat: 'Groceries', price: 5.30, stock: 96, vat: '5%' },
+  ];
+
+  const categories = ['All', 'Personal Care', 'Dairy', 'Beverages', 'Snacks', 'Groceries'];
+
+  const filteredProducts = selectedCategory === 'All'
+    ? products
+    : products.filter(p => p.cat === selectedCategory);
+
+  const addToCart = (product: typeof products[0]) => {
+    setScanningItem(product.name);
+    setTimeout(() => setScanningItem(null), 800);
+
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+      }
+      return [...prev, { id: product.id, name: product.name, price: product.price, qty: 1 }];
+    });
+  };
+
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+    const total = cart.reduce((acc, item) => acc + item.price * item.qty, 0).toFixed(2);
+    setCheckoutToast(`⚡ Checkout Paid: £${total} • ESC/POS Receipt Printed • Auto Synced`);
+    setCart([]);
+    setTimeout(() => setCheckoutToast(null), 4000);
+  };
+
+  // Simulated auto-scanner demo loop
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const randomProd = products[Math.floor(Math.random() * products.length)];
+      addToCart(randomProd);
+    }, 7000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const totalAmount = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+
+  return (
+    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-emerald-100/70 via-sky-50 to-blue-100/70 p-4 sm:p-7 shadow-2xl border border-emerald-100/50 overflow-hidden group">
+      {/* Antigravity ambient background glows */}
+      <div className="absolute -top-12 -left-12 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-teal-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-12 -right-12 w-80 h-80 bg-gradient-to-tr from-sky-400/20 to-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Main Inner POS App Canvas (Clean frameless white card) */}
+      <div className="relative bg-white text-slate-900 rounded-3xl p-4 sm:p-6 shadow-xl border border-slate-200/70 min-h-[480px] flex flex-col justify-between select-none overflow-hidden">
+
+        {/* POS Top Header Bar (Matching Screenshot 3) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-slate-900 text-white font-bold rounded-lg flex items-center justify-center text-xs shadow-sm">
+              iE
+            </div>
+            <div>
+              <div className="font-black text-slate-950 text-xs tracking-tight">INFEPOS Terminal</div>
+              <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                <span>yogesh d</span> • <span className="text-emerald-600 font-bold">🟢 Shift Open</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[10px]">
+            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 font-mono text-slate-500 font-semibold border border-slate-200">
+              12:46:27 Fri 09 Oct
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Offline Mode Active</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Search Bar & Category Filter Pills */}
+        <div className="space-y-2 mb-3">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-slate-50 border border-slate-200/70 rounded-xl px-3 py-1.5 text-xs text-slate-400 flex items-center gap-2">
+              <Search size={14} className="text-slate-400" />
+              <span>Search SKU, barcode or item name...</span>
+            </div>
+            <button className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-bold text-slate-700 border border-slate-200">
+              Sync Catalog
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${
+                  selectedCategory === cat
+                    ? 'bg-slate-900 text-white font-bold shadow-md scale-105'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Products Grid & Cart Drawer */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 flex-1">
+          {/* Products Grid */}
+          <div className="md:col-span-8 grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {filteredProducts.map(product => (
+              <div
+                key={product.id}
+                onClick={() => addToCart(product)}
+                className={`bg-slate-50/80 hover:bg-white border rounded-2xl p-2.5 flex flex-col justify-between cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] relative ${
+                  scanningItem === product.name ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/50' : 'border-slate-200/70'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[8px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded-full">
+                    {product.stock} IN STOCK
+                  </span>
+                  <span className="text-[8px] font-semibold text-slate-400">{product.vat}</span>
+                </div>
+                <div className="font-bold text-slate-950 text-xs line-clamp-2 my-1">{product.name}</div>
+                <div className="text-xs font-black text-blue-600 pt-1 border-t border-slate-200/50 flex justify-between items-center">
+                  <span>£{product.price.toFixed(2)}</span>
+                  <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px]">
+                    +
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Cart Sidebar */}
+          <div className="md:col-span-4 bg-slate-50/90 border border-slate-200/80 rounded-2xl p-3 flex flex-col justify-between shadow-inner">
+            <div>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 mb-2">
+                <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                  <ShoppingCart size={14} className="text-blue-600" /> Cart
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400">{cart.length} Items</span>
+              </div>
+
+              {cart.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <ShoppingCart size={28} className="mx-auto mb-1 opacity-40" />
+                  <div className="text-[11px] font-semibold">Cart is empty</div>
+                  <div className="text-[9px] text-slate-400">Tap items to scan & add</div>
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  {cart.map(item => (
+                    <div key={item.id} className="bg-white rounded-xl p-2 border border-slate-200/60 flex items-center justify-between text-[11px]">
+                      <div>
+                        <div className="font-bold text-slate-950 line-clamp-1">{item.name}</div>
+                        <div className="text-[9px] text-slate-400">£{item.price.toFixed(2)} x {item.qty}</div>
+                      </div>
+                      <div className="font-black text-slate-950">£{(item.price * item.qty).toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Cart Footer */}
+            <div className="pt-2 border-t border-slate-200/80 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-600">Total</span>
+                <span className="font-black text-slate-950 text-base">£{totalAmount.toFixed(2)}</span>
+              </div>
+              <button
+                onClick={handleCheckout}
+                disabled={cart.length === 0}
+                className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-md ${
+                  cart.length > 0
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-[1.02] cursor-pointer'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                <span>Checkout / Pay</span> &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Floating Toast Notification */}
+        {checkoutToast && (
+          <div className="absolute bottom-3 left-3 right-3 bg-slate-950 text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-2.5 animate-bounce">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+            <div className="text-xs font-semibold text-emerald-300">{checkoutToast}</div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
@@ -1361,13 +1923,11 @@ const LandingPage: React.FC = () => {
           }`}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6">
-          {/* Logo */}
-          <a href="#" className="flex items-center gap-2 flex-shrink-0 group">
+          <a href="#" className="flex items-center flex-shrink-0 group">
             <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-base transition-all duration-300 ${pastHero ? `${currentTheme.primaryBtn} shadow-sm` : 'bg-white text-blue-600 shadow-md group-hover:scale-105'
-                }`}
+              className={`w-16 h-16 flex items-center justify-center transition-all duration-300 ${!pastHero && 'group-hover:scale-105'} -mr-2`}
             >
-              I
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-md scale-[1.5]" />
             </div>
             <InfeposLogoText textSize="text-xl" isHeroTheme={!pastHero} />
           </a>
@@ -1610,15 +2170,15 @@ const LandingPage: React.FC = () => {
           </div>
 
           {/* Main logo label */}
-          <div className="flex items-center gap-2.5 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md">
-              <span className="text-blue-600 font-extrabold text-lg">I</span>
+          <div className="flex items-center mb-8">
+            <div className="w-20 h-20 flex items-center justify-center -mr-3 -ml-2">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-xl scale-[1.4]" />
             </div>
             <InfeposLogoText textSize="text-2xl sm:text-3xl" isHeroTheme={true} />
           </div>
 
-          {/* Hero headline */}
-          <h1 className="text-6xl sm:text-7xl md:text-8xl font-bold tracking-tighter text-white leading-[1.02] mb-8 max-w-5xl">
+          {/* Hero headline with modern clean sans font (Clash Display / Plus Jakarta Sans) */}
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-clash font-bold tracking-tight text-white leading-[1.05] mb-8 max-w-5xl">
             Experience liftoff with the next-gen POS platform
           </h1>
 
@@ -1714,25 +2274,21 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Right: Card Container with Picture */}
+            {/* Right: Real Interactive Dashboard Showcase Component */}
             <div className="lg:col-span-7">
-              <div className="relative rounded-[2.5rem] bg-gradient-to-br from-slate-100 via-slate-50 to-blue-50/50 p-6 md:p-8 border border-slate-200/80 shadow-2xl overflow-hidden group hover:shadow-blue-500/10 transition-all duration-500">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="relative rounded-2xl overflow-hidden shadow-xl border border-slate-200/60 bg-white group-hover:scale-[1.02] transition-transform duration-500">
-                  <img
-                    src="/hero-admin.png"
-                    alt="INFEPOS Admin Dashboard Interface"
-                    className="w-full h-auto object-cover"
-                  />
-                </div>
-              </div>
+              <AnimatedDashboardPreviewCard />
             </div>
           </div>
 
           {/* Product 2: INFEPOS Till App */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left: Text & Details */}
-            <div className="lg:col-span-5 space-y-6">
+            {/* Left on desktop: Real Interactive Till App Showcase Component */}
+            <div className="lg:col-span-7 order-2 lg:order-1">
+              <AnimatedTillAppPreviewCard />
+            </div>
+
+            {/* Right on desktop: Text & Details */}
+            <div className="lg:col-span-5 space-y-6 order-1 lg:order-2">
               <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 text-white text-xs font-bold uppercase tracking-wider">
                 Point of Sale Terminal
               </span>
@@ -1766,110 +2322,108 @@ const LandingPage: React.FC = () => {
                 </button>
               </div>
             </div>
-
-            {/* Right: Card Container with Picture */}
-            <div className="lg:col-span-7">
-              <div className="relative rounded-[2.5rem] bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-6 md:p-8 border border-slate-800 shadow-2xl overflow-hidden group hover:shadow-blue-500/10 transition-all duration-500">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="relative rounded-2xl overflow-hidden shadow-xl border border-slate-800 bg-slate-900 group-hover:scale-[1.02] transition-transform duration-500">
-                  <img
-                    src="/hero-pos.png"
-                    alt="INFEPOS Till App Point of Sale Interface"
-                    className="w-full h-auto object-cover"
-                  />
-                </div>
-              </div>
-            </div>
           </div>
 
         </div>
       </section>
 
-      {/* ── 4. BENTO FEATURE GRID ── */}
-      <section id="products" className="py-28 bg-white">
-        <div className="max-w-7xl mx-auto px-6 md:px-12">
-          <div className="mb-16 max-w-3xl">
-            <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-4">The Platform</p>
-            <h2 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 leading-[1.05] mb-6">
-              Everything retail. All in one place.
+      {/* ── 4. PREMIUM BENTO FEATURE GRID (Apple Style) ── */}
+      <section id="products" className="py-32 bg-white">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
+          <div className="mb-20 text-center max-w-4xl mx-auto flex flex-col items-center">
+            <h2 className="text-6xl md:text-7xl font-bold tracking-tighter text-black mb-6 leading-[1.05]">
+              Everything retail. <br />
+              <span className="text-[#86868b]">All in one place.</span>
             </h2>
-            <p className="text-xl text-slate-500 font-light leading-relaxed flex items-center gap-1.5 flex-wrap">
-              <InfeposLogoText textSize="text-xl" isHeroTheme={false} /> unifies your in-store POS, cloud admin, and offline sync into one beautifully integrated system.
-            </p>
+            <div className="text-xl md:text-2xl text-[#86868b] font-medium leading-relaxed flex items-center justify-center flex-wrap gap-1.5">
+              <div className="flex items-center">
+                <div className="w-8 h-8 flex items-center justify-center -mr-1">
+                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-sm scale-[1.5]" />
+                </div>
+                <InfeposLogoText textSize="text-xl md:text-2xl" isHeroTheme={false} />
+              </div>
+              <span>unifies your in-store POS, cloud admin, and offline sync.</span>
+            </div>
           </div>
 
-          {/* Bento grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Large card */}
-            <div className="md:col-span-2 bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100 hover:-translate-y-1 transition-all duration-300 hover:shadow-xl group">
-              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                <Wifi size={28} />
+          {/* Bento grid container */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:auto-rows-[22rem]">
+            
+            {/* Card 1: Offline First (Large Horizontal) */}
+            <div className="md:col-span-2 md:row-span-1 bg-[#f5f5f7] rounded-[2.5rem] p-10 md:p-12 flex flex-col justify-between overflow-hidden relative group transition-transform duration-500 hover:scale-[1.02]">
+              <div className="relative z-10">
+                <h3 className="text-3xl md:text-4xl font-bold text-black mb-4 tracking-tight">Offline-First. <br/><span className="text-[#86868b]">Never lose a sale.</span></h3>
+                <p className="text-[#86868b] text-lg md:text-xl font-medium leading-snug max-w-sm">
+                  Our POS terminal processes transactions locally and auto-syncs the moment connectivity is restored.
+                </p>
               </div>
-              <h3 className="text-3xl font-bold text-slate-900 mb-4 tracking-tight">Offline-First Architecture</h3>
-              <p className="text-slate-500 text-lg font-light leading-relaxed max-w-lg">
-                Never lose a sale. Our POS terminal processes transactions locally and auto-syncs the moment connectivity is restored, seamlessly.
-              </p>
-              <a href="#" className="mt-8 inline-flex items-center gap-2 text-blue-600 font-semibold hover:gap-3 transition-all">
-                Learn more <ArrowRight size={16} />
-              </a>
+              <Wifi size={160} strokeWidth={0.5} className="absolute -bottom-10 -right-10 text-black/5 transform group-hover:scale-110 transition-transform duration-700" />
             </div>
 
-            <div className="bg-blue-600 rounded-[2.5rem] p-10 border border-blue-500 hover:-translate-y-1 transition-all duration-300 hover:shadow-xl text-white">
-              <div className="w-14 h-14 bg-white/20 text-white rounded-2xl flex items-center justify-center mb-8">
-                <BarChart3 size={28} />
+            {/* Card 2: Enterprise Security (Tall Vertical Dark) */}
+            <div className="md:col-span-1 md:row-span-2 bg-black rounded-[2.5rem] p-10 md:p-12 flex flex-col justify-between overflow-hidden relative group text-white transition-transform duration-500 hover:scale-[1.02]">
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-8 backdrop-blur-md">
+                  <Lock size={32} className="text-white" />
+                </div>
+                <h3 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">Enterprise grade security.</h3>
+                <p className="text-[#a1a1a6] text-lg md:text-xl font-medium leading-snug">
+                  JWT auth, RBAC, encrypted sync, and audit logs. Built for regulated industries.
+                </p>
               </div>
-              <h3 className="text-3xl font-bold mb-4 tracking-tight">Real-Time Analytics</h3>
-              <p className="text-blue-100 text-lg font-light leading-relaxed">
-                Live dashboards, sales trends, and inventory health at a glance. Data your team can act on immediately.
-              </p>
+              <div className="absolute inset-0 bg-gradient-to-t from-blue-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
             </div>
 
-            <div className="bg-slate-900 rounded-[2.5rem] p-10 border border-slate-800 hover:-translate-y-1 transition-all duration-300 hover:shadow-xl text-white">
-              <div className="w-14 h-14 bg-white/10 text-white rounded-2xl flex items-center justify-center mb-8">
-                <Lock size={28} />
+            {/* Card 3: Real-Time Analytics (Square Colorful) */}
+            <div className="md:col-span-1 md:row-span-1 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[2.5rem] p-10 md:p-12 flex flex-col justify-between text-white overflow-hidden relative group transition-transform duration-500 hover:scale-[1.02]">
+              <div className="relative z-10">
+                <BarChart3 size={40} className="mb-6 text-white/80" />
+                <h3 className="text-3xl font-bold mb-3 tracking-tight">Real-Time Analytics.</h3>
+                <p className="text-white/80 text-lg font-medium leading-snug">
+                  Live dashboards & sales trends at a glance.
+                </p>
               </div>
-              <h3 className="text-3xl font-bold mb-4 tracking-tight">Enterprise Security</h3>
-              <p className="text-slate-400 text-lg font-light leading-relaxed">
-                JWT auth, RBAC, encrypted sync, and audit logs. Built for regulated industries.
-              </p>
+              <div className="absolute top-0 right-0 w-full h-full bg-white/10 blur-3xl transform translate-x-full group-hover:translate-x-0 transition-transform duration-1000"></div>
             </div>
 
-            <div className="bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100 hover:-translate-y-1 transition-all duration-300 hover:shadow-xl group">
-              <div className="w-14 h-14 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                <RefreshCw size={28} />
+            {/* Card 4: Multi-Tenant (Horizontal Light, spans cols 1-2 in row 2) */}
+            <div className="md:col-span-2 md:row-span-1 bg-[#f5f5f7] rounded-[2.5rem] p-10 md:p-12 flex flex-col justify-between overflow-hidden relative group transition-transform duration-500 hover:scale-[1.02]">
+              <div className="relative z-10 flex flex-col h-full justify-center">
+                <h3 className="text-3xl md:text-4xl font-bold text-black mb-4 tracking-tight">Multi-Tenant Architecture.</h3>
+                <p className="text-[#86868b] text-lg md:text-xl font-medium leading-snug max-w-md">
+                  Fully isolated tenant environments. Manage a franchise of 1 or 10,000 stores from a single unified admin panel.
+                </p>
               </div>
-              <h3 className="text-3xl font-bold text-slate-900 mb-4 tracking-tight">Auto Sync</h3>
-              <p className="text-slate-500 text-lg font-light leading-relaxed">
-                Intelligent background synchronization across all terminals, stores, and devices without manual intervention.
-              </p>
+              <Users size={160} strokeWidth={0.5} className="absolute top-1/2 -translate-y-1/2 -right-4 text-black/5 transform group-hover:-translate-x-4 transition-transform duration-700" />
             </div>
 
-            <div className="bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100 hover:-translate-y-1 transition-all duration-300 hover:shadow-xl group">
-              <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                <Users size={28} />
+            {/* Card 5: Auto Sync (Square Light, goes in col 4 in row 2) */}
+            <div className="md:col-span-1 md:row-span-1 bg-[#f5f5f7] rounded-[2.5rem] p-10 md:p-12 flex flex-col justify-between overflow-hidden relative group transition-transform duration-500 hover:scale-[1.02]">
+              <div className="relative z-10">
+                <RefreshCw size={40} className="text-blue-500 mb-6 group-hover:rotate-180 transition-transform duration-700" />
+                <h3 className="text-2xl font-bold text-black mb-3 tracking-tight">Auto Sync.</h3>
+                <p className="text-[#86868b] text-lg font-medium leading-snug">
+                  Intelligent background synchronization across all terminals.
+                </p>
               </div>
-              <h3 className="text-3xl font-bold text-slate-900 mb-4 tracking-tight">Multi-Tenant</h3>
-              <p className="text-slate-500 text-lg font-light leading-relaxed">
-                Fully isolated tenant environments. Manage a franchise of 1 or 10,000 stores from a single admin.
-              </p>
             </div>
+
           </div>
         </div>
       </section>
 
-      {/* ── 5. SPLIT SCREEN — Admin Dashboard Spotlight ── */}
-      <section id="use-cases" className="py-28 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6 md:px-12">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+      {/* ── 5. SPLIT SCREEN — Admin Dashboard Spotlight (Apple Style) ── */}
+      <section id="use-cases" className="py-32 bg-[#f5f5f7]">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
+          <div className="grid md:grid-cols-2 gap-20 items-center">
             <div>
-              <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-6">Admin Dashboard</p>
-              <h2 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 leading-[1.05] mb-8">
-                Total control. From anywhere.
+              <h2 className="text-6xl md:text-7xl font-bold tracking-tighter text-black leading-[1.05] mb-8">
+                Total control. <br/><span className="text-[#86868b]">From anywhere.</span>
               </h2>
-              <p className="text-xl text-slate-500 font-light leading-relaxed mb-10">
+              <p className="text-xl md:text-2xl text-[#86868b] font-medium leading-relaxed mb-12">
                 Manage products, staff, inventory, and reports across all your locations from one powerful cloud-based admin panel.
               </p>
-              <ul className="space-y-4 mb-10">
+              <ul className="space-y-5 mb-12">
                 {[
                   'Multi-location inventory management',
                   'Staff roles & permissions control',
@@ -1877,106 +2431,104 @@ const LandingPage: React.FC = () => {
                   'Product catalog & pricing management',
                   'Shift management & session logs',
                 ].map(item => (
-                  <li key={item} className="flex items-start gap-3 text-slate-700 font-medium">
-                    <CheckCircle2 size={20} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                  <li key={item} className="flex items-center gap-4 text-black text-lg font-medium">
+                    <CheckCircle2 size={24} className="text-black flex-shrink-0" />
                     {item}
                   </li>
                 ))}
               </ul>
               <button
                 onClick={() => navigate('/login')}
-                className="flex items-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-full font-semibold hover:bg-black transition-all hover:scale-105 shadow-xl"
+                className="flex items-center gap-3 px-8 py-4 bg-black text-white rounded-full font-semibold text-lg hover:bg-slate-800 transition-all hover:scale-[1.02]"
               >
-                Open Admin Dashboard <ArrowRight size={18} />
+                Open Admin Dashboard <ArrowRight size={20} />
               </button>
             </div>
 
             <div className="relative">
-              <div className="bg-blue-600 rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[4/3] flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700" />
-                <div className="relative z-10 p-8 w-full">
-                  {/* Mini admin UI mockup */}
-                  <div className="bg-white/10 rounded-2xl p-4 mb-3">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-white/80 text-xs font-medium uppercase tracking-widest">Today's Revenue</span>
-                      <TrendingUp size={14} className="text-green-400" />
+              <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl shadow-black/5 aspect-[4/3] flex items-center justify-center p-8 border border-black/5">
+                <div className="w-full">
+                  {/* Mini admin UI mockup - Sleek & Light */}
+                  <div className="bg-[#f5f5f7] rounded-3xl p-6 mb-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-[#86868b] text-sm font-semibold uppercase tracking-widest">Today's Revenue</span>
+                      <TrendingUp size={18} className="text-green-500" />
                     </div>
-                    <div className="text-white text-3xl font-bold">₹1,24,780</div>
-                    <div className="text-green-400 text-sm mt-1">+18.4% vs yesterday</div>
+                    <div className="text-black text-5xl font-bold tracking-tighter">₹1,24,780</div>
+                    <div className="text-green-500 font-medium text-sm mt-2">+18.4% vs yesterday</div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-4">
                     {['Transactions', 'Products', 'Terminals'].map((label, i) => (
-                      <div key={label} className="bg-white/10 rounded-xl p-3 text-center">
-                        <div className="text-white font-bold text-lg">{['482', '1.2k', '12'][i]}</div>
-                        <div className="text-white/60 text-xs mt-1">{label}</div>
+                      <div key={label} className="bg-[#f5f5f7] rounded-2xl p-4 text-center">
+                        <div className="text-black font-bold text-2xl tracking-tight">{['482', '1.2k', '12'][i]}</div>
+                        <div className="text-[#86868b] text-sm font-medium mt-1">{label}</div>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-3 bg-white/10 rounded-2xl p-4">
-                    <div className="text-white/60 text-xs mb-2 uppercase tracking-widest">Recent Sales</div>
+                  <div className="mt-4 bg-[#f5f5f7] rounded-3xl p-6">
+                    <div className="text-[#86868b] text-sm font-semibold mb-4 uppercase tracking-widest">Recent Sales</div>
                     {['Coffee & Snack', 'Electronics', 'Apparel'].map((cat, i) => (
-                      <div key={cat} className="flex justify-between items-center py-1.5 border-b border-white/10 last:border-0">
-                        <span className="text-white text-sm">{cat}</span>
-                        <span className="text-white/80 text-sm font-medium">₹{['480', '2,400', '960'][i]}</span>
+                      <div key={cat} className="flex justify-between items-center py-2.5 border-b border-black/5 last:border-0">
+                        <span className="text-black font-medium">{cat}</span>
+                        <span className="text-[#86868b] font-semibold">₹{['480', '2,400', '960'][i]}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
               {/* Floating badge */}
-              <div className="absolute -bottom-4 -right-4 bg-white rounded-2xl shadow-2xl px-6 py-4 border border-slate-100">
-                <div className="text-slate-900 font-bold text-sm">🟢 All 12 terminals</div>
-                <div className="text-slate-500 text-xs">online & synced</div>
+              <div className="absolute -bottom-6 -right-6 bg-black text-white rounded-3xl shadow-2xl px-8 py-6">
+                <div className="font-bold text-lg tracking-tight mb-1">🟢 All 12 terminals</div>
+                <div className="text-[#a1a1a6] font-medium">online & synced</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── 6. SPLIT SCREEN — POS Terminal Spotlight ── */}
-      <section className="py-28 bg-white">
-        <div className="max-w-7xl mx-auto px-6 md:px-12">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+      {/* ── 6. SPLIT SCREEN — POS Terminal Spotlight (Apple Style) ── */}
+      <section className="py-32 bg-white">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
+          <div className="grid md:grid-cols-2 gap-20 items-center">
             <div className="order-2 md:order-1 relative">
-              <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[4/3] flex items-center justify-center">
-                <div className="p-8 w-full">
-                  <div className="bg-slate-800 rounded-2xl p-4 mb-3">
-                    <div className="text-slate-400 text-xs uppercase tracking-widest mb-2">Cart</div>
+              <div className="bg-black rounded-[3rem] overflow-hidden shadow-2xl shadow-blue-900/10 aspect-[4/3] flex items-center justify-center p-8">
+                <div className="w-full">
+                  <div className="bg-[#1d1d1f] rounded-3xl p-6 mb-4">
+                    <div className="text-[#a1a1a6] text-sm font-semibold uppercase tracking-widest mb-4">Cart</div>
                     {['Tx Organic Coffee', 'Tx Pastry', 'Mineral Water'].map((item, i) => (
-                      <div key={item} className="flex justify-between py-1.5 border-b border-slate-700 last:border-0">
-                        <span className="text-white text-sm">{item}</span>
-                        <span className="text-slate-300 text-sm">₹{['180', '120', '40'][i]}</span>
+                      <div key={item} className="flex justify-between py-2.5 border-b border-white/10 last:border-0">
+                        <span className="text-white font-medium">{item}</span>
+                        <span className="text-[#a1a1a6] font-semibold">₹{['180', '120', '40'][i]}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between pt-2 mt-1">
-                      <span className="text-white font-bold">Total</span>
-                      <span className="text-green-400 font-bold">₹340</span>
+                    <div className="flex justify-between pt-4 mt-2">
+                      <span className="text-white text-xl font-bold tracking-tight">Total</span>
+                      <span className="text-white text-xl font-bold tracking-tight">₹340</span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button className="bg-blue-600 text-white rounded-xl py-3 text-sm font-bold">Cash</button>
-                    <button className="bg-slate-700 text-white rounded-xl py-3 text-sm font-bold">Card / UPI</button>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button className="bg-white text-black rounded-2xl py-4 text-lg font-bold hover:scale-[1.02] transition-transform">Cash</button>
+                    <button className="bg-[#2d2d2f] text-white rounded-2xl py-4 text-lg font-bold hover:scale-[1.02] transition-transform">Card / UPI</button>
                   </div>
-                  <div className="mt-2 bg-slate-800 rounded-xl p-3 text-center">
-                    <div className="text-slate-400 text-xs">🔴 Offline Mode Active — Syncing when online</div>
+                  <div className="mt-4 bg-[#1d1d1f] rounded-2xl p-4 text-center">
+                    <div className="text-[#a1a1a6] font-medium">⚡ Offline Mode Active</div>
                   </div>
                 </div>
               </div>
-              <div className="absolute -top-4 -left-4 bg-white rounded-2xl shadow-2xl px-6 py-4 border border-slate-100">
-                <div className="text-slate-900 font-bold text-sm">⚡ Offline Mode</div>
-                <div className="text-slate-500 text-xs">100% functional, no internet needed</div>
+              <div className="absolute -top-6 -left-6 bg-white rounded-3xl shadow-2xl shadow-black/10 px-8 py-6 border border-black/5">
+                <div className="text-black font-bold text-lg tracking-tight mb-1">⚡ Offline Mode</div>
+                <div className="text-[#86868b] font-medium">100% functional, no internet needed</div>
               </div>
             </div>
 
             <div className="order-1 md:order-2">
-              <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-6">POS Terminal</p>
-              <h2 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 leading-[1.05] mb-8">
-                Built for the shop floor.
+              <h2 className="text-6xl md:text-7xl font-bold tracking-tighter text-black leading-[1.05] mb-8">
+                Built for the <br/><span className="text-[#86868b]">shop floor.</span>
               </h2>
-              <p className="text-xl text-slate-500 font-light leading-relaxed mb-10">
+              <p className="text-xl md:text-2xl text-[#86868b] font-medium leading-relaxed mb-12">
                 A blazing-fast desktop POS terminal that keeps selling even when your internet goes down. Tap, ring, and go.
               </p>
-              <ul className="space-y-4 mb-10">
+              <ul className="space-y-5 mb-12">
                 {[
                   'Works 100% offline — no internet required',
                   'Barcode scanner & receipt printer support',
@@ -1984,81 +2536,188 @@ const LandingPage: React.FC = () => {
                   'Customer loyalty & discount management',
                   'Auto-syncs when connectivity is restored',
                 ].map(item => (
-                  <li key={item} className="flex items-start gap-3 text-slate-700 font-medium">
-                    <CheckCircle2 size={20} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                  <li key={item} className="flex items-center gap-4 text-black text-lg font-medium">
+                    <CheckCircle2 size={24} className="text-black flex-shrink-0" />
                     {item}
                   </li>
                 ))}
               </ul>
               <button
                 onClick={() => window.location.href = 'https://github.com/naveend07ec/pos-download/releases/download/v1.0.0/INFEPOS.Terminal.Setup.0.0.0.exe'}
-                className="flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-500 transition-all hover:scale-105 shadow-xl"
+                className="flex items-center gap-3 px-8 py-4 bg-black text-white rounded-full font-semibold text-lg hover:bg-slate-800 transition-all hover:scale-[1.02]"
               >
-                Download POS App <Download size={18} />
+                Download POS App <Download size={20} />
               </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── 7. ENTERPRISE PRICING SECTION ── */}
-      <section id="pricing" className="py-28 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6 md:px-12">
-          <div className="text-center mb-16">
-            <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-4">Pricing</p>
-            <h2 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 leading-[1.05] mb-6">
+      {/* ── 7. ENTERPRISE PRICING SECTION — Compact Glassmorphic & Bumping Bubble Design ── */}
+      <section id="pricing" className="py-24 relative bg-gradient-to-b from-slate-50 via-blue-50/40 to-indigo-50/50 overflow-hidden">
+        {/* Floating Ambient Bumping Glass Bubbles */}
+        <div className="absolute top-10 left-10 w-72 h-72 rounded-full bg-gradient-to-tr from-sky-400/25 via-blue-400/20 to-indigo-400/15 blur-3xl animate-pulse pointer-events-none" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-gradient-to-br from-amber-300/20 via-orange-400/15 to-purple-500/20 blur-3xl animate-pulse pointer-events-none" style={{ animationDuration: '7s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-blue-300/10 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="max-w-6xl mx-auto px-6 md:px-12 relative z-10 pt-4">
+          {/* Header */}
+          <div className="text-center mb-14 max-w-2xl mx-auto space-y-3">
+            <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 text-[11px] font-extrabold uppercase tracking-widest backdrop-blur-md shadow-sm">
+              Transparent & Scalable Plans
+            </span>
+            <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-950 leading-[1.08]">
               Simple, transparent pricing.
             </h2>
-            <p className="text-xl text-slate-500 font-light max-w-2xl mx-auto">
-              From a single store to a global enterprise. Scale confidently with predictable pricing.
+            <p className="text-base text-slate-600 font-normal leading-relaxed">
+              Scale your retail operations with zero hidden costs. From a single boutique to a nationwide multi-store franchise.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                name: 'Starter', price: '₹2,999', period: '/mo', desc: 'Perfect for single-store owners.',
-                features: ['1 POS Terminal', '1 Location', 'Basic Analytics', 'Email Support', '10,000 products'],
-                cta: 'Get Started', bg: 'bg-white', border: 'border-slate-200', textColor: 'text-slate-900',
-                btnClass: 'bg-slate-900 text-white hover:bg-black',
-              },
-              {
-                name: 'Business', price: '₹8,999', period: '/mo', desc: 'Grow across multiple locations.',
-                features: ['5 POS Terminals', '5 Locations', 'Advanced Analytics', 'Priority Support', 'Unlimited products'],
-                cta: 'Start Free Trial', bg: 'bg-blue-600', border: 'border-blue-500', textColor: 'text-white',
-                btnClass: 'bg-white text-blue-600 hover:bg-blue-50',
-                badge: 'Most Popular',
-              },
-              {
-                name: 'Enterprise', price: 'Custom', period: '', desc: 'For large chains & franchises.',
-                features: ['Unlimited Terminals', 'Unlimited Locations', 'Custom Integrations', 'Dedicated SLA', 'White-label options'],
-                cta: 'Contact Sales', bg: 'bg-white', border: 'border-slate-200', textColor: 'text-slate-900',
-                btnClass: 'bg-slate-900 text-white hover:bg-black',
-              },
-            ].map(plan => (
-              <div
-                key={plan.name}
-                className={`relative rounded-[2.5rem] p-10 border ${plan.bg} ${plan.border} hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl`}
-              >
-                {plan.badge && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide">
-                    {plan.badge}
-                  </div>
-                )}
-                <div className={`text-sm font-semibold uppercase tracking-widest mb-4 ${plan.textColor === 'text-white' ? 'text-blue-200' : 'text-blue-600'}`}>{plan.name}</div>
-                <div className={`text-5xl font-bold tracking-tight mb-1 ${plan.textColor}`}>{plan.price}<span className="text-2xl font-medium opacity-60">{plan.period}</span></div>
-                <p className={`mb-8 font-light ${plan.textColor === 'text-white' ? 'text-blue-100' : 'text-slate-500'}`}>{plan.desc}</p>
-                <ul className="space-y-3 mb-10">
-                  {plan.features.map(f => (
-                    <li key={f} className={`flex items-center gap-2.5 text-sm font-medium ${plan.textColor === 'text-white' ? 'text-blue-100' : 'text-slate-700'}`}>
-                      <CheckCircle2 size={16} className={plan.textColor === 'text-white' ? 'text-blue-200' : 'text-blue-500'} />
-                      {f}
+          {/* Compact Glass Cards Grid */}
+          <div className="grid md:grid-cols-3 gap-6 items-stretch pt-2">
+
+            {/* Plan 1: Starter */}
+            <div className="relative rounded-[2rem] p-6 sm:p-7 bg-white/70 backdrop-blur-2xl border border-white/90 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group">
+              {/* Sheen container */}
+              <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-blue-600 bg-blue-50 border border-blue-200/60 px-3 py-1 rounded-full">
+                    Starter
+                  </span>
+                </div>
+
+                <div className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight mb-1">
+                  £29<span className="text-base font-bold text-slate-400">/mo</span>
+                </div>
+                <p className="text-xs font-medium text-slate-500 mb-5">
+                  Ideal for independent stores & single till checkout.
+                </p>
+
+                <div className="h-px bg-slate-100 w-full mb-5" />
+
+                <ul className="space-y-2.5 mb-6 text-xs font-semibold text-slate-700">
+                  {[
+                    '1 POS Terminal App',
+                    '1 Location / Storefront',
+                    '100% Offline Checkout Mode',
+                    'Basic Revenue & Sales Analytics',
+                    'Email & Ticket Support',
+                    'Up to 10,000 Catalog SKUs',
+                  ].map(f => (
+                    <li key={f} className="flex items-center gap-2.5">
+                      <div className="w-4 h-4 rounded-full bg-blue-100/80 text-blue-600 flex items-center justify-center font-bold text-[10px] flex-shrink-0">✓</div>
+                      <span>{f}</span>
                     </li>
                   ))}
                 </ul>
-                <button className={`w-full py-4 rounded-full font-semibold transition-all hover:scale-105 ${plan.btnClass}`}>{plan.cta}</button>
               </div>
-            ))}
+
+              <button className="w-full py-3 rounded-xl font-extrabold text-xs text-slate-900 bg-slate-100 hover:bg-slate-900 hover:text-white transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-95">
+                Get Started Free &rarr;
+              </button>
+            </div>
+
+            {/* Plan 2: Business (Hero / Most Popular Glass Card) */}
+            <div className="relative rounded-[2rem] p-6 sm:p-7 bg-gradient-to-b from-blue-600/95 via-blue-600/95 to-indigo-700/95 text-white backdrop-blur-2xl border border-blue-400/40 shadow-2xl shadow-blue-600/30 md:-translate-y-2 hover:-translate-y-4 transition-all duration-300 flex flex-col justify-between group">
+              {/* Floating Visible Badge (Not Clipped!) */}
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-slate-950 text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-wider shadow-md shadow-amber-500/30 flex items-center justify-center z-30 animate-bounce whitespace-nowrap">
+                MOST POPULAR
+              </div>
+
+              {/* Sheen container */}
+              <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4 pt-1">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-blue-100 bg-white/20 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/30">
+                    Business Pro
+                  </span>
+                </div>
+
+                <div className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-1">
+                  £89<span className="text-base font-bold text-blue-200">/mo</span>
+                </div>
+                <p className="text-xs font-medium text-blue-100 mb-5">
+                  For growing multi-location retailers & high volume tills.
+                </p>
+
+                <div className="h-px bg-white/20 w-full mb-5" />
+
+                <ul className="space-y-2.5 mb-6 text-xs font-semibold text-white">
+                  {[
+                    '5 POS Terminal Apps Included',
+                    '5 Store Locations & Stock Sync',
+                    'Unlimited Product SKU Catalog',
+                    'Real-Time Multi-Store Analytics',
+                    'Priority 24/7 Phone & Chat Support',
+                    'Role-Based Cashier Shift Audit Logs',
+                  ].map(f => (
+                    <li key={f} className="flex items-center gap-2.5">
+                      <div className="w-4 h-4 rounded-full bg-white/25 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 backdrop-blur-md">✓</div>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Shining Glass Button */}
+              <button className="w-full py-3 rounded-xl font-black text-xs text-blue-700 bg-white hover:bg-blue-50 transition-all duration-300 shadow-md shadow-white/20 hover:scale-[1.02] active:scale-95">
+                Start 14-Day Free Trial &rarr;
+              </button>
+            </div>
+
+            {/* Plan 3: Enterprise */}
+            <div className="relative rounded-[2rem] p-6 sm:p-7 bg-white/70 backdrop-blur-2xl border border-white/90 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group">
+              {/* Sheen container */}
+              <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-200/60 px-3 py-1 rounded-full">
+                    Enterprise
+                  </span>
+                </div>
+
+                <div className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight mb-1">
+                  Custom
+                </div>
+                <p className="text-xs font-medium text-slate-500 mb-5">
+                  For large retail chains, supermarket groups & franchises.
+                </p>
+
+                <div className="h-px bg-slate-100 w-full mb-5" />
+
+                <ul className="space-y-2.5 mb-6 text-xs font-semibold text-slate-700">
+                  {[
+                    'Unlimited POS Terminals & Stores',
+                    'Custom ERP & Payment Gateway Integrations',
+                    'Dedicated SLA Uptime Guarantee (99.99%)',
+                    'White-Label Branded Receipt Setup',
+                    'Dedicated Account Manager & Onsite Training',
+                    'Custom Database & Private Cloud Deployment',
+                  ].map(f => (
+                    <li key={f} className="flex items-center gap-2.5">
+                      <div className="w-4 h-4 rounded-full bg-indigo-100/80 text-indigo-600 flex items-center justify-center font-bold text-[10px] flex-shrink-0">✓</div>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <button className="w-full py-3 rounded-xl font-extrabold text-xs text-white bg-slate-950 hover:bg-black transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-95">
+                Contact Enterprise Sales &rarr;
+              </button>
+            </div>
+
           </div>
         </div>
       </section>
@@ -2088,12 +2747,6 @@ const LandingPage: React.FC = () => {
                   className="px-8 py-4 bg-white text-slate-950 rounded-full font-semibold text-base shadow-2xl hover:bg-slate-100 transition-all hover:scale-105"
                 >
                   Download for Windows
-                </button>
-                <button
-                  onClick={() => alert('Downloading INFEPOS Terminal for Android/ARM64...')}
-                  className="px-8 py-4 bg-white/10 text-white border border-white/20 backdrop-blur-xl rounded-full font-semibold text-base shadow-2xl hover:bg-white/20 transition-all hover:scale-105"
-                >
-                  Download for Android / POS
                 </button>
               </div>
             </div>
@@ -2181,17 +2834,14 @@ const LandingPage: React.FC = () => {
                 <ul className="space-y-2.5 text-sm font-medium text-slate-600">
                   <li><a href="#download" className="hover:text-slate-900 transition-colors">Download</a></li>
                   <li><a href="#products" className="hover:text-slate-900 transition-colors">Product</a></li>
-                  <li><a href="#" className="hover:text-slate-900 transition-colors">Docs</a></li>
-                  <li><a href="#" className="hover:text-slate-900 transition-colors">Changelog</a></li>
-                  <li><a href="#" className="hover:text-slate-900 transition-colors">Press</a></li>
-                  <li><a href="#" className="hover:text-slate-900 transition-colors">Releases</a></li>
+                  <li><Link to="/docs" className="hover:text-slate-900 transition-colors">Docs</Link></li>
                 </ul>
               </div>
 
               <div>
                 <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Resources</h4>
                 <ul className="space-y-2.5 text-sm font-medium text-slate-600">
-                  <li><a href="#" className="hover:text-slate-900 transition-colors">Blog</a></li>
+                  <li><Link to="/blog" className="hover:text-slate-900 transition-colors">Blog</Link></li>
                   <li><a href="#pricing" className="hover:text-slate-900 transition-colors">Pricing</a></li>
                   <li><a href="#use-cases" className="hover:text-slate-900 transition-colors">Use Cases</a></li>
                 </ul>
@@ -2199,11 +2849,11 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Center Giant Branding Typography (Antigravity Style with stylish E and blue gradient POS) */}
+          {/* Center Giant Branding Typography (Thunder Typeface with letter spacing) */}
           <div className="border-t border-slate-100 py-10 md:py-14 text-center select-none overflow-hidden">
-            <h1 className="text-[14vw] md:text-[13vw] font-extrabold tracking-tighter text-slate-950 leading-none pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-center justify-center">
+            <h1 className="text-[13vw] md:text-[12vw] font-thunder font-black tracking-wider text-slate-950 leading-none pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-center justify-center gap-2 sm:gap-4 md:gap-6">
               <span>INF</span>
-              <span className="font-serif italic bg-gradient-to-tr from-amber-500 via-amber-400 to-orange-500 bg-clip-text text-transparent font-normal inline-block mx-[-0.01em] transform -rotate-3">E</span>
+              <span className="font-serif italic bg-gradient-to-tr from-amber-500 via-amber-400 to-orange-500 bg-clip-text text-transparent font-normal inline-block mx-1 transform -rotate-3">E</span>
               <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">POS</span>
             </h1>
           </div>
@@ -2211,15 +2861,20 @@ const LandingPage: React.FC = () => {
           {/* Bottom Bar: Brand Left, Legal Links Right */}
           <div className="border-t border-slate-100 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-500">
             <div className="flex items-center gap-3">
-              <InfeposLogoText textSize="text-sm" isHeroTheme={false} />
+              <div className="flex items-center">
+                <div className="w-6 h-6 flex items-center justify-center -mr-1">
+                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-sm scale-[1.5]" />
+                </div>
+                <InfeposLogoText textSize="text-sm" isHeroTheme={false} />
+              </div>
               <span>© {new Date().getFullYear()} Infynux Solutions. All rights reserved.</span>
             </div>
 
             <div className="flex items-center gap-6">
-              <a href="#" className="hover:text-slate-900 transition-colors">About Infynux</a>
-              <a href="#" className="hover:text-slate-900 transition-colors">Products</a>
-              <a href="#" className="hover:text-slate-900 transition-colors">Privacy</a>
-              <a href="#" className="hover:text-slate-900 transition-colors">Terms</a>
+              <Link to="/about" className="hover:text-slate-900 transition-colors">About Infynux</Link>
+              <Link to="/info/products" className="hover:text-slate-900 transition-colors">Products</Link>
+              <Link to="/privacy" className="hover:text-slate-900 transition-colors">Privacy</Link>
+              <Link to="/terms" className="hover:text-slate-900 transition-colors">Terms</Link>
             </div>
           </div>
 

@@ -1,0 +1,29 @@
+meta {
+  name: 01 List Inventory (query params)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/inventory
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+params:query {
+  page: 1
+  limit: 20
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("Response has data", function() {
+    expect(res.body).to.have.property("data");
+  });
+}

@@ -1,0 +1,41 @@
+meta {
+  name: 01 Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "tenantCode": "{{tenant_code}}",
+    "email": "{{admin_email}}",
+    "password": "{{admin_password}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 || res.status === 201) {
+    bru.setVar("access_token", res.body.data?.accessToken || res.body.accessToken);
+    bru.setVar("refresh_token", res.body.data?.refreshToken || res.body.refreshToken);
+  }
+}
+
+tests {
+  test("Status is 200 or 201", function() {
+    expect(res.status).to.be.oneOf([200, 201]);
+  });
+  test("Response has accessToken", function() {
+    const data = res.body.data || res.body;
+    expect(data.accessToken).to.be.a("string");
+  });
+  test("Response has refreshToken", function() {
+    const data = res.body.data || res.body;
+    expect(data.refreshToken).to.be.a("string");
+  });
+}
+​

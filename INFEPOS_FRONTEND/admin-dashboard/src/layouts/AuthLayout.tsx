@@ -15,7 +15,11 @@ const AuthLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#070b19] flex items-center justify-center p-3 sm:p-6 font-sans selection:bg-blue-500 selection:text-white relative overflow-hidden">
+      {/* Tech Blueprint Grid Lines Background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
+      
       <Outlet />
     </div>
   );

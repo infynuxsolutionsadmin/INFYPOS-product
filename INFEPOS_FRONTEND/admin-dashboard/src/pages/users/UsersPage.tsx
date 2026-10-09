@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Search, Users as UsersIcon, Shield, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { User, FindUsersQuery, UserStatus } from '../../types/users';
 import { getUsers } from '../../api/users.api';
 import { useAuthStore } from '../../stores/authStore';
@@ -34,6 +35,17 @@ const UsersPage: React.FC = () => {
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const [showTooltip, setShowTooltip] = useState(() => {
+    return localStorage.getItem('hideRolesTooltip') !== 'true';
+  });
+
+  const dismissTooltip = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowTooltip(false);
+    localStorage.setItem('hideRolesTooltip', 'true');
+  };
 
   const fetchUsers = useCallback(async () => {
     if (!canRead) {
@@ -81,10 +93,32 @@ const UsersPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-12">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-[#1a1f36]">Users</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage users and their access within the organization.</p>
+          <h1 className="text-2xl font-bold text-[#1a1f36] mb-1">User Management</h1>
+          <p className="text-sm text-gray-500 mb-5">Manage staff accounts, assign roles, and control access permissions across your organization.</p>
+          
+          <div className="inline-flex bg-gray-100/80 p-1.5 rounded-xl border border-gray-200">
+            <Link to="/users" className="px-5 py-2 rounded-lg text-sm font-bold transition-all bg-white text-[#5B58F2] shadow-sm flex items-center gap-2 border border-gray-200/50">
+              <UsersIcon className="w-4 h-4" /> Users
+            </Link>
+            
+            <div className="relative">
+              <Link to="/roles-permissions" className="px-5 py-2 rounded-lg text-sm font-medium transition-all text-gray-500 hover:text-gray-900 hover:bg-gray-200/50 flex items-center gap-2">
+                <Shield className="w-4 h-4" /> Roles & Permissions
+              </Link>
+
+              {showTooltip && (
+                <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-[#5B58F2] text-white text-xs font-bold px-3 py-2 rounded-lg shadow-xl whitespace-nowrap animate-bounce flex items-center gap-2 z-50">
+                  <span>Manage Roles Here!</span>
+                  <button onClick={dismissTooltip} className="hover:bg-indigo-700 rounded-full p-0.5 transition-colors">
+                    <X className="w-3 h-3" />
+                  </button>
+                  <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-[#5B58F2]"></div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
         {canCreate && (
           <button

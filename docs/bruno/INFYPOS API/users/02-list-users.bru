@@ -1,0 +1,31 @@
+meta {
+  name: 02 List Users (query params)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/users?page=1&limit=10&search=
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+params:query {
+  page: 1
+  limit: 10
+  search: 
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("Response has data array", function() {
+    const data = res.body.data || res.body;
+    expect(data).to.satisfy(d => Array.isArray(d) || Array.isArray(d.items));
+  });
+}

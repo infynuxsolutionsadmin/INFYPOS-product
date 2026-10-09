@@ -6,3 +6,26 @@
     color: var(--color-gray-900);
   }
 }
+
+.font-display {
+  font-family: 'Clash Display', 'Plus Jakarta Sans', 'Outfit', sans-serif;
+}
+
+.font-clash {
+  font-family: 'Clash Display', 'Plus Jakarta Sans', 'Outfit', sans-serif;
+}
+
+.font-manhattan {
+  font-family: 'Manhattan', 'Manhattan Display', 'Playfair Display', serif;
+}
+
+.font-thunder {
+  font-family: 'Thunder', 'Bebas Neue', 'Impact', sans-serif;
+  text-transform: uppercase;
+}
+
+.font-retro-thin {
+  font-family: 'Black Sansa', 'Syne', 'Outfit', sans-serif;
+  font-weight: 200;
+  letter-spacing: 0.15em;
+}

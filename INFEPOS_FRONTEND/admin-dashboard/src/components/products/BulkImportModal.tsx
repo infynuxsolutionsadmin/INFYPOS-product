@@ -30,7 +30,7 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'infypos_products_import_template.csv');
+    link.setAttribute('download', 'infepos_products_import_template.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

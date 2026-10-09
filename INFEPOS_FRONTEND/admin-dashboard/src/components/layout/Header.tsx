@@ -13,23 +13,22 @@ const navigation = [
   { name: 'Customers', href: '/customers' },
   { name: 'Shifts', href: '/shifts', permission: 'shifts.read' },
   { name: 'Users', href: '/users' },
-  { name: 'Roles & Perms', href: '/roles-permissions' },
   { name: 'Settings', href: '/settings' },
 ];
 
 const Header: React.FC = () => {
-  const { user, clearAuth, hasPermission } = useAuthStore();
+  const { clearAuth, hasPermission } = useAuthStore();
 
   return (
     <header className="sticky top-0 z-40 bg-[#F3F5F9] px-4 sm:px-6 lg:px-8 pt-6 pb-2">
       <div className="flex flex-col xl:flex-row items-center justify-between gap-4">
         {/* Logo Area */}
         <div className="flex items-center space-x-2">
-          <div className="w-10 h-10 bg-[#5B58F2] rounded-xl flex items-center justify-center text-white font-bold text-xl">
-            I
+          <div className="w-12 h-12 flex items-center justify-center">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 leading-tight">INFYPOS</h1>
+            <h1 className="text-xl font-bold text-gray-900 leading-tight">INFEPOS</h1>
             <p className="text-xs text-gray-500">Admin Dashboard</p>
           </div>
         </div>
