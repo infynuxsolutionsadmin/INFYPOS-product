@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CreditCard, Banknote, Smartphone, Landmark, Loader2, AlertCircle, Wallet, Lock, ArrowRight, Circle, CheckCircle2 } from 'lucide-react';
+import { X, CreditCard, Banknote, Smartphone, Landmark, Loader2, AlertCircle, Wallet, Lock, ArrowRight } from 'lucide-react';
 import { useCartStore } from '../../stores/cartStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useShiftStore } from '../../stores/shiftStore';

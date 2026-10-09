@@ -61,12 +61,14 @@ export const syncProductsToLocalDb = async (products: any[]) => {
     await queryLocalDb('DELETE FROM products');
 
     for (const p of products) {
+      if (p.status === 'INACTIVE') continue;
+
       const stock = p.inventories?.[0]?.quantityOnHand !== undefined 
         ? parseFloat(p.inventories[0].quantityOnHand)
         : (p.stockQuantity !== undefined ? parseFloat(p.stockQuantity) : 100);
 
       await queryLocalDb(
-        `INSERT OR REPLACE INTO products (id, name, price, vatRate, sku, barcode, categoryId, stockQuantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO products (id, name, price, vatRate, sku, barcode, categoryId, stockQuantity, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         p.id,
         p.name || '',
         p.sellingPrice || p.price || 0,
@@ -74,7 +76,8 @@ export const syncProductsToLocalDb = async (products: any[]) => {
         p.sku || '',
         p.barcode || '',
         p.category?.name || p.category || p.categoryId || 'General',
-        stock
+        stock,
+        p.status || 'ACTIVE'
       );
     }
 

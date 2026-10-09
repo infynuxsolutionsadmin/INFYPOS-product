@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut } from 'lucide-react';
 import { login } from '../api/auth.api';
 import { useAuthStore } from '../stores/authStore';
 import client from '../api/client';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Monitor, User, Store, LogOut, History, FileText, Wifi, WifiOff, RefreshCcw } from 'lucide-react';
+import { User, Store, LogOut, History, FileText, Wifi, WifiOff, RefreshCcw } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useShiftStore } from '../../stores/shiftStore';
 import { useNavigate } from 'react-router-dom';

@@ -34,10 +34,12 @@ function initDb() {
         sku TEXT,
         barcode TEXT,
         categoryId TEXT,
-        stockQuantity REAL DEFAULT 0
+        stockQuantity REAL DEFAULT 0,
+        status TEXT DEFAULT 'ACTIVE'
       );
     `);
     db!.run(`ALTER TABLE products ADD COLUMN stockQuantity REAL DEFAULT 0`, () => {});
+    db!.run(`ALTER TABLE products ADD COLUMN status TEXT DEFAULT 'ACTIVE'`, () => {});
     db!.run(`
       CREATE TABLE IF NOT EXISTS inventory (
         productId TEXT PRIMARY KEY,
@@ -64,10 +66,17 @@ function initDb() {
     
     // Migration: Add barcode column if it doesn't exist
     db!.all("PRAGMA table_info(products)", (err: Error | null, columns: any[]) => {
-      if (!err && columns && !columns.some((c: any) => c.name === 'barcode')) {
-        db!.run("ALTER TABLE products ADD COLUMN barcode TEXT", (err: Error | null) => {
-          if (!err) console.log("Added barcode column to products table");
-        });
+      if (!err && columns) {
+        if (!columns.some((c: any) => c.name === 'barcode')) {
+          db!.run("ALTER TABLE products ADD COLUMN barcode TEXT", (err: Error | null) => {
+            if (!err) console.log("Added barcode column to products table");
+          });
+        }
+        if (!columns.some((c: any) => c.name === 'status')) {
+          db!.run("ALTER TABLE products ADD COLUMN status TEXT DEFAULT 'ACTIVE'", (err: Error | null) => {
+            if (!err) console.log("Added status column to products table");
+          });
+        }
       }
     });
   });

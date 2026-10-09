@@ -214,12 +214,26 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
-    await this.prisma.product.update({
+    // 1. Delete stock movements referencing product
+    await this.prisma.stockMovement.deleteMany({ where: { tenantId, productId: id } });
+
+    // 2. Delete all related item records referencing product
+    await this.prisma.inventoryAdjustmentItem.deleteMany({ where: { productId: id } });
+    await this.prisma.stockTransferItem.deleteMany({ where: { productId: id } });
+    await this.prisma.goodsReceiptItem.deleteMany({ where: { productId: id } });
+    await this.prisma.purchaseItem.deleteMany({ where: { productId: id } });
+    await this.prisma.saleReturnItem.deleteMany({ where: { productId: id } });
+    await this.prisma.saleItem.deleteMany({ where: { productId: id } });
+
+    // 3. Delete inventory records for product
+    await this.prisma.inventory.deleteMany({ where: { tenantId, productId: id } });
+
+    // 4. Delete product
+    await this.prisma.product.delete({
       where: { id },
-      data: { status: ProductStatus.INACTIVE },
     });
 
-    return this.findOne(tenantId, id);
+    return { id, message: 'Product deleted successfully' };
   }
 
   private getSelectFields() {

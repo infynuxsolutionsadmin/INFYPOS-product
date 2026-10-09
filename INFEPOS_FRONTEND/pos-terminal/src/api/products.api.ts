@@ -15,9 +15,16 @@ export const getProducts = async (query?: FindProductsQuery): Promise<PaginatedP
     const search = query?.search?.toLowerCase() || '';
     const category = query?.category || '';
 
-    let sql = 'SELECT * FROM products WHERE 1=1';
-    let countSql = 'SELECT COUNT(*) as total FROM products WHERE 1=1';
+    const reqStatus = query?.status || 'ACTIVE';
+    let sql = "SELECT * FROM products WHERE (status IS NULL OR status = 'ACTIVE' OR status != 'INACTIVE')";
+    let countSql = "SELECT COUNT(*) as total FROM products WHERE (status IS NULL OR status = 'ACTIVE' OR status != 'INACTIVE')";
     const params: any[] = [];
+
+    if (reqStatus && reqStatus !== 'ACTIVE') {
+      sql = 'SELECT * FROM products WHERE status = ?';
+      countSql = 'SELECT COUNT(*) as total FROM products WHERE status = ?';
+      params.push(reqStatus);
+    }
 
     if (search) {
       sql += ' AND (LOWER(name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(barcode) LIKE ? OR LOWER(categoryId) LIKE ?)';
