@@ -229,9 +229,9 @@ const TypewriterHeading: React.FC<{
         {parts.map((part, i) => {
           if (part.toUpperCase() === 'INFEPOS') {
             return (
-              <span key={i} className="inline-flex items-center">
+              <span key={i} className="inline-flex items-center py-1">
                 <span className={isDarkTheme ? 'text-white' : 'text-slate-900'}>INF</span>
-                <span className="italic bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">
+                <span className="italic py-0.5 pr-1 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">
                   EPOS
                 </span>
               </span>
@@ -261,9 +261,9 @@ const InfeposLogoText: React.FC<{
   isHeroTheme?: boolean;
 }> = ({ textSize = 'text-xl', isHeroTheme = false }) => {
   return (
-    <span className={`${textSize} font-extrabold tracking-tight inline-flex items-center`}>
+    <span className={`${textSize} font-extrabold tracking-tight inline-flex items-center py-1`}>
       <span className={isHeroTheme ? 'text-white' : 'text-slate-950'}>INF</span>
-      <span className={`italic ${isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}`}>
+      <span className={`italic py-0.5 pr-1 ${isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}`}>
         EPOS
       </span>
     </span>
@@ -2844,10 +2844,10 @@ const LandingPage: React.FC = () => {
           </div>
 
           {/* Center Giant Branding Typography */}
-          <div className="border-t border-slate-100 py-10 md:py-14 text-center select-none overflow-hidden">
-            <h1 className="text-[13vw] md:text-[12vw] font-thunder font-black leading-none pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-center justify-center tracking-wider">
+          <div className="border-t border-slate-100 py-10 md:py-14 text-center select-none overflow-visible">
+            <h1 className="text-[13vw] md:text-[12vw] font-thunder font-black leading-[1.1] pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-center justify-center tracking-wider py-3">
               <span className="text-slate-950">INF</span>
-              <span className="italic bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">EPOS</span>
+              <span className="italic py-2 pr-4 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">EPOS</span>
             </h1>
           </div>
 
