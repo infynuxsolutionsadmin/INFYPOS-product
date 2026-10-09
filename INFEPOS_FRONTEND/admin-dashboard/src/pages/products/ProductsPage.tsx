@@ -99,7 +99,7 @@ const ProductsPage: React.FC = () => {
     page: 1,
     limit: 10,
     search: '',
-    status: undefined,
+    status: 'ACTIVE',
   });
   
   const [totalPages, setTotalPages] = useState(1);
@@ -268,13 +268,13 @@ const ProductsPage: React.FC = () => {
         </div>
         <div className="w-full sm:w-56">
           <select
-            value={query.status || ''}
+            value={query.status ?? 'ACTIVE'}
             onChange={handleStatusChange}
-            className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer"
+            className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer font-medium"
           >
+            <option value="ACTIVE">Active Products</option>
+            <option value="INACTIVE">Inactive / Deleted Products</option>
             <option value="">All Statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
             <option value="DRAFT">Draft</option>
           </select>
         </div>

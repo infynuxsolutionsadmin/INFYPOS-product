@@ -62,7 +62,7 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
             <div className="mt-2">
               <p className="text-sm text-gray-500">
                 Are you sure you want to delete the product <strong>{product.name}</strong> (SKU: {product.sku})? 
-                This action will permanently remove the product from your store catalog and till terminals.
+                This action will mark the product as inactive and hide it from your active catalog and POS till terminals while preserving past sales data.
               </p>
             </div>
           </div>
