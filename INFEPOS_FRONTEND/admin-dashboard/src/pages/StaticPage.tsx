@@ -6,9 +6,9 @@ const InfeposLogoText: React.FC<{
   isHeroTheme?: boolean;
 }> = ({ textSize = 'text-xl', isHeroTheme = false }) => {
   return (
-    <span className={`${textSize} font-extrabold tracking-tight inline-flex items-center`}>
-      <span className={isHeroTheme ? 'text-white' : 'text-slate-950'}>INF</span>
-      <span className={isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}>
+    <span className={`${textSize} tracking-tight inline-flex items-baseline`}>
+      <span className={`font-black ${isHeroTheme ? 'text-white' : 'text-slate-950'}`}>INF</span>
+      <span className={`font-display font-extrabold ${isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}`}>
         EPOS
       </span>
     </span>

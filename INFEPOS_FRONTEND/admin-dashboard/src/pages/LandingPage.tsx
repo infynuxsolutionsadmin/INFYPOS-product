@@ -229,9 +229,9 @@ const TypewriterHeading: React.FC<{
         {parts.map((part, i) => {
           if (part.toUpperCase() === 'INFEPOS') {
             return (
-              <span key={i} className="inline-flex items-center">
-                <span className={isDarkTheme ? 'text-white' : 'text-slate-900'}>INF</span>
-                <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">
+              <span key={i} className="inline-flex items-baseline">
+                <span className={`font-black ${isDarkTheme ? 'text-white' : 'text-slate-900'}`}>INF</span>
+                <span className="font-display font-extrabold bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">
                   EPOS
                 </span>
               </span>
@@ -254,16 +254,16 @@ const TypewriterHeading: React.FC<{
 };
 
 /* ─────────────────────────────────────────────────────────────────
-   INFEPOS BRAND LOGO TEXT — Modern Unified INF + EPOS (Gradient)
+   INFEPOS BRAND LOGO TEXT — Modern Distinct INF + EPOS (Gradient)
 ───────────────────────────────────────────────────────────────── */
 const InfeposLogoText: React.FC<{
   textSize?: string;
   isHeroTheme?: boolean;
 }> = ({ textSize = 'text-xl', isHeroTheme = false }) => {
   return (
-    <span className={`${textSize} font-extrabold tracking-tight inline-flex items-center`}>
-      <span className={isHeroTheme ? 'text-white' : 'text-slate-950'}>INF</span>
-      <span className={isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}>
+    <span className={`${textSize} tracking-tight inline-flex items-baseline`}>
+      <span className={`font-black ${isHeroTheme ? 'text-white' : 'text-slate-950'}`}>INF</span>
+      <span className={`font-display font-extrabold ${isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}`}>
         EPOS
       </span>
     </span>
@@ -2843,11 +2843,11 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Center Giant Branding Typography (Thunder Typeface) */}
+          {/* Center Giant Branding Typography */}
           <div className="border-t border-slate-100 py-10 md:py-14 text-center select-none overflow-hidden">
-            <h1 className="text-[14vw] md:text-[13vw] font-thunder font-black tracking-wider text-slate-950 leading-none pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-center justify-center">
-              <span>INF</span>
-              <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">EPOS</span>
+            <h1 className="text-[13vw] md:text-[12vw] leading-none pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-baseline justify-center">
+              <span className="font-thunder font-black text-slate-950 tracking-wider">INF</span>
+              <span className="font-display font-extrabold bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent tracking-tight">EPOS</span>
             </h1>
           </div>
 

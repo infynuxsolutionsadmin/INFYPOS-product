@@ -69,9 +69,9 @@ const LoginPage: React.FC = () => {
               />
               
               {/* Text Logo Styling */}
-              <div className="flex items-center text-3xl font-display font-extrabold tracking-tight">
-                <span className="text-white">INF</span>
-                <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-300 bg-clip-text text-transparent">EPOS</span>
+              <div className="flex items-baseline text-3xl tracking-tight">
+                <span className="font-black text-white">INF</span>
+                <span className="font-display font-extrabold bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-300 bg-clip-text text-transparent">EPOS</span>
               </div>
             </div>
 
