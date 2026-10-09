@@ -260,33 +260,24 @@ const InfeposLogoText: React.FC<{
   textSize?: string;
   isHeroTheme?: boolean;
 }> = ({ textSize = 'text-xl', isHeroTheme = false }) => {
-  const gradId = `infepos-e-grad-${isHeroTheme ? 'hero' : 'light'}`;
   return (
     <span className={`${textSize} font-['Orbitron'] font-black tracking-[0.12em] inline-flex items-center leading-none select-none uppercase ${isHeroTheme ? 'text-white' : 'text-slate-950'}`}>
       <span>INF</span>
       <svg viewBox="0 0 78 70" className="inline-block h-[0.67em] w-auto align-middle mx-[0.05em]" fill="none">
-        <defs>
-          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
-            {isHeroTheme ? (
-              <>
-                <stop offset="0%" stopColor="#0b1a40" />
-                <stop offset="50%" stopColor="#142e6e" />
-                <stop offset="100%" stopColor="#0b1a40" />
-              </>
-            ) : (
-              <>
-                <stop offset="0%" stopColor="#2563eb" />
-                <stop offset="35%" stopColor="#4f46e5" />
-                <stop offset="70%" stopColor="#7c3aed" />
-                <stop offset="100%" stopColor="#3b82f6" />
-              </>
-            )}
-          </linearGradient>
-        </defs>
+        {!isHeroTheme && (
+          <defs>
+            <linearGradient id="infepos-e-grad-light" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#2563eb" />
+              <stop offset="35%" stopColor="#4f46e5" />
+              <stop offset="70%" stopColor="#7c3aed" />
+              <stop offset="100%" stopColor="#3b82f6" />
+            </linearGradient>
+          </defs>
+        )}
         {/* Top Bar */}
         <rect x="0" y="0" width="78" height="18" rx="4" fill="currentColor" />
-        {/* Middle Bar: Midnight Navy for Hero theme, Violet-Blue for Light themes */}
-        <rect x="0" y="26" width="78" height="18" rx="4" fill={`url(#${gradId})`} />
+        {/* Middle Bar: Solid White for Hero theme, Violet-Blue for Light themes */}
+        <rect x="0" y="26" width="78" height="18" rx="4" fill={isHeroTheme ? 'currentColor' : 'url(#infepos-e-grad-light)'} />
         {/* Bottom Bar */}
         <rect x="0" y="52" width="78" height="18" rx="4" fill="currentColor" />
       </svg>
