@@ -254,18 +254,34 @@ const TypewriterHeading: React.FC<{
 };
 
 /* ─────────────────────────────────────────────────────────────────
-   INFEPOS BRAND LOGO TEXT — Identical Height INF + EPOS (Gradient Italic)
+   INFEPOS BRAND LOGO TEXT — Exact Brand Typography & Glowing 3-Bar E
 ───────────────────────────────────────────────────────────────── */
 const InfeposLogoText: React.FC<{
   textSize?: string;
   isHeroTheme?: boolean;
 }> = ({ textSize = 'text-xl', isHeroTheme = false }) => {
+  const gradId = `infepos-e-grad-${isHeroTheme ? 'hero' : 'light'}`;
   return (
-    <span className={`${textSize} font-extrabold tracking-tight inline-flex items-center py-1`}>
-      <span className={isHeroTheme ? 'text-white' : 'text-slate-950'}>INF</span>
-      <span className={`italic py-0.5 pr-1 ${isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}`}>
-        EPOS
-      </span>
+    <span className={`${textSize} font-['Orbitron'] font-black tracking-[0.12em] inline-flex items-center leading-none select-none uppercase ${isHeroTheme ? 'text-white' : 'text-slate-950'}`}>
+      <span>INF</span>
+      <svg viewBox="0 0 100 82" className="inline-block h-[0.74em] w-auto align-middle mx-[0.08em] -mt-[0.08em]" fill="none">
+        <defs>
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={isHeroTheme ? '#ffffff' : '#0b0f19'} />
+            <stop offset="28%" stopColor="#1d4ed8" />
+            <stop offset="50%" stopColor="#00f2fe" />
+            <stop offset="72%" stopColor="#1d4ed8" />
+            <stop offset="100%" stopColor={isHeroTheme ? '#ffffff' : '#0b0f19'} />
+          </linearGradient>
+        </defs>
+        {/* Top Bar */}
+        <rect x="0" y="0" width="100" height="20" rx="4" fill="currentColor" />
+        {/* Middle Glowing Bar */}
+        <rect x="0" y="31" width="100" height="20" rx="4" fill={`url(#${gradId})`} />
+        {/* Bottom Bar */}
+        <rect x="0" y="62" width="100" height="20" rx="4" fill="currentColor" />
+      </svg>
+      <span>POS</span>
     </span>
   );
 };
@@ -2843,11 +2859,10 @@ const LandingPage: React.FC = () => {
           </div>
 
           {/* Center Giant Branding Typography */}
-          <div className="border-t border-slate-100 py-10 md:py-14 text-center select-none overflow-visible">
-            <h1 className="text-[13vw] md:text-[12vw] font-thunder font-black leading-[1.1] pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-center justify-center tracking-wider py-3">
-              <span className="text-slate-950">INF</span>
-              <span className="italic py-2 pr-4 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">EPOS</span>
-            </h1>
+          <div className="border-t border-slate-100 py-12 md:py-16 text-center select-none overflow-hidden">
+            <div className="pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-center justify-center py-4">
+              <InfeposLogoText textSize="text-[11vw] md:text-[9.5vw]" isHeroTheme={false} />
+            </div>
           </div>
 
           {/* Bottom Bar: Brand Left, Legal Links Right */}
