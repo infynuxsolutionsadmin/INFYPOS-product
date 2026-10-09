@@ -229,11 +229,8 @@ const TypewriterHeading: React.FC<{
         {parts.map((part, i) => {
           if (part.toUpperCase() === 'INFEPOS') {
             return (
-              <span key={i} className="inline-flex items-center mx-1">
+              <span key={i} className="inline-flex items-center">
                 <span className={isDarkTheme ? 'text-white' : 'text-slate-900'}>INF</span>
-                {/* <span className="font-serif italic bg-gradient-to-tr from-amber-400 via-amber-300 to-orange-400 bg-clip-text text-transparent font-normal inline-block mx-[-0.01em] transform -rotate-3">
-                  E
-                </span> */}
                 <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">
                   EPOS
                 </span>
@@ -257,7 +254,7 @@ const TypewriterHeading: React.FC<{
 };
 
 /* ─────────────────────────────────────────────────────────────────
-   INFEPOS BRAND LOGO TEXT — Signature INF + E (amber serif) + POS (gradient)
+   INFEPOS BRAND LOGO TEXT — Modern Unified INF + EPOS (Gradient)
 ───────────────────────────────────────────────────────────────── */
 const InfeposLogoText: React.FC<{
   textSize?: string;
@@ -266,11 +263,8 @@ const InfeposLogoText: React.FC<{
   return (
     <span className={`${textSize} font-extrabold tracking-tight inline-flex items-center`}>
       <span className={isHeroTheme ? 'text-white' : 'text-slate-950'}>INF</span>
-      {/* <span className="font-serif italic bg-gradient-to-tr from-amber-400 via-amber-300 to-orange-400 bg-clip-text text-transparent font-normal inline-block mx-[-0.01em] transform -rotate-3">
-        E
-      </span> */}
       <span className={isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}>
-         EPOS
+        EPOS
       </span>
     </span>
   );
@@ -2849,12 +2843,11 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Center Giant Branding Typography (Thunder Typeface with letter spacing) */}
+          {/* Center Giant Branding Typography (Thunder Typeface) */}
           <div className="border-t border-slate-100 py-10 md:py-14 text-center select-none overflow-hidden">
-            <h1 className="text-[13vw] md:text-[12vw] font-thunder font-black tracking-wider text-slate-950 leading-none pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-center justify-center gap-2 sm:gap-4 md:gap-6">
+            <h1 className="text-[14vw] md:text-[13vw] font-thunder font-black tracking-wider text-slate-950 leading-none pointer-events-none transform hover:scale-[1.01] transition-transform duration-500 inline-flex items-center justify-center">
               <span>INF</span>
-              <span className="font-serif italic bg-gradient-to-tr from-amber-500 via-amber-400 to-orange-500 bg-clip-text text-transparent font-normal inline-block mx-1 transform -rotate-3">E</span>
-              <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">POS</span>
+              <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent">EPOS</span>
             </h1>
           </div>
 

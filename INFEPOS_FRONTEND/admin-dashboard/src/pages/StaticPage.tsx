@@ -8,11 +8,8 @@ const InfeposLogoText: React.FC<{
   return (
     <span className={`${textSize} font-extrabold tracking-tight inline-flex items-center`}>
       <span className={isHeroTheme ? 'text-white' : 'text-slate-950'}>INF</span>
-      <span className="font-serif italic bg-gradient-to-tr from-amber-400 via-amber-300 to-orange-400 bg-clip-text text-transparent font-normal inline-block mx-[-0.01em] transform -rotate-3">
-        E
-      </span>
       <span className={isHeroTheme ? 'text-sky-300' : 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent'}>
-        POS
+        EPOS
       </span>
     </span>
   );
