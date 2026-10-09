@@ -12,19 +12,18 @@ const InfeposLogoText: React.FC<{
       <svg viewBox="0 0 100 82" className="inline-block h-[0.74em] w-auto align-middle mx-[0.08em] -mt-[0.08em]" fill="none">
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={isHeroTheme ? '#ffffff' : '#0b0f19'} />
-            <stop offset="28%" stopColor="#1d4ed8" />
-            <stop offset="50%" stopColor="#00f2fe" />
-            <stop offset="72%" stopColor="#1d4ed8" />
-            <stop offset="100%" stopColor={isHeroTheme ? '#ffffff' : '#0b0f19'} />
+            <stop offset="0%" stopColor="#2563eb" />
+            <stop offset="35%" stopColor="#4f46e5" />
+            <stop offset="70%" stopColor="#7c3aed" />
+            <stop offset="100%" stopColor="#3b82f6" />
           </linearGradient>
         </defs>
         {/* Top Bar */}
-        <rect x="0" y="0" width="100" height="20" rx="4" fill="currentColor" />
-        {/* Middle Glowing Bar */}
-        <rect x="0" y="31" width="100" height="20" rx="4" fill={`url(#${gradId})`} />
+        <rect x="0" y="0" width="100" height="20" rx="5" fill="currentColor" />
+        {/* Middle Violet-Blue Bar */}
+        <rect x="0" y="31" width="100" height="20" rx="5" fill={`url(#${gradId})`} />
         {/* Bottom Bar */}
-        <rect x="0" y="62" width="100" height="20" rx="4" fill="currentColor" />
+        <rect x="0" y="62" width="100" height="20" rx="5" fill="currentColor" />
       </svg>
       <span>POS</span>
     </span>

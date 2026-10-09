@@ -254,7 +254,7 @@ const TypewriterHeading: React.FC<{
 };
 
 /* ─────────────────────────────────────────────────────────────────
-   INFEPOS BRAND LOGO TEXT — Exact Brand Typography & Glowing 3-Bar E
+   INFEPOS BRAND LOGO TEXT — Exact Brand Typography & Violet-Blue 3-Bar E
 ───────────────────────────────────────────────────────────────── */
 const InfeposLogoText: React.FC<{
   textSize?: string;
@@ -267,19 +267,18 @@ const InfeposLogoText: React.FC<{
       <svg viewBox="0 0 100 82" className="inline-block h-[0.74em] w-auto align-middle mx-[0.08em] -mt-[0.08em]" fill="none">
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={isHeroTheme ? '#ffffff' : '#0b0f19'} />
-            <stop offset="28%" stopColor="#1d4ed8" />
-            <stop offset="50%" stopColor="#00f2fe" />
-            <stop offset="72%" stopColor="#1d4ed8" />
-            <stop offset="100%" stopColor={isHeroTheme ? '#ffffff' : '#0b0f19'} />
+            <stop offset="0%" stopColor="#2563eb" />
+            <stop offset="35%" stopColor="#4f46e5" />
+            <stop offset="70%" stopColor="#7c3aed" />
+            <stop offset="100%" stopColor="#3b82f6" />
           </linearGradient>
         </defs>
         {/* Top Bar */}
-        <rect x="0" y="0" width="100" height="20" rx="4" fill="currentColor" />
-        {/* Middle Glowing Bar */}
-        <rect x="0" y="31" width="100" height="20" rx="4" fill={`url(#${gradId})`} />
+        <rect x="0" y="0" width="100" height="20" rx="5" fill="currentColor" />
+        {/* Middle Violet-Blue Bar */}
+        <rect x="0" y="31" width="100" height="20" rx="5" fill={`url(#${gradId})`} />
         {/* Bottom Bar */}
-        <rect x="0" y="62" width="100" height="20" rx="4" fill="currentColor" />
+        <rect x="0" y="62" width="100" height="20" rx="5" fill="currentColor" />
       </svg>
       <span>POS</span>
     </span>
@@ -1934,12 +1933,10 @@ const LandingPage: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6">
           <a href="#" className="flex items-center flex-shrink-0 group">
-            <div
-              className={`w-16 h-16 flex items-center justify-center transition-all duration-300 ${!pastHero && 'group-hover:scale-105'} -mr-2`}
-            >
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-md scale-[1.5]" />
+            <div className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center mr-1">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
             </div>
-            <InfeposLogoText textSize="text-xl" isHeroTheme={!pastHero} />
+            <InfeposLogoText textSize="text-lg md:text-xl" isHeroTheme={!pastHero} />
           </a>
 
           {/* Center Floating Pill Menu with Functional Dropdowns */}
@@ -2183,8 +2180,8 @@ const LandingPage: React.FC = () => {
 
           {/* Main logo label */}
           <div className="flex items-center mb-8">
-            <div className="w-20 h-20 flex items-center justify-center -mr-3 -ml-2">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-xl scale-[1.4]" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center mr-2">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-lg" />
             </div>
             <InfeposLogoText textSize="text-2xl sm:text-3xl" isHeroTheme={true} />
           </div>
@@ -2346,8 +2343,8 @@ const LandingPage: React.FC = () => {
             </h2>
             <div className="text-xl md:text-2xl text-[#86868b] font-medium leading-relaxed flex items-center justify-center flex-wrap gap-1.5">
               <div className="flex items-center">
-                <div className="w-8 h-8 flex items-center justify-center -mr-1">
-                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-sm scale-[1.5]" />
+                <div className="w-7 h-7 flex items-center justify-center mr-1">
+                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
                 </div>
                 <InfeposLogoText textSize="text-xl md:text-2xl" isHeroTheme={false} />
               </div>
@@ -2869,8 +2866,8 @@ const LandingPage: React.FC = () => {
           <div className="border-t border-slate-100 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-500">
             <div className="flex items-center gap-3">
               <div className="flex items-center">
-                <div className="w-6 h-6 flex items-center justify-center -mr-1">
-                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-sm scale-[1.5]" />
+                <div className="w-6 h-6 flex items-center justify-center mr-1">
+                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
                 </div>
                 <InfeposLogoText textSize="text-sm" isHeroTheme={false} />
               </div>
