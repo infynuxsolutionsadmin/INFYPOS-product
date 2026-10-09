@@ -273,7 +273,7 @@ const InfeposLogoText: React.FC<{
 /* ─────────────────────────────────────────────────────────────────
    ANIMATED DASHBOARD PREVIEW CARD — Frameless Antigravity Style
 ───────────────────────────────────────────────────────────────── */
-const AnimatedDashboardPreviewCard: React.FC<{ frameless?: boolean }> = ({ frameless = false }) => {
+const AnimatedDashboardPreviewCard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'Dashboard' | 'Products' | 'Stores' | 'Inventory' | 'Sales'>('Dashboard');
   const [salesCount, setSalesCount] = useState(95);
   const [netRevenue, setNetRevenue] = useState(133689698.70);
@@ -323,8 +323,14 @@ const AnimatedDashboardPreviewCard: React.FC<{ frameless?: boolean }> = ({ frame
     { day: 'Sun', rev: 26100, height: '82%' },
   ];
 
-  const innerCanvas = (
-    <div className={`relative bg-white text-slate-900 ${frameless ? 'rounded-2xl p-4 sm:p-6 border-0 shadow-none' : 'rounded-3xl p-5 sm:p-7 shadow-xl border border-slate-200/70'} min-h-[480px] flex flex-col justify-between select-none overflow-hidden`}>
+  return (
+    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-blue-100/70 via-sky-50 to-indigo-100/70 p-4 sm:p-7 shadow-2xl border border-blue-100/50 overflow-hidden group">
+      {/* Antigravity ambient background glows */}
+      <div className="absolute -top-12 -right-12 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-sky-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-gradient-to-tr from-amber-300/20 to-emerald-300/20 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Main Inner App Canvas (Clean frameless white card) */}
+      <div className="relative bg-white text-slate-900 rounded-3xl p-5 sm:p-7 shadow-xl border border-slate-200/70 min-h-[480px] flex flex-col justify-between select-none overflow-hidden">
 
         {/* Top Header & Pill Nav */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
@@ -599,16 +605,6 @@ const AnimatedDashboardPreviewCard: React.FC<{ frameless?: boolean }> = ({ frame
           </div>
         )}
       </div>
-  );
-
-  if (frameless) return innerCanvas;
-
-  return (
-    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-blue-100/70 via-sky-50 to-indigo-100/70 p-4 sm:p-7 shadow-2xl border border-blue-100/50 overflow-hidden group">
-      {/* Antigravity ambient background glows */}
-      <div className="absolute -top-12 -right-12 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-sky-300/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-gradient-to-tr from-amber-300/20 to-emerald-300/20 rounded-full blur-3xl pointer-events-none" />
-      {innerCanvas}
     </div>
   );
 };
@@ -623,7 +619,7 @@ interface TillCartItem {
   qty: number;
 }
 
-const AnimatedTillAppPreviewCard: React.FC<{ frameless?: boolean }> = ({ frameless = false }) => {
+const AnimatedTillAppPreviewCard: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [cart, setCart] = useState<TillCartItem[]>([
     { id: 'p2', name: 'Dabur Lip Balm 50ml', price: 7.25, qty: 1 },
@@ -680,8 +676,14 @@ const AnimatedTillAppPreviewCard: React.FC<{ frameless?: boolean }> = ({ framele
 
   const totalAmount = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
 
-  const innerCanvas = (
-    <div className={`relative bg-white text-slate-900 ${frameless ? 'rounded-2xl p-4 sm:p-5 border-0 shadow-none' : 'rounded-3xl p-4 sm:p-6 shadow-xl border border-slate-200/70'} min-h-[480px] flex flex-col justify-between select-none overflow-hidden`}>
+  return (
+    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-emerald-100/70 via-sky-50 to-blue-100/70 p-4 sm:p-7 shadow-2xl border border-emerald-100/50 overflow-hidden group">
+      {/* Antigravity ambient background glows */}
+      <div className="absolute -top-12 -left-12 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-teal-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-12 -right-12 w-80 h-80 bg-gradient-to-tr from-sky-400/20 to-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Main Inner POS App Canvas (Clean frameless white card) */}
+      <div className="relative bg-white text-slate-900 rounded-3xl p-4 sm:p-6 shadow-xl border border-slate-200/70 min-h-[480px] flex flex-col justify-between select-none overflow-hidden">
 
         {/* POS Top Header Bar (Matching Screenshot 3) */}
         <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
@@ -826,366 +828,9 @@ const AnimatedTillAppPreviewCard: React.FC<{ frameless?: boolean }> = ({ framele
           </div>
         )}
       </div>
-  );
-
-  if (frameless) return innerCanvas;
-
-  return (
-    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-emerald-100/70 via-sky-50 to-blue-100/70 p-4 sm:p-7 shadow-2xl border border-emerald-100/50 overflow-hidden group">
-      {/* Antigravity ambient background glows */}
-      <div className="absolute -top-12 -left-12 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-teal-300/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-12 -right-12 w-80 h-80 bg-gradient-to-tr from-sky-400/20 to-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
-      {innerCanvas}
     </div>
   );
 };
-
-/* ─────────────────────────────────────────────────────────────────
-   POS TILL HARDWARE DEVICE MOCKUP — Realistic POS Terminal Stand & Bezel
-───────────────────────────────────────────────────────────────── */
-const PosTillHardwareMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <div className="relative flex flex-col items-center w-full max-w-2xl mx-auto group">
-      {/* Ambient Backlight Glow behind hardware */}
-      <div className="absolute -inset-4 bg-gradient-to-tr from-sky-500/25 via-blue-500/20 to-teal-500/20 rounded-[3rem] blur-2xl pointer-events-none group-hover:scale-105 transition-transform duration-700" />
-
-      {/* POS Terminal Monitor Screen Bezel Container */}
-      <div className="relative w-full z-10 bg-slate-950 p-2 sm:p-3.5 rounded-[2.2rem] border-[8px] sm:border-[12px] border-slate-900 shadow-2xl shadow-black/80 ring-1 ring-white/10">
-        {/* Top Camera Sensor Dot */}
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-slate-900/90 border border-slate-800/80">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <div className="w-1 h-1 rounded-full bg-slate-700" />
-        </div>
-
-        {/* Side Card Reader Attached Accent */}
-        <div className="absolute -right-3 top-1/3 z-20 w-3.5 h-20 bg-gradient-to-r from-slate-800 to-slate-950 rounded-r-xl border-y border-r border-slate-700 shadow-xl hidden sm:flex flex-col justify-center items-center">
-          <div className="w-1 h-10 bg-slate-700 rounded-full" />
-        </div>
-
-        {/* Interactive Screen Display Canvas */}
-        <div className="relative overflow-hidden rounded-[1.4rem]">
-          {children}
-        </div>
-      </div>
-
-      {/* POS Terminal Heavy Base & Stand Neck */}
-      <div className="relative z-0 w-3/4 sm:w-2/3 flex flex-col items-center -mt-2">
-        {/* Metal Neck Stand Stem */}
-        <div className="w-24 sm:w-36 h-6 sm:h-9 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-x border-slate-800/60 shadow-inner flex items-center justify-center">
-          <div className="w-12 h-1 bg-slate-700/60 rounded-full" />
-        </div>
-
-        {/* POS Printer & Base Chassis */}
-        <div className="w-full bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-slate-800/90 rounded-b-[2rem] shadow-2xl p-3 sm:p-4 flex justify-between items-center relative overflow-hidden ring-1 ring-white/10">
-          {/* Thermal Receipt Slot with Paper Roll Accent */}
-          <div className="flex flex-col items-start pl-2">
-            <div className="w-24 sm:w-32 h-2.5 bg-slate-950 rounded-full border border-slate-800 shadow-inner flex items-center justify-center overflow-hidden">
-              <div className="w-20 sm:w-28 h-4 bg-slate-100/95 rounded-t-sm shadow-md animate-pulse transform -translate-y-1" />
-            </div>
-            <span className="text-[9px] font-extrabold text-slate-400 tracking-wider uppercase mt-1">ESC/POS Printer</span>
-          </div>
-
-          {/* POS Hardware Badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900 rounded-lg border border-slate-800 text-[10px] font-black text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            <span>INFEPOS TILL T2</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ─────────────────────────────────────────────────────────────────
-   LAPTOP / MACBOOK HARDWARE DEVICE MOCKUP — Realistic Laptop Bezel & Chassis
-───────────────────────────────────────────────────────────────── */
-const LaptopHardwareMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <div className="relative flex flex-col items-center w-full max-w-2xl mx-auto group">
-      {/* Ambient Backlight Glow behind laptop */}
-      <div className="absolute -inset-4 bg-gradient-to-tr from-blue-500/25 via-sky-500/20 to-indigo-500/20 rounded-[3rem] blur-2xl pointer-events-none group-hover:scale-105 transition-transform duration-700" />
-
-      {/* Laptop Screen Frame Lid */}
-      <div className="relative w-full z-10 bg-slate-950 p-2 sm:p-3.5 rounded-t-[2.2rem] rounded-b-md border-[8px] sm:border-[12px] border-b-2 border-slate-900 shadow-2xl shadow-black/80 ring-1 ring-white/10">
-        {/* Top Webcam Lens Notch */}
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center w-3 h-3 rounded-full bg-slate-900 border border-slate-800">
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-        </div>
-
-        {/* Interactive Screen Display Canvas */}
-        <div className="relative overflow-hidden rounded-t-[1.4rem] rounded-b-sm">
-          {children}
-        </div>
-      </div>
-
-      {/* Laptop Keyboard Base & Trackpad Chassis */}
-      <div className="relative z-20 w-[105%] bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-t border-slate-700/80 rounded-b-2xl shadow-2xl shadow-black/90 h-6 sm:h-8 flex items-center justify-between px-6 sm:px-10 -mt-0.5 ring-1 ring-white/10">
-        {/* Center Display Hinge Notch */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 sm:w-44 h-2 bg-slate-950 rounded-b-lg border-b border-slate-800" />
-
-        {/* Left Bumper Notch */}
-        <div className="w-8 h-1 bg-slate-950 rounded-full" />
-
-        {/* Laptop Trackpad Lip Silhouette */}
-        <div className="w-24 sm:w-36 h-2 bg-slate-950/90 rounded-b-md border border-slate-800/80" />
-
-        {/* Right Bumper Notch */}
-        <div className="w-8 h-1 bg-slate-950 rounded-full" />
-      </div>
-    </div>
-  );
-};
-/* ─────────────────────────────────────────────────────────────────
-   CSS POS TILL DEVICE MOCKUP — Realistic terminal stand with live app inside
-───────────────────────────────────────────────────────────────── */
-const CssTillDeviceMockup: React.FC = () => (
-  <div className="relative flex flex-col items-center group" style={{ perspective: '1200px' }}>
-    {/* Ambient glow */}
-    <div className="absolute -inset-6 bg-gradient-to-br from-emerald-400/20 via-sky-400/15 to-blue-500/20 rounded-[3rem] blur-2xl pointer-events-none group-hover:scale-105 transition-transform duration-700" />
-
-    {/* Outer wrapper — slight tilt for 3D feel */}
-    <div style={{ transform: 'rotateY(-6deg) rotateX(2deg)', transformStyle: 'preserve-3d' }} className="w-full transition-transform duration-500 group-hover:rotateY-0">
-
-      {/* ── MONITOR BEZEL ── */}
-      <div
-        className="relative w-full rounded-[1.6rem] shadow-2xl shadow-black/60"
-        style={{
-          background: 'linear-gradient(160deg, #1e2435 0%, #111827 60%, #0d1117 100%)',
-          padding: '10px',
-          border: '1.5px solid rgba(255,255,255,0.07)',
-          boxShadow: '0 0 0 1px rgba(0,0,0,0.6), 0 32px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)',
-        }}
-      >
-        {/* Top sensor bar */}
-        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-          <div className="w-2 h-2 rounded-full border border-slate-700 flex items-center justify-center">
-            <div className="w-1 h-1 rounded-full bg-slate-600" />
-          </div>
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-sm shadow-emerald-400" />
-        </div>
-
-        {/* Side card reader slot */}
-        <div
-          className="absolute -right-2 top-[30%] w-2.5 h-16 rounded-r-lg hidden sm:flex flex-col justify-center items-center gap-1"
-          style={{ background: 'linear-gradient(180deg,#1a2030,#0f1520)', border: '1px solid rgba(255,255,255,0.05)', borderLeft: 'none' }}
-        >
-          <div className="w-0.5 h-8 rounded-full bg-slate-700/70" />
-        </div>
-
-        {/* Screen glass — inner bezel ring */}
-        <div
-          className="relative overflow-hidden"
-          style={{
-            borderRadius: '1.1rem',
-            background: '#000',
-            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 2px 8px rgba(0,0,0,0.8)',
-          }}
-        >
-          {/* Screen glare overlay */}
-          <div
-            className="absolute inset-0 pointer-events-none z-20"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 50%)',
-              borderRadius: '1.1rem',
-            }}
-          />
-          {/* Live interactive app */}
-          <AnimatedTillAppPreviewCard frameless={true} />
-        </div>
-      </div>
-
-      {/* ── NECK / STAND ── */}
-      <div className="flex flex-col items-center -mt-0.5">
-        <div
-          className="w-20 h-7"
-          style={{
-            background: 'linear-gradient(180deg,#1a2235 0%,#111827 100%)',
-            borderLeft: '1px solid rgba(255,255,255,0.04)',
-            borderRight: '1px solid rgba(255,255,255,0.04)',
-            clipPath: 'polygon(15% 0%,85% 0%,100% 100%,0% 100%)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-          }}
-        />
-
-        {/* ── PRINTER BASE ── */}
-        <div
-          className="relative w-full rounded-b-[1.4rem] overflow-hidden"
-          style={{
-            background: 'linear-gradient(180deg,#1a2235 0%,#0f1520 60%,#080d14 100%)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderTop: 'none',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-            padding: '10px 14px 14px',
-          }}
-        >
-          {/* Receipt slot */}
-          <div className="flex flex-col items-start mb-2">
-            <div
-              className="w-28 h-2.5 rounded-full overflow-hidden"
-              style={{ background: '#050810', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
-              <div className="w-24 h-4 -mt-0.5 rounded-t-sm" style={{ background: 'linear-gradient(180deg,#f8fafc,#e2e8f0)', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} />
-            </div>
-            <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest mt-1">ESC/POS</span>
-          </div>
-
-          {/* Badge */}
-          <div className="absolute right-3 bottom-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" style={{ animationDuration: '2s' }} />
-            <span className="text-[9px] font-black text-slate-300 tracking-wider">INFEPOS TILL</span>
-          </div>
-
-          {/* Base foot */}
-          <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-[1.4rem]" style={{ background: 'linear-gradient(90deg,#0f1520,#1a2235,#0f1520)' }} />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-/* ─────────────────────────────────────────────────────────────────
-   CSS LAPTOP DEVICE MOCKUP — Realistic MacBook-style with live app inside
-───────────────────────────────────────────────────────────────── */
-const CssLaptopDeviceMockup: React.FC = () => (
-  <div className="relative flex flex-col items-center group" style={{ perspective: '1200px' }}>
-    {/* Ambient glow */}
-    <div className="absolute -inset-6 bg-gradient-to-br from-blue-400/20 via-indigo-400/15 to-violet-500/20 rounded-[3rem] blur-2xl pointer-events-none group-hover:scale-105 transition-transform duration-700" />
-
-    <div style={{ transform: 'rotateY(6deg) rotateX(2deg)', transformStyle: 'preserve-3d' }} className="w-full transition-transform duration-500">
-
-      {/* ── SCREEN LID ── */}
-      <div
-        className="relative w-full rounded-t-[1.4rem] rounded-b-[0.3rem] shadow-2xl shadow-black/60"
-        style={{
-          background: 'linear-gradient(160deg,#1c2333 0%,#111827 60%,#0d1117 100%)',
-          padding: '10px 10px 6px',
-          border: '1.5px solid rgba(255,255,255,0.07)',
-          borderBottom: '2px solid rgba(0,0,0,0.8)',
-          boxShadow: '0 0 0 1px rgba(0,0,0,0.6), 0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
-        }}
-      >
-        {/* Webcam notch */}
-        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
-          <div className="w-3 h-3 rounded-full border border-slate-700/60 flex items-center justify-center">
-            <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-          </div>
-          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-        </div>
-
-        {/* Screen glass */}
-        <div
-          className="relative overflow-hidden"
-          style={{
-            borderRadius: '0.85rem',
-            background: '#000',
-            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 2px 10px rgba(0,0,0,0.9)',
-          }}
-        >
-          {/* Screen glare */}
-          <div
-            className="absolute inset-0 pointer-events-none z-20"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 45%)',
-              borderRadius: '0.85rem',
-            }}
-          />
-          {/* Live interactive admin dashboard */}
-          <AnimatedDashboardPreviewCard frameless={true} />
-        </div>
-      </div>
-
-      {/* ── HINGE LINE ── */}
-      <div className="w-full h-[3px]" style={{ background: 'linear-gradient(90deg,#0a0f18,#1e293b,#0a0f18)' }} />
-
-      {/* ── KEYBOARD BASE ── */}
-      <div
-        className="relative w-[103%] -ml-[1.5%] rounded-b-2xl"
-        style={{
-          background: 'linear-gradient(180deg,#1c2740 0%,#111827 50%,#0d1421 100%)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          borderTop: 'none',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(0,0,0,0.5)',
-          padding: '8px 12px 10px',
-          minHeight: '44px',
-        }}
-      >
-        {/* Keyboard rows */}
-        <div className="flex flex-col gap-1 mb-2">
-          {[28, 26, 24].map((w, i) => (
-            <div key={i} className="flex gap-0.5" style={{ paddingLeft: i * 2 }}>
-              {Array.from({ length: Math.floor(w / 3) }).map((_, j) => (
-                <div key={j} className="h-1.5 flex-1 rounded-[2px]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.04)' }} />
-              ))}
-            </div>
-          ))}
-        </div>
-
-        {/* Trackpad */}
-        <div
-          className="mx-auto rounded-[0.4rem]"
-          style={{
-            width: '36%',
-            height: '18px',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.4)',
-          }}
-        />
-
-        {/* Apple-style bottom lip */}
-        <div className="absolute bottom-0 left-0 right-0 h-2 rounded-b-2xl" style={{ background: 'linear-gradient(90deg,#080d18,#141c2e,#080d18)' }} />
-      </div>
-    </div>
-  </div>
-);
-
-/* ─────────────────────────────────────────────────────────────────
-   HERO DEVICE SHOWCASE — CSS Till Terminal + Laptop side by side
-───────────────────────────────────────────────────────────────── */
-const RealHardwareImageInteractiveOverlay: React.FC = () => {
-  return (
-    <div className="relative w-full max-w-7xl mx-auto px-4">
-      {/* Wide ambient glow */}
-      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* ── DESKTOP: side-by-side ── */}
-      <div className="hidden md:grid grid-cols-2 gap-8 lg:gap-12 items-end">
-        {/* Left: POS Till */}
-        <div className="flex flex-col items-center">
-          <div className="mb-4 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-xs font-bold backdrop-blur-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              INFEPOS Till Terminal
-            </span>
-          </div>
-          <CssTillDeviceMockup />
-        </div>
-
-        {/* Right: Laptop Dashboard */}
-        <div className="flex flex-col items-center">
-          <div className="mb-4 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-xs font-bold backdrop-blur-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              INFEPOS Admin Dashboard
-            </span>
-          </div>
-          <CssLaptopDeviceMockup />
-        </div>
-      </div>
-
-      {/* ── MOBILE: stacked cards ── */}
-      <div className="grid grid-cols-1 gap-8 md:hidden">
-        <AnimatedTillAppPreviewCard />
-        <AnimatedDashboardPreviewCard />
-      </div>
-    </div>
-  );
-};
-
-
-
-
 
 /* ─────────────────────────────────────────────────────────────────
    VORTEX PARTICLE CANVAS — Concentric rotating/pulsing dot rings
@@ -2555,9 +2200,22 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Showcase — Real 3D Hardware Photo (hero-transparent.png) with Live Interactive Apps inside Screens */}
-        <div className="relative z-10 w-full flex justify-center items-center pt-2 pb-12 px-2 sm:px-6">
-          <RealHardwareImageInteractiveOverlay />
+        {/* Hero Showcase — Interactive Dual App Cards (Till Terminal + Admin Dashboard) */}
+        <div className="relative z-10 w-full flex justify-center items-center pt-4 pb-8 px-4 sm:px-6">
+          <div className="relative max-w-7xl w-full">
+            {/* Subtle ambient glow behind cards */}
+            <div className="absolute inset-0 bg-sky-400/20 rounded-full blur-3xl transform scale-95 pointer-events-none" />
+
+            {/* Side-by-side interactive components */}
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+              <div className="transform hover:scale-[1.01] transition-transform duration-500">
+                <AnimatedTillAppPreviewCard />
+              </div>
+              <div className="transform hover:scale-[1.01] transition-transform duration-500">
+                <AnimatedDashboardPreviewCard />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -2618,9 +2276,7 @@ const LandingPage: React.FC = () => {
 
             {/* Right: Real Interactive Dashboard Showcase Component */}
             <div className="lg:col-span-7">
-              <LaptopHardwareMockup>
-                <AnimatedDashboardPreviewCard />
-              </LaptopHardwareMockup>
+              <AnimatedDashboardPreviewCard />
             </div>
           </div>
 
@@ -2628,9 +2284,7 @@ const LandingPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left on desktop: Real Interactive Till App Showcase Component */}
             <div className="lg:col-span-7 order-2 lg:order-1">
-              <PosTillHardwareMockup>
-                <AnimatedTillAppPreviewCard />
-              </PosTillHardwareMockup>
+              <AnimatedTillAppPreviewCard />
             </div>
 
             {/* Right on desktop: Text & Details */}
