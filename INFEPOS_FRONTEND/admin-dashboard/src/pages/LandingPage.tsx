@@ -929,11 +929,245 @@ const LaptopHardwareMockup: React.FC<{ children: React.ReactNode }> = ({ childre
 };
 
 /* ─────────────────────────────────────────────────────────────────
+   HERO TILL SCREEN CONTENT — Compact Frameless Screen UI (Zero Scrollbars)
+───────────────────────────────────────────────────────────────── */
+const HeroTillScreenContent: React.FC = () => {
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [cart, setCart] = useState<{ id: string; name: string; price: number; qty: number }[]>([
+    { id: 'p2', name: 'Dabur Lip Balm', price: 7.25, qty: 1 },
+    { id: 'p3', name: 'Aavin Buttermilk', price: 1.25, qty: 2 },
+  ]);
+  const [checkoutToast, setCheckoutToast] = useState<string | null>(null);
+  const [scanningItem, setScanningItem] = useState<string | null>(null);
+
+  const products = [
+    { id: 'p1', name: 'Harpic Dishwash 5kg', cat: 'Home Care', price: 8.00, stock: 97 },
+    { id: 'p2', name: 'Dabur Lip Balm 50ml', cat: 'Personal Care', price: 7.25, stock: 98 },
+    { id: 'p3', name: 'Aavin Buttermilk 200ml', cat: 'Dairy', price: 1.25, stock: 96 },
+    { id: 'p4', name: 'Coca-Cola Mango 200ml', cat: 'Beverages', price: 3.50, stock: 97 },
+  ];
+
+  const filteredProducts = selectedCategory === 'All'
+    ? products
+    : products.filter(p => p.cat === selectedCategory || selectedCategory === 'All');
+
+  const addToCart = (product: typeof products[0]) => {
+    setScanningItem(product.name);
+    setTimeout(() => setScanningItem(null), 500);
+
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+      }
+      return [...prev, { id: product.id, name: product.name, price: product.price, qty: 1 }];
+    });
+  };
+
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+    const total = cart.reduce((acc, item) => acc + item.price * item.qty, 0).toFixed(2);
+    setCheckoutToast(`⚡ Paid £${total} • POS Synced`);
+    setCart([]);
+    setTimeout(() => setCheckoutToast(null), 3000);
+  };
+
+  const totalAmount = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+
+  return (
+    <div className="w-full h-full bg-white text-slate-900 p-2 sm:p-3 flex flex-col justify-between select-none overflow-hidden text-xs rounded-xl shadow-inner">
+      {/* Top Header Bar */}
+      <div className="flex items-center justify-between pb-1 border-b border-slate-100 text-[10px]">
+        <div className="flex items-center gap-1.5">
+          <div className="w-5 h-5 bg-slate-900 text-white font-black rounded flex items-center justify-center text-[9px] shadow-sm">
+            iE
+          </div>
+          <div>
+            <div className="font-black text-slate-950 leading-none text-[11px]">INFEPOS Terminal</div>
+            <div className="text-[8px] text-emerald-600 font-bold mt-0.5">🟢 Shift Open</div>
+          </div>
+        </div>
+        <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[8px] font-bold border border-emerald-200">
+          Offline Mode
+        </span>
+      </div>
+
+      {/* Category Pills */}
+      <div className="flex items-center gap-1 py-1 overflow-hidden">
+        {['All', 'Personal Care', 'Dairy', 'Beverages'].map(cat => (
+          <button
+            key={cat}
+            onClick={() => setSelectedCategory(cat)}
+            className={`px-2 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap transition-all ${
+              selectedCategory === cat ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Product Grid & Cart Column */}
+      <div className="grid grid-cols-12 gap-1.5 flex-1 min-h-0 py-0.5">
+        {/* Products Grid (7 cols) */}
+        <div className="col-span-7 grid grid-cols-2 gap-1 overflow-hidden">
+          {filteredProducts.slice(0, 4).map(product => (
+            <div
+              key={product.id}
+              onClick={() => addToCart(product)}
+              className={`bg-slate-50 hover:bg-white border rounded-lg p-1.5 flex flex-col justify-between cursor-pointer transition-all ${
+                scanningItem === product.name ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200/80'
+              }`}
+            >
+              <div className="text-[8px] font-bold text-slate-900 line-clamp-2 leading-snug">{product.name}</div>
+              <div className="text-[9px] font-black text-blue-600 flex justify-between items-center mt-0.5">
+                <span>£{product.price.toFixed(2)}</span>
+                <span className="w-3.5 h-3.5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[9px]">
+                  +
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Cart Sidebar (5 cols) */}
+        <div className="col-span-5 bg-slate-50 border border-slate-200/80 rounded-lg p-1.5 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[9px] font-bold text-slate-700 pb-1 border-b border-slate-200">
+            <span>Cart</span>
+            <span className="text-[8px] text-slate-400">{cart.length} items</span>
+          </div>
+
+          <div className="space-y-0.5 my-1 overflow-hidden flex-1">
+            {cart.map(item => (
+              <div key={item.id} className="flex justify-between items-center text-[8px] bg-white p-1 rounded border border-slate-100">
+                <span className="truncate font-bold text-slate-900 max-w-[60%]">{item.name}</span>
+                <span className="font-black text-slate-950">£{(item.price * item.qty).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <div className="flex justify-between text-[9px] font-black mb-1 text-slate-950">
+              <span>Total</span>
+              <span>£{totalAmount.toFixed(2)}</span>
+            </div>
+            <button
+              onClick={handleCheckout}
+              disabled={cart.length === 0}
+              className={`w-full py-1 rounded text-[9px] font-bold transition-all shadow-sm ${
+                cart.length > 0 ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-200 text-slate-400'
+              }`}
+            >
+              Pay &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Toast */}
+      {checkoutToast && (
+        <div className="bg-slate-950 text-emerald-300 text-[8px] font-bold px-2 py-0.5 rounded text-center animate-bounce">
+          {checkoutToast}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────
+   HERO DASHBOARD SCREEN CONTENT — Compact Frameless Screen UI (Zero Scrollbars)
+───────────────────────────────────────────────────────────────── */
+const HeroDashboardScreenContent: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'Dashboard' | 'Products' | 'Sales'>('Dashboard');
+  const [salesCount, setSalesCount] = useState(105);
+  const [revenue, setRevenue] = useState(133689.50);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSalesCount(prev => prev + 1);
+      setRevenue(prev => prev + 14.50);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="w-full h-full bg-white text-slate-900 p-2 sm:p-3 flex flex-col justify-between select-none overflow-hidden text-xs rounded-lg shadow-inner">
+      {/* Top Header */}
+      <div className="flex items-center justify-between pb-1 border-b border-slate-100 text-[10px]">
+        <div className="flex items-center gap-1.5">
+          <div className="w-5 h-5 bg-blue-600 text-white font-bold rounded flex items-center justify-center text-[9px] shadow-sm">
+            iE
+          </div>
+          <div>
+            <div className="font-black text-slate-950 leading-none text-[11px]">INFEPOS</div>
+            <div className="text-[8px] text-slate-400 font-semibold mt-0.5">Admin Dashboard</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-full text-[8px]">
+          {(['Dashboard', 'Products', 'Sales'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-2 py-0.5 rounded-full font-bold transition-all ${
+                activeTab === tab ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[8px] font-bold border border-emerald-200">
+          🟢 Sync Active
+        </span>
+      </div>
+
+      {/* Main Stat Cards */}
+      <div className="grid grid-cols-3 gap-1 my-1">
+        <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200/60">
+          <div className="text-[7px] font-bold text-slate-400 uppercase tracking-wider">TOTAL SALES</div>
+          <div className="text-sm font-black text-slate-950 tracking-tight">{salesCount}</div>
+        </div>
+
+        <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200/60">
+          <div className="text-[7px] font-bold text-slate-400 uppercase tracking-wider">NET REVENUE</div>
+          <div className="text-sm font-black text-slate-950 tracking-tight">£{(revenue / 1000).toFixed(1)}k</div>
+        </div>
+
+        <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200/60">
+          <div className="text-[7px] font-bold text-slate-400 uppercase tracking-wider">STORES</div>
+          <div className="text-sm font-black text-emerald-600 tracking-tight">12 Active</div>
+        </div>
+      </div>
+
+      {/* Revenue Telemetry Chart */}
+      <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200/60 flex-1 flex flex-col justify-between">
+        <div className="text-[8px] font-bold text-slate-600 flex justify-between">
+          <span>Weekly Revenue Telemetry</span>
+          <span className="text-blue-600 font-bold">Real-Time</span>
+        </div>
+        <div className="flex items-end justify-between gap-1 h-12 pt-1 px-0.5">
+          {[45, 65, 80, 68, 92, 100, 85].map((h, i) => (
+            <div key={i} className="flex-1 bg-slate-200/80 rounded-t h-full flex items-end">
+              <div
+                className="w-full bg-blue-600 rounded-t transition-all duration-500"
+                style={{ height: `${h}%` }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────
    HERO HARDWARE IMAGE OVERLAY SHOWCASE — Live Interactive Apps Inside 3D Hardware Image
 ───────────────────────────────────────────────────────────────── */
 const HeroHardwareImageOverlayShowcase: React.FC = () => {
   return (
-    <div className="relative w-full max-w-6xl mx-auto flex flex-col items-center">
+    <div className="relative w-full max-w-5xl mx-auto flex flex-col items-center">
       {/* Subtle Ambient Backlight Glow behind 3D Hardware */}
       <div className="absolute inset-0 bg-gradient-to-r from-sky-400/25 via-blue-500/20 to-indigo-500/25 rounded-full blur-3xl pointer-events-none transform scale-95" />
 
@@ -948,36 +1182,32 @@ const HeroHardwareImageOverlayShowcase: React.FC = () => {
 
         {/* 1. Left Till Screen Overlay — Perspective fitted over 3D POS Till screen */}
         <div
-          className="absolute z-10 overflow-hidden rounded-[1.2rem] shadow-2xl transition-all duration-300 hover:z-30 hover:scale-[1.02]"
+          className="absolute z-10 overflow-hidden rounded-[0.9rem] shadow-xl transition-all duration-300 hover:z-30 hover:ring-2 ring-blue-400/50"
           style={{
-            top: '7%',
-            left: '8.8%',
-            width: '38.2%',
-            height: '50.5%',
-            transform: 'perspective(1200px) rotateY(15.5deg) rotateX(9.5deg) rotateZ(-3.2deg)',
-            transformOrigin: 'center center',
+            top: '12.8%',
+            left: '11.5%',
+            width: '36.8%',
+            height: '45.2%',
+            transform: 'perspective(1000px) rotateX(19.5deg) rotateY(16.5deg) rotateZ(-5.8deg) skewY(-2.2deg)',
+            transformOrigin: 'top left',
           }}
         >
-          <div className="w-full h-full transform scale-[0.82] origin-top-left overflow-y-auto">
-            <AnimatedTillAppPreviewCard />
-          </div>
+          <HeroTillScreenContent />
         </div>
 
         {/* 2. Right Laptop Screen Overlay — Perspective fitted over 3D Laptop screen */}
         <div
-          className="absolute z-10 overflow-hidden rounded-[0.8rem] shadow-2xl transition-all duration-300 hover:z-30 hover:scale-[1.02]"
+          className="absolute z-10 overflow-hidden rounded-[0.6rem] shadow-xl transition-all duration-300 hover:z-30 hover:ring-2 ring-blue-400/50"
           style={{
-            top: '23.5%',
+            top: '23.8%',
             right: '4.8%',
-            width: '36.2%',
-            height: '47.5%',
-            transform: 'perspective(1200px) rotateY(-13.5deg) rotateX(11deg) rotateZ(1.8deg)',
-            transformOrigin: 'center center',
+            width: '36.8%',
+            height: '46.2%',
+            transform: 'perspective(1000px) rotateX(17.5deg) rotateY(-14.8deg) rotateZ(3.2deg) skewY(1.6deg)',
+            transformOrigin: 'top right',
           }}
         >
-          <div className="w-full h-full transform scale-[0.80] origin-top-left overflow-y-auto">
-            <AnimatedDashboardPreviewCard />
-          </div>
+          <HeroDashboardScreenContent />
         </div>
       </div>
 
