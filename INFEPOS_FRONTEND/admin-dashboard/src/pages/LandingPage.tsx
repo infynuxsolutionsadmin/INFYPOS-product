@@ -929,6 +929,72 @@ const LaptopHardwareMockup: React.FC<{ children: React.ReactNode }> = ({ childre
 };
 
 /* ─────────────────────────────────────────────────────────────────
+   HERO HARDWARE IMAGE OVERLAY SHOWCASE — Live Interactive Apps Inside 3D Hardware Image
+───────────────────────────────────────────────────────────────── */
+const HeroHardwareImageOverlayShowcase: React.FC = () => {
+  return (
+    <div className="relative w-full max-w-6xl mx-auto flex flex-col items-center">
+      {/* Subtle Ambient Backlight Glow behind 3D Hardware */}
+      <div className="absolute inset-0 bg-gradient-to-r from-sky-400/25 via-blue-500/20 to-indigo-500/25 rounded-full blur-3xl pointer-events-none transform scale-95" />
+
+      {/* Desktop Perspective View (Interactive screens embedded inside hero-transparent.png) */}
+      <div className="relative w-full hidden md:block select-none">
+        {/* Underlay Hardware Base Image (hero-transparent.png) */}
+        <img
+          src="/hero-transparent.png"
+          alt="INFEPOS 3D Hardware Showcase"
+          className="w-full h-auto object-contain relative z-0 pointer-events-none drop-shadow-2xl"
+        />
+
+        {/* 1. Left Till Screen Overlay — Perspective fitted over 3D POS Till screen */}
+        <div
+          className="absolute z-10 overflow-hidden rounded-[1.2rem] shadow-2xl transition-all duration-300 hover:z-30 hover:scale-[1.02]"
+          style={{
+            top: '7%',
+            left: '8.8%',
+            width: '38.2%',
+            height: '50.5%',
+            transform: 'perspective(1200px) rotateY(15.5deg) rotateX(9.5deg) rotateZ(-3.2deg)',
+            transformOrigin: 'center center',
+          }}
+        >
+          <div className="w-full h-full transform scale-[0.82] origin-top-left overflow-y-auto">
+            <AnimatedTillAppPreviewCard />
+          </div>
+        </div>
+
+        {/* 2. Right Laptop Screen Overlay — Perspective fitted over 3D Laptop screen */}
+        <div
+          className="absolute z-10 overflow-hidden rounded-[0.8rem] shadow-2xl transition-all duration-300 hover:z-30 hover:scale-[1.02]"
+          style={{
+            top: '23.5%',
+            right: '4.8%',
+            width: '36.2%',
+            height: '47.5%',
+            transform: 'perspective(1200px) rotateY(-13.5deg) rotateX(11deg) rotateZ(1.8deg)',
+            transformOrigin: 'center center',
+          }}
+        >
+          <div className="w-full h-full transform scale-[0.80] origin-top-left overflow-y-auto">
+            <AnimatedDashboardPreviewCard />
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile/Tablet View — Dual Hardware Cards for optimal touch interaction */}
+      <div className="relative z-10 grid grid-cols-1 gap-8 w-full md:hidden px-2">
+        <PosTillHardwareMockup>
+          <AnimatedTillAppPreviewCard />
+        </PosTillHardwareMockup>
+        <LaptopHardwareMockup>
+          <AnimatedDashboardPreviewCard />
+        </LaptopHardwareMockup>
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────
    VORTEX PARTICLE CANVAS — Concentric rotating/pulsing dot rings
 ───────────────────────────────────────────────────────────────── */
 const VortexParticleCanvas: React.FC = () => {
@@ -2296,26 +2362,9 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Showcase — Interactive Dual Hardware Devices (Till Terminal + Laptop Dashboard) */}
-        <div className="relative z-10 w-full flex justify-center items-center pt-4 pb-12 px-4 sm:px-6">
-          <div className="relative max-w-7xl w-full">
-            {/* Ambient Backlight Glow behind hardware devices */}
-            <div className="absolute inset-0 bg-sky-400/20 rounded-full blur-3xl transform scale-95 pointer-events-none" />
-
-            {/* Side-by-side interactive hardware device mockups */}
-            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-end">
-              <div className="transform hover:scale-[1.01] transition-transform duration-500">
-                <PosTillHardwareMockup>
-                  <AnimatedTillAppPreviewCard />
-                </PosTillHardwareMockup>
-              </div>
-              <div className="transform hover:scale-[1.01] transition-transform duration-500">
-                <LaptopHardwareMockup>
-                  <AnimatedDashboardPreviewCard />
-                </LaptopHardwareMockup>
-              </div>
-            </div>
-          </div>
+        {/* Hero Showcase — Interactive Live Apps Embedded inside hero-transparent.png 3D Hardware */}
+        <div className="relative z-10 w-full flex justify-center items-center pt-2 pb-12 px-2 sm:px-6">
+          <HeroHardwareImageOverlayShowcase />
         </div>
       </section>
 
