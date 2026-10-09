@@ -833,6 +833,102 @@ const AnimatedTillAppPreviewCard: React.FC = () => {
 };
 
 /* ─────────────────────────────────────────────────────────────────
+   POS TILL HARDWARE DEVICE MOCKUP — Realistic POS Terminal Stand & Bezel
+───────────────────────────────────────────────────────────────── */
+const PosTillHardwareMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <div className="relative flex flex-col items-center w-full max-w-2xl mx-auto group">
+      {/* Ambient Backlight Glow behind hardware */}
+      <div className="absolute -inset-4 bg-gradient-to-tr from-sky-500/25 via-blue-500/20 to-teal-500/20 rounded-[3rem] blur-2xl pointer-events-none group-hover:scale-105 transition-transform duration-700" />
+
+      {/* POS Terminal Monitor Screen Bezel Container */}
+      <div className="relative w-full z-10 bg-slate-950 p-2 sm:p-3.5 rounded-[2.2rem] border-[8px] sm:border-[12px] border-slate-900 shadow-2xl shadow-black/80 ring-1 ring-white/10">
+        {/* Top Camera Sensor Dot */}
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-slate-900/90 border border-slate-800/80">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="w-1 h-1 rounded-full bg-slate-700" />
+        </div>
+
+        {/* Side Card Reader Attached Accent */}
+        <div className="absolute -right-3 top-1/3 z-20 w-3.5 h-20 bg-gradient-to-r from-slate-800 to-slate-950 rounded-r-xl border-y border-r border-slate-700 shadow-xl hidden sm:flex flex-col justify-center items-center">
+          <div className="w-1 h-10 bg-slate-700 rounded-full" />
+        </div>
+
+        {/* Interactive Screen Display Canvas */}
+        <div className="relative overflow-hidden rounded-[1.4rem]">
+          {children}
+        </div>
+      </div>
+
+      {/* POS Terminal Heavy Base & Stand Neck */}
+      <div className="relative z-0 w-3/4 sm:w-2/3 flex flex-col items-center -mt-2">
+        {/* Metal Neck Stand Stem */}
+        <div className="w-24 sm:w-36 h-6 sm:h-9 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-x border-slate-800/60 shadow-inner flex items-center justify-center">
+          <div className="w-12 h-1 bg-slate-700/60 rounded-full" />
+        </div>
+
+        {/* POS Printer & Base Chassis */}
+        <div className="w-full bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-slate-800/90 rounded-b-[2rem] shadow-2xl p-3 sm:p-4 flex justify-between items-center relative overflow-hidden ring-1 ring-white/10">
+          {/* Thermal Receipt Slot with Paper Roll Accent */}
+          <div className="flex flex-col items-start pl-2">
+            <div className="w-24 sm:w-32 h-2.5 bg-slate-950 rounded-full border border-slate-800 shadow-inner flex items-center justify-center overflow-hidden">
+              <div className="w-20 sm:w-28 h-4 bg-slate-100/95 rounded-t-sm shadow-md animate-pulse transform -translate-y-1" />
+            </div>
+            <span className="text-[9px] font-extrabold text-slate-400 tracking-wider uppercase mt-1">ESC/POS Printer</span>
+          </div>
+
+          {/* POS Hardware Badge */}
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900 rounded-lg border border-slate-800 text-[10px] font-black text-slate-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            <span>INFEPOS TILL T2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────
+   LAPTOP / MACBOOK HARDWARE DEVICE MOCKUP — Realistic Laptop Bezel & Chassis
+───────────────────────────────────────────────────────────────── */
+const LaptopHardwareMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <div className="relative flex flex-col items-center w-full max-w-2xl mx-auto group">
+      {/* Ambient Backlight Glow behind laptop */}
+      <div className="absolute -inset-4 bg-gradient-to-tr from-blue-500/25 via-sky-500/20 to-indigo-500/20 rounded-[3rem] blur-2xl pointer-events-none group-hover:scale-105 transition-transform duration-700" />
+
+      {/* Laptop Screen Frame Lid */}
+      <div className="relative w-full z-10 bg-slate-950 p-2 sm:p-3.5 rounded-t-[2.2rem] rounded-b-md border-[8px] sm:border-[12px] border-b-2 border-slate-900 shadow-2xl shadow-black/80 ring-1 ring-white/10">
+        {/* Top Webcam Lens Notch */}
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center w-3 h-3 rounded-full bg-slate-900 border border-slate-800">
+          <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+        </div>
+
+        {/* Interactive Screen Display Canvas */}
+        <div className="relative overflow-hidden rounded-t-[1.4rem] rounded-b-sm">
+          {children}
+        </div>
+      </div>
+
+      {/* Laptop Keyboard Base & Trackpad Chassis */}
+      <div className="relative z-20 w-[105%] bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-t border-slate-700/80 rounded-b-2xl shadow-2xl shadow-black/90 h-6 sm:h-8 flex items-center justify-between px-6 sm:px-10 -mt-0.5 ring-1 ring-white/10">
+        {/* Center Display Hinge Notch */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 sm:w-44 h-2 bg-slate-950 rounded-b-lg border-b border-slate-800" />
+
+        {/* Left Bumper Notch */}
+        <div className="w-8 h-1 bg-slate-950 rounded-full" />
+
+        {/* Laptop Trackpad Lip Silhouette */}
+        <div className="w-24 sm:w-36 h-2 bg-slate-950/90 rounded-b-md border border-slate-800/80" />
+
+        {/* Right Bumper Notch */}
+        <div className="w-8 h-1 bg-slate-950 rounded-full" />
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────
    VORTEX PARTICLE CANVAS — Concentric rotating/pulsing dot rings
 ───────────────────────────────────────────────────────────────── */
 const VortexParticleCanvas: React.FC = () => {
@@ -2200,19 +2296,23 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Showcase — Interactive Dual App Cards (Till Terminal + Admin Dashboard) */}
-        <div className="relative z-10 w-full flex justify-center items-center pt-4 pb-8 px-4 sm:px-6">
+        {/* Hero Showcase — Interactive Dual Hardware Devices (Till Terminal + Laptop Dashboard) */}
+        <div className="relative z-10 w-full flex justify-center items-center pt-4 pb-12 px-4 sm:px-6">
           <div className="relative max-w-7xl w-full">
-            {/* Subtle ambient glow behind cards */}
+            {/* Ambient Backlight Glow behind hardware devices */}
             <div className="absolute inset-0 bg-sky-400/20 rounded-full blur-3xl transform scale-95 pointer-events-none" />
 
-            {/* Side-by-side interactive components */}
-            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+            {/* Side-by-side interactive hardware device mockups */}
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-end">
               <div className="transform hover:scale-[1.01] transition-transform duration-500">
-                <AnimatedTillAppPreviewCard />
+                <PosTillHardwareMockup>
+                  <AnimatedTillAppPreviewCard />
+                </PosTillHardwareMockup>
               </div>
               <div className="transform hover:scale-[1.01] transition-transform duration-500">
-                <AnimatedDashboardPreviewCard />
+                <LaptopHardwareMockup>
+                  <AnimatedDashboardPreviewCard />
+                </LaptopHardwareMockup>
               </div>
             </div>
           </div>
@@ -2276,7 +2376,9 @@ const LandingPage: React.FC = () => {
 
             {/* Right: Real Interactive Dashboard Showcase Component */}
             <div className="lg:col-span-7">
-              <AnimatedDashboardPreviewCard />
+              <LaptopHardwareMockup>
+                <AnimatedDashboardPreviewCard />
+              </LaptopHardwareMockup>
             </div>
           </div>
 
@@ -2284,7 +2386,9 @@ const LandingPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left on desktop: Real Interactive Till App Showcase Component */}
             <div className="lg:col-span-7 order-2 lg:order-1">
-              <AnimatedTillAppPreviewCard />
+              <PosTillHardwareMockup>
+                <AnimatedTillAppPreviewCard />
+              </PosTillHardwareMockup>
             </div>
 
             {/* Right on desktop: Text & Details */}
