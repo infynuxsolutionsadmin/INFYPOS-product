@@ -22,6 +22,7 @@ export interface User {
   roleId: string;
   storeId: string | null;
   pinCode?: string;
+  hasPin?: boolean;
   role?: UserRole;
   store?: UserStore | null;
 }
@@ -29,11 +30,11 @@ export interface User {
 export interface CreateUserPayload {
   firstName: string;
   lastName?: string;
-  email: string;
+  email?: string;
   phone?: string;
   roleId: string;
   storeId?: string;
-  password: string;
+  password?: string;
 }
 
 export interface UpdateUserPayload {

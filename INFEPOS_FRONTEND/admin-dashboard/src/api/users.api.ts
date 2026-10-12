@@ -39,3 +39,17 @@ export const getRoles = async (): Promise<RoleOption[]> => {
   });
   return response.data.data.items;
 };
+
+export interface ResetPinResponse {
+  message?: string;
+  generatedPin: string;
+}
+
+export const resetUserPin = async (id: string, pin?: string): Promise<ResetPinResponse> => {
+  const response = await client.post<BackendResponse<ResetPinResponse>>(
+    `/users/${id}/reset-pin`,
+    pin ? { pin } : {},
+  );
+  return response.data.data;
+};
+

@@ -8,7 +8,7 @@ interface ShiftState {
   currentShift: Shift | null;
   setShift: (shift: Shift) => void;
   clearShift: () => void;
-  isShiftOpen: () => boolean;
+  isShiftOpen: (storeId?: string) => boolean;
 }
 
 export const useShiftStore = create<ShiftState>()(
@@ -22,9 +22,11 @@ export const useShiftStore = create<ShiftState>()(
 
       clearShift: () => set({ currentShift: null }),
 
-      isShiftOpen: () => {
+      isShiftOpen: (storeId?: string) => {
         const shift = get().currentShift;
-        return shift !== null && shift.status === 'OPEN';
+        if (!shift || shift.status !== 'OPEN') return false;
+        if (storeId && shift.storeId !== storeId) return false;
+        return true;
       },
     }),
     {

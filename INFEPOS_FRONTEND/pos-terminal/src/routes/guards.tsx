@@ -20,16 +20,17 @@ export const RequireAuth: React.FC = () => {
   return <Outlet />;
 };
 
-/** Requires an open shift. Redirects to /open-shift if no active shift. */
+/** Requires an open shift. Redirects to /open-shift if no active shift for current store. */
 export const RequireShift: React.FC = () => {
   const isShiftOpen = useShiftStore((s) => s.isShiftOpen);
   const shiftHydrated = useShiftStore((s) => s._hasHydrated);
+  const user = useAuthStore((s) => s.user);
 
   if (!shiftHydrated) {
     return null;
   }
 
-  if (!isShiftOpen()) {
+  if (!isShiftOpen(user?.storeId)) {
     return <Navigate to="/open-shift" replace />;
   }
 

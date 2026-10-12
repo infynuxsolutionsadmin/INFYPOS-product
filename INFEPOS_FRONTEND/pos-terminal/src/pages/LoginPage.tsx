@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut } from 'lucide-react';
 import { login } from '../api/auth.api';
 import { useAuthStore } from '../stores/authStore';
+import { useShiftStore } from '../stores/shiftStore';
 import client from '../api/client';
 import { compareSync } from 'bcrypt-ts';
 import { getLocalCashiers, syncCashiersToLocalDb } from '../services/localDb';
@@ -23,6 +24,8 @@ const LoginPage: React.FC = () => {
   
   // Cashier PIN state
   const [cashiers, setCashiers] = useState<any[]>([]);
+  const [cashiersLoading, setCashiersLoading] = useState(false);
+  const [cashiersError, setCashiersError] = useState<string | null>(null);
   const [selectedCashier, setSelectedCashier] = useState<any | null>(null);
   const [pin, setPin] = useState('');
   
@@ -41,20 +44,38 @@ const LoginPage: React.FC = () => {
   }, [isPaired, pairedStoreId]);
 
   const fetchCashiers = async () => {
+    setCashiersLoading(true);
+    setCashiersError(null);
     try {
-      const res = await client.get(`/users/cashiers/${pairedStoreId}`);
-      const data = res.data.data || res.data;
-      setCashiers(data);
+      const res = await client.get('/users', { 
+        params: { storeId: pairedStoreId, limit: 100, status: 'ACTIVE' } 
+      });
+      // The users endpoint returns paginated data (res.data.data.items)
+      const data = res.data?.data?.items || res.data?.items || res.data?.data || res.data || [];
+      
+      // Map passwordHash to pinCodeHash and filter out SYSTEM Owner/Admin roles
+      const cashiersList = (Array.isArray(data) ? data : [])
+        .filter(u => u.role?.code !== 'OWNER' && u.role?.code !== 'SYSTEM_ADMIN')
+        .map(u => ({
+          ...u,
+          pinCodeHash: u.passwordHash || u.pinCodeHash || ''
+        }));
+      
+      setCashiers(cashiersList);
       // Cache for offline use
-      await syncCashiersToLocalDb(data);
+      await syncCashiersToLocalDb(cashiersList);
     } catch (err) {
       console.warn('Failed to fetch cashiers online, falling back to local DB', err);
       try {
         const localCashiers = await getLocalCashiers();
-        setCashiers(localCashiers);
+        const filteredLocal = (localCashiers || []).filter((c: any) => c.role?.code !== 'OWNER' && c.role?.code !== 'SYSTEM_ADMIN' && c.role !== 'OWNER' && c.role !== 'System Owner');
+        setCashiers(filteredLocal);
       } catch (e) {
         console.error('Failed to load local cashiers', e);
+        setCashiersError('Failed to load team members. Please check connection.');
       }
+    } finally {
+      setCashiersLoading(false);
     }
   };
 
@@ -74,7 +95,11 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      const result = await login(form);
+      const result = await login({
+        storeCode: form.tenantCode,
+        email: form.email,
+        password: form.password
+      });
       if (!result.user.storeId) {
         throw new Error('Manager must be assigned to a specific store to pair a device.');
       }
@@ -100,6 +125,11 @@ const LoginPage: React.FC = () => {
         
         if (isValid) {
           // Success! Log the cashier in
+          const currentShift = useShiftStore.getState().currentShift;
+          if (currentShift && currentShift.storeId !== pairedStoreId) {
+            useShiftStore.getState().clearShift();
+          }
+
           setAuth({
             id: selectedCashier.id,
             firstName: selectedCashier.firstName,
@@ -139,13 +169,19 @@ const LoginPage: React.FC = () => {
         password: managerForm.password
       });
       
+      const effectiveStoreId = result.user.storeId || pairedStoreId;
+      const currentShift = useShiftStore.getState().currentShift;
+      if (currentShift && currentShift.storeId !== effectiveStoreId) {
+        useShiftStore.getState().clearShift();
+      }
+
       setAuth({
         id: result.user.id,
         firstName: result.user.firstName,
         lastName: result.user.lastName,
         email: result.user.email,
         roleId: result.user.roleId,
-        storeId: result.user.storeId || pairedStoreId,
+        storeId: effectiveStoreId,
         tenantId: result.user.tenantId
       }, []); // Set permissions if needed
       
@@ -304,34 +340,52 @@ const LoginPage: React.FC = () => {
                   </div>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', width: '100%' }}>
-                    {cashiers.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => setSelectedCashier(c)}
-                        style={{
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: '12px',
-                          padding: '1.5rem 1rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                        onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                      >
-                        <div style={{ width: 48, height: 48, borderRadius: 24, background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
-                          {c.firstName.charAt(0)}{c.lastName.charAt(0)}
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ color: 'var(--pos-text)', fontWeight: 600 }}>{c.firstName} {c.lastName}</div>
-                          <div style={{ color: 'var(--pos-text-dim)', fontSize: '0.75rem' }}>{c.role}</div>
-                        </div>
-                      </button>
-                    ))}
+                    {cashiersLoading ? (
+                      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--pos-text-dim)', width: '100%', gridColumn: '1 / -1' }}>
+                        <Loader2 size={32} className="animate-spin mx-auto" style={{ marginBottom: '1rem' }} />
+                        Loading team members...
+                      </div>
+                    ) : cashiersError ? (
+                      <div style={{ textAlign: 'center', padding: '2rem', color: '#ef4444', width: '100%', gridColumn: '1 / -1', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '12px' }}>
+                        {cashiersError}
+                      </div>
+                    ) : cashiers.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--pos-text-dim)', width: '100%', gridColumn: '1 / -1', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                        No team members available for this store.
+                      </div>
+                    ) : cashiers.map(c => {
+                      const fInitial = c.firstName ? c.firstName.charAt(0).toUpperCase() : '';
+                      const lInitial = c.lastName ? c.lastName.charAt(0).toUpperCase() : '';
+                      
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => setSelectedCashier(c)}
+                          style={{
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
+                            padding: '1.5rem 1rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                        >
+                          <div style={{ width: 48, height: 48, borderRadius: 24, background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
+                            {fInitial}{lInitial}
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ color: 'var(--pos-text)', fontWeight: 600 }}>{c.firstName} {c.lastName || ''}</div>
+                            <div style={{ color: 'var(--pos-text-dim)', fontSize: '0.75rem' }}>{c.role?.name || (typeof c.role === 'string' ? c.role : 'Cashier')}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', flexWrap: 'wrap', justifyContent: 'center' }}>

@@ -29,7 +29,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
   const [roleId, setRoleId] = useState('');
   const [storeId, setStoreId] = useState('');
   const [status, setStatus] = useState<UserStatus>('ACTIVE');
-  const [generatedPin] = useState<string | null>(null);
+  const [generatedPin, setGeneratedPin] = useState<string | null>(null);
   // Password only for create
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -78,7 +78,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
     e.preventDefault();
     setError(null);
 
-    if (!isEdit) {
+    if (!isEdit && !isCashier) {
       if (password.length < 8) {
         setError('Password must be at least 8 characters.');
         return;
@@ -103,16 +103,20 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
       } else {
         const payload: CreateUserPayload = {
           firstName,
-          email,
           roleId,
-          password,
         };
+        if (email) payload.email = email;
+        if (password) payload.password = password;
         if (lastName) payload.lastName = lastName;
         if (phone) payload.phone = phone;
         if (storeId) payload.storeId = storeId;
-        await createUser(payload);
+        const res: any = await createUser(payload);
+        onSuccess();
+        if (res.generatedPin) {
+          setGeneratedPin(res.generatedPin);
+          return; // don't close, show PIN
+        }
       }
-      onSuccess();
       onClose();
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'An error occurred';
@@ -145,7 +149,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
               <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">{error}</div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            {!generatedPin ? (
+              <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">First Name *</label>
@@ -206,7 +211,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
                     <select
                       required
                       value={roleId}
-                      onChange={e => setRoleId(e.target.value)}
+                      onChange={e => { setRoleId(e.target.value); setError(null); }}
                       className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm"
                     >
                       <option value="">Select a role</option>
@@ -307,6 +312,33 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
                 </button>
               </div>
             </form>
+            ) : (
+              <div className="text-center py-8">
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
+                  <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-medium text-gray-900 mb-2">Cashier Account Created</h4>
+                <p className="text-sm text-gray-500 mb-6">
+                  Please share this 4-digit PIN with the cashier. They will need it to clock in.
+                </p>
+                <div className="bg-gray-50 rounded-xl p-6 border border-gray-100 mb-8 inline-block">
+                  <span className="text-4xl font-mono font-bold tracking-[0.25em] text-gray-900">
+                    {generatedPin}
+                  </span>
+                </div>
+                <div className="bg-slate-50/50 px-4 py-4 sm:px-8 sm:flex sm:flex-row-reverse -mx-6 sm:-mx-8 -mb-6 sm:-mb-8 rounded-b-[30px] border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full inline-flex justify-center rounded-full border border-transparent shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-base font-bold text-white hover:from-indigo-600 hover:to-purple-700 focus:outline-none hover:-translate-y-0.5 transition-all sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

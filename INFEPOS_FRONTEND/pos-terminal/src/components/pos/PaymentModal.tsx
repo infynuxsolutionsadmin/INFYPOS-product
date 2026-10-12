@@ -42,6 +42,24 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
       setError('Store ID is missing from your session.');
       return;
     }
+
+    if (!currentShift || currentShift.storeId !== user.storeId) {
+      setError('No active shift found for your store. Please open a shift for your store before checking out.');
+      return;
+    }
+
+    const outOfStockItem = cartItems.find((i) => i.product.stockQuantity !== undefined && i.product.stockQuantity <= 0);
+    if (outOfStockItem) {
+      setError(`"${outOfStockItem.product.name}" is out of stock or unavailable in this store.`);
+      return;
+    }
+
+    const insufficientItem = cartItems.find((i) => i.product.stockQuantity !== undefined && i.product.stockQuantity < i.quantity);
+    if (insufficientItem) {
+      setError(`Insufficient stock for "${insufficientItem.product.name}". Available: ${insufficientItem.product.stockQuantity}, Requested: ${insufficientItem.quantity}.`);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -62,7 +80,27 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
 
     try {
       const sale = await createSale(payload);
-      onSuccess(sale, false);
+
+      if (isDesktopApp()) {
+        sale.subtotal = cartSummary.subtotal;
+        sale.taxAmount = cartSummary.totalVat;
+        sale.items = cartItems.map(i => ({
+          id: `item-${Math.random()}`,
+          saleId: sale.id,
+          productId: i.product.id,
+          productName: i.product.name,
+          sku: i.product.sku,
+          barcode: i.product.barcode || null,
+          quantity: i.quantity,
+          returnedQuantity: 0,
+          unitPrice: i.unitPrice,
+          vatRate: i.product.vatRate,
+          lineTotal: i.lineTotal,
+          createdAt: sale.createdAt
+        }));
+      }
+
+      onSuccess(sale, isDesktopApp());
     } catch (err: any) {
       // Check if it's a network error (no response)
       if (!err.response && !isDesktopApp()) {

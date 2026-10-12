@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer, CheckCircle2, CloudOff } from 'lucide-react';
 import type { Sale } from '../../types/sale';
+import { useAuthStore } from '../../stores/authStore';
 
 interface ReceiptViewProps {
   sale: Sale;
@@ -10,6 +11,9 @@ interface ReceiptViewProps {
 
 const ReceiptView: React.FC<ReceiptViewProps> = ({ sale, isOffline, onClose }) => {
   const fmt = (n: number | string) => `£${Number(n).toFixed(2)}`;
+  
+  const user = useAuthStore((s) => s.user);
+  const storeName = (user as any)?.store?.name || (user as any)?.storeName || 'Store';
   
   const handlePrint = () => {
     window.print();
@@ -73,11 +77,8 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ sale, isOffline, onClose }) =
           }}
         >
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <img src="/logo.png" alt="Logo" style={{ width: '64px', height: '64px', objectFit: 'contain', margin: '0 auto 0.5rem' }} />
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#243B53', margin: '0 0 0.5rem 0', letterSpacing: '1px' }}>INFEPOS</h3>
-            <p style={{ fontSize: '0.9rem', color: '#64748B', margin: '2px 0' }}>Store ID: {sale.storeId ? sale.storeId.slice(0, 8) : 'N/A'}</p>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#243B53', margin: '0 0 0.5rem 0', letterSpacing: '1px' }}>{storeName}</h3>
             <p style={{ fontSize: '0.9rem', color: '#64748B', margin: '2px 0' }}>{sale.createdAt ? new Date(sale.createdAt).toLocaleString() : 'Just now'}</p>
-            <p style={{ fontSize: '0.9rem', color: '#64748B', margin: '2px 0' }}>Receipt #: {sale.saleNumber || 'Pending'}</p>
           </div>
 
           <table style={{ width: '100%', fontSize: '0.95rem', borderCollapse: 'collapse', marginBottom: '1.5rem' }}>

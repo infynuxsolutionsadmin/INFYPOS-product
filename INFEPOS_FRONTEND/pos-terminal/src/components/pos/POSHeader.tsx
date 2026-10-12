@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { User, Store, LogOut, History, FileText, Wifi, WifiOff, RefreshCcw } from 'lucide-react';
+import { User, Store, LogOut, History, FileText, Wifi, WifiOff, RefreshCcw, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useShiftStore } from '../../stores/shiftStore';
 import { useNavigate } from 'react-router-dom';
 import SalesHistoryModal from './SalesHistoryModal';
 import ShiftCloseModal from './ShiftCloseModal';
+import FailedSyncModal from './FailedSyncModal';
 import { useSyncManager } from '../../offline/useSyncManager';
 
 const POSHeader: React.FC = () => {
@@ -14,11 +15,12 @@ const POSHeader: React.FC = () => {
   const clearShift = useShiftStore((s) => s.clearShift);
   const navigate = useNavigate();
 
-  const { isOnline, isSyncing, pendingCount, processSyncQueue, checkConnectivity } = useSyncManager();
+  const { isOnline, isSyncing, pendingCount, failedCount, syncError, processSyncQueue, checkConnectivity } = useSyncManager();
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCloseShiftOpen, setIsCloseShiftOpen] = useState(false);
+  const [isFailedSyncOpen, setIsFailedSyncOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -189,6 +191,33 @@ const POSHeader: React.FC = () => {
               </button>
             </>
           )}
+
+          {failedCount > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid #ef4444',
+                color: '#ef4444',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                marginLeft: '4px',
+              }}
+              title={syncError || `${failedCount} transactions failed to sync. Click to review and recover.`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsFailedSyncOpen(true);
+              }}
+            >
+              <AlertCircle size={12} color="#ef4444" />
+              <span>{failedCount} Sync Failed</span>
+            </div>
+          )}
         </div>
 
         <div style={{ textAlign: 'right' }}>
@@ -241,6 +270,10 @@ const POSHeader: React.FC = () => {
 
       {isCloseShiftOpen && (
         <ShiftCloseModal onClose={() => setIsCloseShiftOpen(false)} />
+      )}
+
+      {isFailedSyncOpen && (
+        <FailedSyncModal onClose={() => setIsFailedSyncOpen(false)} />
       )}
     </header>
   );

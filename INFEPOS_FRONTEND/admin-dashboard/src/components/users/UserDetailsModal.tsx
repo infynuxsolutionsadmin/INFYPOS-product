@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, User as UserIcon, Briefcase } from 'lucide-react';
+import { X, User as UserIcon, Briefcase, RotateCcw, KeyRound, Copy, Check, CheckCircle2 } from 'lucide-react';
 import type { User } from '../../types/users';
-import { getUserById } from '../../api/users.api';
+import { getUserById, resetUserPin } from '../../api/users.api';
+import { useAuthStore } from '../../stores/authStore';
 import UserStatusBadge from './UserStatusBadge';
 
 interface UserDetailsModalProps {
@@ -11,9 +12,54 @@ interface UserDetailsModalProps {
 }
 
 const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, userId }) => {
+  const { user: currentUser, hasPermission } = useAuthStore();
+  const isAdmin = currentUser?.roleCode === 'SUPER_ADMIN' || currentUser?.roleCode === 'OWNER' || hasPermission('users.update');
+
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [revealedPin, setRevealedPin] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleClose = () => {
+    setShowResetConfirm(false);
+    setRevealedPin(null);
+    setResetError(null);
+    setCopied(false);
+    onClose();
+  };
+
+  const handleConfirmReset = async () => {
+    if (!user) return;
+    setResetting(true);
+    setResetError(null);
+    try {
+      const res = await resetUserPin(user.id);
+      setUser(prev => prev ? { ...prev, hasPin: true } : null);
+      setShowResetConfirm(false);
+      setRevealedPin(res.generatedPin);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to reset PIN';
+      setResetError(Array.isArray(msg) ? msg.join(', ') : msg);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleCopyPin = async () => {
+    if (!revealedPin) return;
+    try {
+      await navigator.clipboard.writeText(revealedPin);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback clipboard ignore
+    }
+  };
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -33,7 +79,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity" aria-hidden="true" onClick={onClose}>
+        <div className="fixed inset-0 transition-opacity" aria-hidden="true" onClick={handleClose}>
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
         </div>
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
@@ -48,7 +94,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
                 <h3 className="text-xl font-bold text-[#1a1f36]">User Details</h3>
                 {user && <UserStatusBadge status={user.status} />}
               </div>
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+              <button onClick={handleClose} className="text-gray-400 hover:text-gray-500">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -103,7 +149,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
                     {/* <ChevronUp className="w-4 h-4 text-gray-400" /> */}
                   </div>
                   <div className="p-4 sm:p-5 bg-white">
-                    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-4">
+                    <dl className="grid grid-cols-2 sm:grid-cols-2 gap-x-4 gap-y-4">
                       <div>
                         <dt className="text-xs font-medium text-gray-400 mb-1">Role</dt>
                         <dd className="text-sm font-semibold text-[#1a1f36]">{user.role ? user.role.name : '—'}</dd>
@@ -126,12 +172,41 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
                         <dt className="text-xs font-medium text-gray-400 mb-2">Status</dt>
                         <dd><UserStatusBadge status={user.status} /></dd>
                       </div>
-                      <div>
-                        <dt className="text-xs font-medium text-gray-400 mb-1">PIN Code</dt>
-                        <dd className="text-sm font-mono font-bold tracking-widest text-[#1a1f36] bg-gray-50 px-2 py-1 rounded inline-block border border-gray-100">
-                          {user.pinCode || '—'}
-                        </dd>
-                      </div>
+                      {isAdmin && (
+                        <div>
+                          <dt className="text-xs font-medium text-gray-400 mb-1">PIN Code</dt>
+                          {user.role?.code === 'CASHIER' ? (
+                            <dd className="flex flex-col items-start gap-1.5">
+                              {user.hasPin ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                  Configured
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200/60">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                  Not Configured
+                                </span>
+                              )}
+                              {currentUser?.id !== user.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setResetError(null);
+                                    setShowResetConfirm(true);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-100 focus:outline-none"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                  Reset PIN
+                                </button>
+                              )}
+                            </dd>
+                          ) : (
+                            <dd className="text-sm font-semibold text-gray-400">—</dd>
+                          )}
+                        </div>
+                      )}
                     </dl>
                   </div>
                 </div>
@@ -141,12 +216,122 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
           <div className="px-6 py-4 sm:px-8 sm:pb-6 sm:flex sm:flex-row-reverse rounded-b-[30px] bg-white">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="w-full sm:w-auto inline-flex justify-center rounded-xl px-5 py-2 bg-slate-100 text-sm font-bold text-slate-700 hover:bg-slate-200 transition-colors focus:outline-none"
             >
               Close
             </button>
           </div>
+
+          {/* Explicit Confirmation Modal */}
+          {showResetConfirm && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+              <div className="bg-white rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-gray-100 relative">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+                    <KeyRound className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-[#1a1f36]">Reset Cashier PIN</h4>
+                    <p className="text-xs text-gray-500">Explicit confirmation required</p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-gray-600 mb-4 leading-relaxed">
+                  Are you sure you want to reset the PIN for <strong className="text-gray-900">{user?.firstName} {user?.lastName || ''}</strong>?
+                  A new 4-digit PIN will be generated and any active cashier sessions will be invalidated immediately.
+                </p>
+
+                {resetError && (
+                  <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl p-3">
+                    {resetError}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2.5 mt-5">
+                  <button
+                    type="button"
+                    disabled={resetting}
+                    onClick={() => {
+                      setShowResetConfirm(false);
+                      setResetError(null);
+                    }}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={resetting}
+                    onClick={handleConfirmReset}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {resetting ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Resetting...
+                      </>
+                    ) : (
+                      'Confirm & Reset'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Secure One-Time Reveal Modal */}
+          {revealedPin && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+              <div className="bg-white rounded-[24px] max-w-sm w-full p-6 shadow-2xl border border-gray-100 text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mb-4">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <h4 className="text-lg font-bold text-[#1a1f36] mb-1">New PIN Generated</h4>
+                <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                  Communicate this 4-digit PIN securely to the cashier. For security, this PIN is shown only once.
+                </p>
+
+                <div className="bg-gray-50 border border-gray-200/80 rounded-2xl p-4 mb-3 flex flex-col items-center justify-center">
+                  <div className="text-3xl font-mono font-bold tracking-[0.3em] text-[#1a1f36] select-all mb-3">
+                    {revealedPin}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyPin}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-gray-200 shadow-xs hover:bg-gray-50 text-gray-700 transition-colors cursor-pointer"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-700">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-gray-500" />
+                        <span>Copy PIN</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200/70 text-amber-800 text-[11px] rounded-xl p-3 mb-4 text-left leading-relaxed">
+                  <strong>Security Notice:</strong> This PIN is never stored in plaintext and cannot be displayed again.
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRevealedPin(null);
+                    setCopied(false);
+                  }}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors cursor-pointer"
+                >
+                  I Have Recorded This PIN
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

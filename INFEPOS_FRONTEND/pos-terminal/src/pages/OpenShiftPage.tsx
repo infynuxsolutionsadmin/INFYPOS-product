@@ -23,8 +23,17 @@ const OpenShiftPage: React.FC = () => {
     const checkShift = async () => {
       try {
         const shift = await getActiveShift();
-        if (mounted && shift) {
-          setActiveShift(shift);
+        if (mounted) {
+          if (shift && user?.storeId && shift.storeId === user.storeId) {
+            setActiveShift(shift);
+          } else {
+            setActiveShift(null);
+            // Clear any stale local shift belonging to another store
+            const currentShift = useShiftStore.getState().currentShift;
+            if (currentShift && currentShift.storeId !== user?.storeId) {
+              useShiftStore.getState().clearShift();
+            }
+          }
         }
       } catch (err) {
         console.error('Failed to check active shift', err);
@@ -34,7 +43,7 @@ const OpenShiftPage: React.FC = () => {
     };
     checkShift();
     return () => { mounted = false; };
-  }, []);
+  }, [user?.storeId]);
 
   const cashierName = user
     ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`

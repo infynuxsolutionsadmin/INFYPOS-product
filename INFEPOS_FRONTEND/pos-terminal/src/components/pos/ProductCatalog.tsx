@@ -267,7 +267,7 @@ const ProductCatalog: React.FC = () => {
       )}
 
       {/* Product grid */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', gap: '0.75rem', color: 'var(--pos-text-muted)' }}>
             <Loader2 size={24} style={{ animation: 'spin 0.7s linear infinite' }} />
@@ -321,8 +321,9 @@ const ProductCatalog: React.FC = () => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-              gap: '0.65rem',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+              gap: '1rem',
+              alignContent: 'start',
             }}
           >
             {products.map((product) => {
@@ -346,16 +347,18 @@ const ProductCatalog: React.FC = () => {
                     background: isAdded ? 'var(--pos-success-light)' : (isOutOfStock ? '#fef2f2' : 'var(--pos-surface)'),
                     border: `1px solid ${isAdded ? 'rgba(22,163,74,0.4)' : (isOutOfStock ? '#fca5a5' : 'var(--pos-border)')}`,
                     borderRadius: 12,
-                    padding: '0.85rem',
+                    padding: '1rem',
                     cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                     textAlign: 'left',
                     transition: 'all 0.15s ease',
-                    transform: isAdded ? 'scale(0.97)' : 'scale(1)',
+                    transform: isAdded ? 'scale(0.98)' : 'scale(1)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.4rem',
+                    gap: '0.6rem',
                     opacity: isOutOfStock ? 0.75 : 1,
                     boxShadow: isAdded ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.04)',
+                    height: '100%',
+                    width: '100%',
                   }}
                   onMouseEnter={(e) => {
                     if (!isAdded && !isOutOfStock) {
@@ -371,16 +374,16 @@ const ProductCatalog: React.FC = () => {
                   }}
                 >
                   {/* Category & Stock Badges */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: '0.4rem', flexWrap: 'wrap' }}>
                     {product.category && (
-                      <span className="badge badge-blue" style={{ fontSize: '0.65rem' }}>
+                      <span className="badge badge-blue" style={{ fontSize: '0.65rem', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {product.category}
                       </span>
                     )}
 
                     <span 
                       className={`badge ${isOutOfStock ? 'badge-red' : stock < 10 ? 'badge-yellow' : 'badge-green'}`}
-                      style={{ fontSize: '0.62rem', fontWeight: 700 }}
+                      style={{ fontSize: '0.62rem', fontWeight: 700, flexShrink: 0 }}
                     >
                       {isOutOfStock ? 'Out of Stock' : `${stock} in stock`}
                     </span>

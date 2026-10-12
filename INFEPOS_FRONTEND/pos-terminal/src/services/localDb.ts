@@ -53,6 +53,55 @@ export const markSyncEventCompleted = async (id: string) => {
   return queryLocalDb(`UPDATE sync_queue SET status = 'COMPLETED' WHERE id = ?`, id);
 };
 
+export const markSyncEventFailed = async (id: string) => {
+  if (!isDesktopApp()) return;
+  return queryLocalDb(`UPDATE sync_queue SET status = 'FAILED' WHERE id = ?`, id);
+};
+
+export const getFailedSyncEvents = async () => {
+  if (!isDesktopApp()) return [];
+  return queryLocalDb(`SELECT * FROM sync_queue WHERE status = 'FAILED' ORDER BY createdAt ASC`);
+};
+
+export const retryFailedSyncEvent = async (id: string, updatedShiftId?: string) => {
+  if (!isDesktopApp()) return;
+
+  if (updatedShiftId) {
+    const rows = await queryLocalDb(`SELECT payload FROM sync_queue WHERE id = ?`, id);
+    if (rows && rows.length > 0) {
+      try {
+        const payload = JSON.parse(rows[0].payload);
+        payload.shiftId = updatedShiftId;
+        const payloadStr = JSON.stringify(payload);
+        await queryLocalDb(
+          `UPDATE sync_queue SET payload = ?, status = 'PENDING' WHERE id = ?`,
+          payloadStr,
+          id
+        );
+      } catch (err) {
+        console.error('Failed to update payload for retry:', err);
+        await queryLocalDb(`UPDATE sync_queue SET status = 'PENDING' WHERE id = ?`, id);
+      }
+    } else {
+      await queryLocalDb(`UPDATE sync_queue SET status = 'PENDING' WHERE id = ?`, id);
+    }
+  } else {
+    await queryLocalDb(`UPDATE sync_queue SET status = 'PENDING' WHERE id = ?`, id);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('sync-queue-updated'));
+  }
+};
+
+export const dismissFailedSyncEvent = async (id: string) => {
+  if (!isDesktopApp()) return;
+  await queryLocalDb(`UPDATE sync_queue SET status = 'DISMISSED' WHERE id = ?`, id);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('sync-queue-updated'));
+  }
+};
+
 export const syncProductsToLocalDb = async (products: any[]) => {
   if (!isDesktopApp() || !products || products.length === 0) return;
 
@@ -65,7 +114,7 @@ export const syncProductsToLocalDb = async (products: any[]) => {
 
       const stock = p.inventories?.[0]?.quantityOnHand !== undefined
         ? parseFloat(p.inventories[0].quantityOnHand)
-        : (p.stockQuantity !== undefined ? parseFloat(p.stockQuantity) : 100);
+        : (p.stockQuantity !== undefined ? parseFloat(p.stockQuantity) : 0);
 
       await queryLocalDb(
         `INSERT OR REPLACE INTO products (id, name, price, vatRate, sku, barcode, categoryId, stockQuantity, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,

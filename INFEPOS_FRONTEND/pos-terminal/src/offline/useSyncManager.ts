@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { syncOperations } from '../api/sync.api';
-import { getPendingSyncEvents, markSyncEventCompleted, isDesktopApp } from '../services/localDb';
+import { getPendingSyncEvents, getFailedSyncEvents, markSyncEventCompleted, markSyncEventFailed, isDesktopApp } from '../services/localDb';
 import { useSyncStore } from '../stores/syncStore';
 
 export const useSyncManager = () => {
@@ -8,6 +8,8 @@ export const useSyncManager = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const isSyncingRef = useRef<boolean>(false);
   const [pendingCount, setPendingCount] = useState<number>(0);
+  const [failedCount, setFailedCount] = useState<number>(0);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const deviceId = 'electron-pos'; // This would come from device registration in a real app
 
   const checkConnectivity = useCallback(async () => {
@@ -80,16 +82,21 @@ export const useSyncManager = () => {
 
   const fetchPendingCount = useCallback(async () => {
     let count = 0;
+    let fCount = 0;
     try {
       if (isDesktopApp()) {
         const pendingDb = await getPendingSyncEvents();
         count += pendingDb.length;
+        const failedDb = await getFailedSyncEvents();
+        fCount += failedDb.length;
       } else {
-        const { getPendingEvents } = useSyncStore.getState();
-        count += getPendingEvents().length;
+        const { events } = useSyncStore.getState();
+        count += events.filter((e) => e.status === 'PENDING').length;
+        fCount += events.filter((e) => e.status === 'FAILED').length;
       }
       
       setPendingCount(count);
+      setFailedCount(fCount);
     } catch (err) {
       console.error('Error fetching pending count', err);
     }
@@ -149,7 +156,6 @@ export const useSyncManager = () => {
       const successIds = [
         ...response.processed.map((r: any) => r.eventId),
         ...response.alreadyProcessed.map((r: any) => r.eventId),
-        ...response.failed.map((r: any) => r.eventId), // Also remove permanently failed events from queue
       ];
       
       for (const id of successIds) {
@@ -162,13 +168,32 @@ export const useSyncManager = () => {
           removeEvents([id]);
         }
       }
+
+      // Preserve failed events in queue and mark them FAILED
+      if (response.failed && response.failed.length > 0) {
+        const firstError = response.failed.map((f: any) => f.error).filter(Boolean).join('; ');
+        setSyncError(firstError || 'One or more transactions failed to synchronize.');
+
+        for (const f of response.failed) {
+          const eventItem = allEvents.find(e => e.eventId === f.eventId);
+          if (eventItem?.source === 'sqlite') {
+            await markSyncEventFailed(f.eventId);
+          } else if (eventItem?.source === 'zustand') {
+            const { updateEventStatus } = useSyncStore.getState();
+            updateEventStatus(f.eventId, 'FAILED', f.error);
+          }
+        }
+      } else {
+        setSyncError(null);
+      }
       
     } catch (error: any) {
       console.error('Sync failed:', error);
+      setSyncError(error?.message || 'Sync failed.');
     } finally {
       isSyncingRef.current = false;
       setIsSyncing(false);
-      fetchPendingCount(); // refresh count
+      fetchPendingCount(); // refresh counts
     }
   }, [isOnline, fetchPendingCount]);
 
@@ -206,6 +231,8 @@ export const useSyncManager = () => {
     isOnline,
     isSyncing,
     pendingCount,
+    failedCount,
+    syncError,
     processSyncQueue,
     checkConnectivity,
   };

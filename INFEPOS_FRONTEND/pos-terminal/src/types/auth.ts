@@ -1,7 +1,8 @@
 export interface LoginRequest {
-  tenantCode: string;
+  tenantCode?: string;
+  storeCode?: string;
   email: string;
-  password: string;
+  password?: string;
 }
 
 export interface AuthUser {
