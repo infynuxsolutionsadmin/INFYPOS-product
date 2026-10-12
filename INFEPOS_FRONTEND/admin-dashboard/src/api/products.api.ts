@@ -32,8 +32,19 @@ export const updateProduct = async (id: string, data: UpdateProductRequest): Pro
   return response.data.data;
 };
 
-export const deleteProduct = async (id: string): Promise<Product> => {
-  const response = await client.delete<BackendResponse<Product>>(`/products/${id}`);
+export const deleteProduct = async (id: string, permanent: boolean = false): Promise<any> => {
+  const url = permanent ? `/products/${id}?permanent=true` : `/products/${id}`;
+  const response = await client.delete<BackendResponse<any>>(url);
+  return response.data.data;
+};
+
+export const restoreProduct = async (id: string): Promise<Product> => {
+  const response = await client.patch<BackendResponse<Product>>(`/products/${id}/restore`);
+  return response.data.data;
+};
+
+export const permanentDeleteProduct = async (id: string): Promise<{ message: string; id: string }> => {
+  const response = await client.delete<BackendResponse<{ message: string; id: string }>>(`/products/${id}/permanent`);
   return response.data.data;
 };
 

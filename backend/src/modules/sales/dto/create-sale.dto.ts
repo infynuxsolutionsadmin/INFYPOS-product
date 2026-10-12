@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -40,6 +41,11 @@ export class CreatePaymentDto {
 }
 
 export class CreateSaleDto {
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  idempotencyKey?: string;
+
   @IsUUID('4')
   @IsOptional()
   shiftId?: string;

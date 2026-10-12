@@ -44,6 +44,7 @@ export interface UpdateUserPayload {
   roleId?: string;
   storeId?: string | null;
   status?: UserStatus;
+  pinCode?: string;
 }
 
 export interface FindUsersQuery {

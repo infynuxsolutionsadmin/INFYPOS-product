@@ -15,7 +15,7 @@ import {
    PARTICLE CANVAS — All 4 corners emit bubbles toward center
    Top corners: fall downward | Bottom corners: rise upward
 ───────────────────────────────────────────────────────────────── */
-const ParticleCanvas: React.FC = () => {
+const ParticleCanvas: React.FC<{ isDark?: boolean }> = ({ isDark = true }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -131,7 +131,7 @@ const ParticleCanvas: React.FC = () => {
         ctx.globalAlpha = alpha;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+        ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 1)' : 'rgba(22, 95, 248, 0.5)';
         ctx.fill();
         ctx.restore();
 
@@ -260,24 +260,23 @@ const InfeposLogoText: React.FC<{
   textSize?: string;
   isHeroTheme?: boolean;
 }> = ({ textSize = 'text-xl', isHeroTheme = false }) => {
+  const gradId = `infepos-e-gold-${isHeroTheme ? 'dark-bg' : 'light-bg'}`;
   return (
-    <span className={`${textSize} font-['Orbitron'] font-black tracking-[0.12em] inline-flex items-center leading-none select-none uppercase ${isHeroTheme ? 'text-white' : 'text-slate-950'}`}>
+    <span className={`${textSize} font-['Orbitron'] font-black tracking-[0.12em] inline-flex items-center leading-none select-none uppercase ${isHeroTheme ? 'text-white' : 'text-[#040b48]'}`}>
       <span>INF</span>
       <svg viewBox="0 0 78 70" className="inline-block h-[0.67em] w-auto align-middle mx-[0.05em]" fill="none">
-        {!isHeroTheme && (
-          <defs>
-            <linearGradient id="infepos-e-grad-light" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#2563eb" />
-              <stop offset="35%" stopColor="#4f46e5" />
-              <stop offset="70%" stopColor="#7c3aed" />
-              <stop offset="100%" stopColor="#3b82f6" />
-            </linearGradient>
-          </defs>
-        )}
+        <defs>
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#c9953d" />
+            <stop offset="30%" stopColor="#eccd96" />
+            <stop offset="70%" stopColor="#dfb880" />
+            <stop offset="100%" stopColor="#d2a153" />
+          </linearGradient>
+        </defs>
         {/* Top Bar */}
         <rect x="0" y="0" width="78" height="18" rx="4" fill="currentColor" />
-        {/* Middle Bar: Solid White for Hero theme, Violet-Blue for Light themes */}
-        <rect x="0" y="26" width="78" height="18" rx="4" fill={isHeroTheme ? 'currentColor' : 'url(#infepos-e-grad-light)'} />
+        {/* Middle Golden Ribbon Bar */}
+        <rect x="0" y="26" width="78" height="18" rx="4" fill={`url(#${gradId})`} />
         {/* Bottom Bar */}
         <rect x="0" y="52" width="78" height="18" rx="4" fill="currentColor" />
       </svg>
@@ -1103,9 +1102,9 @@ const IconWaveStrip: React.FC = () => {
 /* ─────────────────────────────────────────────────────────────────
    PROJECT THEMES DEFINITIONS
 ───────────────────────────────────────────────────────────────── */
-export type ProjectThemeId = 'cobalt' | 'midnight' | 'emerald' | 'violet' | 'amber';
+type ProjectThemeId = 'cobalt' | 'white' | 'midnight' | 'emerald' | 'violet' | 'amber';
 
-export interface ProjectThemeConfig {
+interface ProjectThemeConfig {
   id: ProjectThemeId;
   name: string;
   subtitle: string;
@@ -1119,19 +1118,32 @@ export interface ProjectThemeConfig {
   swatchHex: string;
 }
 
-export const PROJECT_THEMES: Record<ProjectThemeId, ProjectThemeConfig> = {
+const PROJECT_THEMES: Record<ProjectThemeId, ProjectThemeConfig> = {
   cobalt: {
     id: 'cobalt',
-    name: 'Cobalt Signature',
-    subtitle: 'Classic INFEPOS Blue',
-    heroBg: 'bg-blue-600',
-    primaryBtn: 'bg-blue-600 hover:bg-blue-700 text-white',
-    secondaryBtn: 'bg-white text-blue-600 hover:bg-blue-50',
-    primaryText: 'text-blue-600',
-    badgeBg: 'bg-blue-50 border-blue-200/60',
-    badgeText: 'text-blue-600',
+    name: 'Brand Blue (From Design)',
+    subtitle: 'Vibrant Royal Blue Hero',
+    heroBg: 'bg-[#165ff8]',
+    primaryBtn: 'bg-white text-blue-600 hover:bg-blue-50 font-semibold',
+    secondaryBtn: 'bg-black/40 hover:bg-black/60 text-white border border-white/20 backdrop-blur-xl',
+    primaryText: 'text-[#165ff8]',
+    badgeBg: 'bg-blue-500/20 border-white/20',
+    badgeText: 'text-white',
     accentGradient: 'from-blue-600 via-sky-500 to-indigo-600',
-    swatchHex: '#2563eb',
+    swatchHex: '#165ff8',
+  },
+  white: {
+    id: 'white',
+    name: 'Crisp White (From Design)',
+    subtitle: 'Clean Minimalist White Hero',
+    heroBg: 'bg-white',
+    primaryBtn: 'bg-[#165ff8] hover:bg-blue-700 text-white font-semibold',
+    secondaryBtn: 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200',
+    primaryText: 'text-[#165ff8]',
+    badgeBg: 'bg-blue-50 border-blue-200/60',
+    badgeText: 'text-[#040b48]',
+    accentGradient: 'from-blue-600 via-sky-500 to-indigo-600',
+    swatchHex: '#ffffff',
   },
   midnight: {
     id: 'midnight',
@@ -1190,7 +1202,7 @@ export const PROJECT_THEMES: Record<ProjectThemeId, ProjectThemeConfig> = {
 /* ─────────────────────────────────────────────────────────────────
    DROPDOWN MENU ITEM SPECIFICATION
 ───────────────────────────────────────────────────────────────── */
-export interface MenuItem {
+interface MenuItem {
   id: string;
   title: string;
   desc: string;
@@ -1203,7 +1215,7 @@ export interface MenuItem {
   ctaText?: string;
 }
 
-export const PRODUCTS_MENU_ITEMS: MenuItem[] = [
+const PRODUCTS_MENU_ITEMS: MenuItem[] = [
   {
     id: 'pos-till',
     title: 'POS Till Terminal App',
@@ -1321,7 +1333,7 @@ export const PRODUCTS_MENU_ITEMS: MenuItem[] = [
   }
 ];
 
-export const USE_CASES_MENU_ITEMS: MenuItem[] = [
+const USE_CASES_MENU_ITEMS: MenuItem[] = [
   {
     id: 'supermarket',
     title: 'Supermarkets & Grocery',
@@ -1404,7 +1416,7 @@ export const USE_CASES_MENU_ITEMS: MenuItem[] = [
   }
 ];
 
-export const RESOURCES_MENU_ITEMS: MenuItem[] = [
+const RESOURCES_MENU_ITEMS: MenuItem[] = [
   {
     id: 'doc-manual',
     title: 'Documentation & Guides',
@@ -1851,7 +1863,13 @@ const LandingPage: React.FC = () => {
 
   // Theme State
   const [themeId] = useState<ProjectThemeId>('cobalt');
-  const currentTheme = PROJECT_THEMES[themeId];
+  const currentTheme = PROJECT_THEMES[themeId] || PROJECT_THEMES.cobalt;
+  const isDarkHero =
+    themeId !== 'white' &&
+    !currentTheme.heroBg.includes('white') &&
+    !currentTheme.heroBg.includes('#F4F4F5') &&
+    !currentTheme.heroBg.includes('#fff') &&
+    !currentTheme.heroBg.includes('#f8fafc');
 
   // Navigation Dropdown State
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -1929,23 +1947,34 @@ const LandingPage: React.FC = () => {
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${pastHero
             ? 'bg-white/95 backdrop-blur-xl border-b border-slate-200/60 shadow-sm py-3'
-            : 'bg-transparent py-4'
+            : isDarkHero
+              ? 'bg-transparent py-4'
+              : 'bg-white/80 backdrop-blur-xl border-b border-slate-200/40 shadow-xs py-4'
           }`}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6">
           <a href="#" className="flex items-center flex-shrink-0 group">
             <div className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center mr-1">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
+              <img
+                src={!pastHero && isDarkHero ? "/logo_large_transparent.png" : "/a_clean_high_resolution_graphic_logo_on_a_transpa.png"}
+                alt="INFEPOS Logo"
+                className={`w-full h-full object-contain ${
+                  !pastHero && isDarkHero
+                    ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]'
+                    : 'filter drop-shadow-sm'
+                }`}
+              />
             </div>
-            <InfeposLogoText textSize="text-lg md:text-xl" isHeroTheme={!pastHero} />
+            <InfeposLogoText textSize="text-lg md:text-xl" isHeroTheme={!pastHero && isDarkHero} />
           </a>
 
           {/* Center Floating Pill Menu with Functional Dropdowns */}
           <nav
-            className={`hidden md:flex items-center gap-1.5 px-5 py-2 rounded-full transition-all duration-300 relative ${pastHero
+            className={`hidden md:flex items-center gap-1.5 px-5 py-2 rounded-full transition-all duration-300 relative ${
+              pastHero || !isDarkHero
                 ? 'bg-slate-100/90 border border-slate-200/80 text-slate-700 shadow-sm'
                 : 'bg-white/10 backdrop-blur-xl border border-white/20 text-white shadow-lg shadow-blue-950/20'
-              }`}
+            }`}
           >
             {/* 1. Products Dropdown */}
             <div
@@ -2131,11 +2160,12 @@ const LandingPage: React.FC = () => {
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-3">
+
             <button
               onClick={() => navigate('/login')}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 active:scale-95 shadow-md ${
-                pastHero
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'
+                pastHero || !isDarkHero
+                  ? 'bg-[#165ff8] hover:bg-blue-700 text-white shadow-blue-600/20'
                   : 'bg-white text-blue-600 hover:bg-blue-50 shadow-black/10'
               }`}
             >
@@ -2146,7 +2176,7 @@ const LandingPage: React.FC = () => {
             <button
               onClick={() => window.location.href = 'https://github.com/naveend07ec/pos-download/releases/download/v1.0.0/INFEPOS.Terminal.Setup.0.0.0.exe'}
               className={`hidden sm:flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg ${
-                pastHero
+                pastHero || !isDarkHero
                   ? 'bg-slate-900 text-white hover:bg-black'
                   : 'bg-black/40 hover:bg-black/60 text-white border border-white/20 backdrop-blur-xl shadow-black/30'
               }`}
@@ -2158,42 +2188,58 @@ const LandingPage: React.FC = () => {
         </div>
       </header>
 
-      {/* ── 2. HERO SECTION (Dynamic theme background color: bg-blue-600, bg-slate-950, bg-emerald-600, bg-indigo-700, bg-amber-600) ── */}
+      {/* ── 2. HERO SECTION (Dynamic theme background color: bg-[#165ff8] Blue, bg-white White, etc.) ── */}
       <section
         ref={heroRef}
         className={`relative w-full min-h-screen ${currentTheme.heroBg} transition-colors duration-500 flex flex-col items-center justify-start pt-36 pb-0 overflow-hidden`}
       >
         {/* Animated particle canvas */}
-        <ParticleCanvas />
+        <ParticleCanvas isDark={isDarkHero} />
 
         {/* Subtle center glow */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-[600px] h-[600px] bg-white/5 rounded-full blur-[100px]" />
+          <div className={`w-[600px] h-[600px] ${isDarkHero ? 'bg-white/5' : 'bg-blue-500/5'} rounded-full blur-[100px]`} />
         </div>
 
         <div className="relative z-10 flex flex-col items-center text-center px-4 max-w-6xl mx-auto">
           {/* Top badge — Introducing INFEPOS */}
-          <div className="inline-flex items-center gap-2 text-base sm:text-lg font-bold text-white tracking-wide mb-6 [text-shadow:0_0_12px_rgba(99,102,241,0.5)]">
+          <div
+            className={`inline-flex items-center gap-2 text-sm sm:text-base font-semibold tracking-normal mb-6 ${
+            isDarkHero
+              ? 'text-white bg-white/10 px-4 py-1.5 rounded-full border border-white/15 backdrop-blur-sm'
+              : 'text-[#040b48] bg-blue-50/90 px-4 py-1.5 rounded-full border border-blue-200/60 shadow-sm'
+          }`}>
             <span>Introducing</span>
-            {/* <InfeposLogoText textSize="text-base sm:text-lg" isHeroTheme={true} /> */}
-            <span>&nbsp; Offline-First POS</span>
+            <span>Offline-First POS</span>
           </div>
 
           {/* Main logo label */}
           <div className="flex items-center mb-8">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center mr-2">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-lg" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center mr-2.5">
+              <img
+                src={isDarkHero ? "/logo_large_transparent.png" : "/a_clean_high_resolution_graphic_logo_on_a_transpa.png"}
+                alt="INFEPOS Logo"
+                className={`w-full h-full object-contain ${
+                  isDarkHero
+                    ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.45)]'
+                    : 'filter drop-shadow-sm'
+                }`}
+              />
             </div>
-            <InfeposLogoText textSize="text-2xl sm:text-3xl" isHeroTheme={true} />
+            <InfeposLogoText textSize="text-2xl sm:text-3xl" isHeroTheme={isDarkHero} />
           </div>
 
           {/* Hero headline with modern clean sans font (Clash Display / Plus Jakarta Sans) */}
-          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-clash font-bold tracking-tight text-white leading-[1.05] mb-8 max-w-5xl">
+          <h1 className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-clash font-bold tracking-tight leading-[1.05] mb-8 max-w-5xl ${
+            isDarkHero ? 'text-white' : 'text-slate-900'
+          }`}>
             Experience liftoff with the next-gen POS platform
           </h1>
 
           {/* Sub-headline */}
-          <p className="text-xl md:text-2xl text-blue-100/90 font-light max-w-2xl leading-relaxed mb-12">
+          <p className={`text-xl md:text-2xl font-light max-w-2xl leading-relaxed mb-12 ${
+            isDarkHero ? 'text-blue-100/90' : 'text-slate-600'
+          }`}>
             Process sales offline, manage your business from the cloud, and scale across locations / all in one system.
           </p>
 
@@ -2201,15 +2247,23 @@ const LandingPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
             <button
               onClick={() => window.location.href = 'https://github.com/naveend07ec/pos-download/releases/download/v1.0.0/INFEPOS.Terminal.Setup.0.0.0.exe'}
-              className="flex items-center gap-2.5 px-9 py-4 bg-black/45 hover:bg-black/65 text-white border border-white/20 hover:border-white/35 backdrop-blur-xl rounded-full font-semibold text-base shadow-2xl shadow-black/40 transition-all hover:scale-105 hover:-translate-y-0.5"
+              className={`flex items-center gap-2.5 px-9 py-4 rounded-full font-semibold text-base transition-all hover:scale-105 hover:-translate-y-0.5 ${
+                isDarkHero
+                  ? 'bg-black/45 hover:bg-black/65 text-white border border-white/20 hover:border-white/35 backdrop-blur-xl shadow-2xl shadow-black/40'
+                  : 'bg-slate-900 hover:bg-black text-white shadow-xl shadow-slate-900/20'
+              }`}
             >
               Download App <Download size={18} />
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="flex items-center gap-2.5 px-9 py-4 bg-white text-slate-900 rounded-full font-semibold text-base shadow-2xl hover:bg-slate-50 transition-all hover:scale-105 hover:-translate-y-0.5"
+              className={`flex items-center gap-2.5 px-9 py-4 rounded-full font-semibold text-base transition-all hover:scale-105 hover:-translate-y-0.5 ${
+                isDarkHero
+                  ? 'bg-white text-slate-900 hover:bg-slate-50 shadow-2xl'
+                  : 'bg-[#165ff8] hover:bg-blue-700 text-white shadow-xl shadow-blue-600/25'
+              }`}
             >
-              Explore Admin <LogIn size={18} className="text-blue-600" />
+              Explore Admin <LogIn size={18} className={isDarkHero ? 'text-blue-600' : 'text-white'} />
             </button>
           </div>
         </div>
@@ -2345,7 +2399,7 @@ const LandingPage: React.FC = () => {
             <div className="text-xl md:text-2xl text-[#86868b] font-medium leading-relaxed flex items-center justify-center flex-wrap gap-1.5">
               <div className="flex items-center">
                 <div className="w-7 h-7 flex items-center justify-center mr-1">
-                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
+                  <img src="/a_clean_high_resolution_graphic_logo_on_a_transpa.png" alt="INFEPOS Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
                 </div>
                 <InfeposLogoText textSize="text-xl md:text-2xl" isHeroTheme={false} />
               </div>
@@ -2868,7 +2922,7 @@ const LandingPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <div className="flex items-center">
                 <div className="w-6 h-6 flex items-center justify-center mr-1">
-                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
+                  <img src="/a_clean_high_resolution_graphic_logo_on_a_transpa.png" alt="INFEPOS Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
                 </div>
                 <InfeposLogoText textSize="text-sm" isHeroTheme={false} />
               </div>

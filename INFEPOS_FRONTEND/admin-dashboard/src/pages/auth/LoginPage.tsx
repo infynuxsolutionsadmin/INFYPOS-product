@@ -59,7 +59,7 @@ const LoginPage: React.FC = () => {
             {/* Logo Image / Symbol Banner */}
             <div className="mb-6 p-4 rounded-3xl bg-slate-900/60 border border-white/10 backdrop-blur-xl shadow-2xl flex flex-col items-center gap-3 transform hover:scale-105 transition-transform duration-300">
               <img
-                src="/logo.png"
+                src="/logo_large_transparent.png"
                 alt="INFEPOS Logo"
                 className="h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(37,99,235,0.4)]"
                 onError={(e) => {

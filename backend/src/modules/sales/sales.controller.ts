@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Post,
@@ -26,8 +28,23 @@ export class SalesController {
   async create(
     @CurrentUser('tenantId') tenantId: string,
     @CurrentUser('userId') userId: string,
+    @Headers('idempotency-key') idempotencyHeader: string | undefined,
     @Body() dto: CreateSaleDto,
   ) {
+    if (idempotencyHeader) {
+      if (typeof idempotencyHeader !== 'string' || idempotencyHeader.trim().length === 0) {
+        throw new BadRequestException('Idempotency-Key header must be a non-empty string');
+      }
+      if (idempotencyHeader.length > 100) {
+        throw new BadRequestException('Idempotency-Key header must not exceed 100 characters');
+      }
+      if (dto.idempotencyKey && dto.idempotencyKey !== idempotencyHeader) {
+        throw new BadRequestException('Idempotency-Key header does not match body idempotencyKey');
+      }
+      if (!dto.idempotencyKey) {
+        dto.idempotencyKey = idempotencyHeader;
+      }
+    }
     return this.salesService.create(tenantId, userId, dto);
   }
 

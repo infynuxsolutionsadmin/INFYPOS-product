@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Eye, Trash2 } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, X } from 'lucide-react';
 import type { Purchase, FindPurchasesQuery, PurchaseStatus } from '../../types/purchases';
 import { getPurchases } from '../../api/purchases.api';
 import { useAuthStore } from '../../stores/authStore';
+import { useDebounce } from '../../hooks/useDebounce';
 import PurchaseFormModal from '../../components/purchases/PurchaseFormModal';
 import PurchaseDetailsModal from '../../components/purchases/PurchaseDetailsModal';
 import DeletePurchaseConfirmModal from '../../components/purchases/DeletePurchaseConfirmModal';
@@ -23,6 +24,16 @@ const PurchasesPage: React.FC = () => {
     search: '',
     status: undefined,
   });
+
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 400);
+
+  useEffect(() => {
+    setQuery(prev => {
+      if (prev.search === debouncedSearch) return prev;
+      return { ...prev, search: debouncedSearch, page: 1 };
+    });
+  }, [debouncedSearch]);
   
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -55,15 +66,11 @@ const PurchasesPage: React.FC = () => {
   }, [query, canRead]);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchPurchases();
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
+    fetchPurchases();
   }, [fetchPurchases]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(prev => ({ ...prev, search: e.target.value, page: 1 }));
+    setSearchInput(e.target.value);
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -115,11 +122,21 @@ const PurchasesPage: React.FC = () => {
             </div>
             <input
               type="text"
-              value={query.search || ''}
+              value={searchInput}
               onChange={handleSearchChange}
-              className="block w-full pl-11 pr-4 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
+              className="block w-full pl-11 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
               placeholder="Search by Purchase # or Supplier..."
             />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => setSearchInput('')}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="w-full sm:w-48">
             <select

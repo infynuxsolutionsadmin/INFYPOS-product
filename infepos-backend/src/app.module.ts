@@ -44,7 +44,7 @@ import { ShiftsModule } from './modules/shifts/shifts.module';
     }),
     ThrottlerModule.forRoot([{
       ttl: 60000,
-      limit: 10, // Default 10 requests per minute
+      limit: 300, // 300 requests per minute for dashboard browsing & search
     }]),
     DatabaseModule,
     AuthModule,

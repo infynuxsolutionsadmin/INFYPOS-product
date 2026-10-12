@@ -29,3 +29,19 @@
   font-weight: 200;
   letter-spacing: 0.15em;
 }
+
+@font-face {
+  font-family: 'Gondens DEMO';
+  src: url('/fonts/Gondens-DEMO.otf') format('opentype'),
+       local('Gondens DEMO'),
+       local('GondensDEMO'),
+       local('Gondens');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-gondens {
+  font-family: 'Gondens DEMO', 'Thunder', 'Clash Display', sans-serif;
+}
+

@@ -84,7 +84,11 @@ export class SyncService {
 
         // 2. Route event to appropriate service
         if (event.eventType === 'SALE') {
-          processedPayload = await this.salesService.create(tenantId, userId, event.payload, true);
+          const salePayload = {
+            ...event.payload,
+            idempotencyKey: event.payload?.idempotencyKey || event.eventId,
+          };
+          processedPayload = await this.salesService.create(tenantId, userId, salePayload, true);
         } else if (event.eventType === 'SALE_RETURN') {
           processedPayload = await this.salesReturnsService.create(tenantId, userId, event.payload, true);
         } else if (event.eventType === 'SHIFT_OPEN') {

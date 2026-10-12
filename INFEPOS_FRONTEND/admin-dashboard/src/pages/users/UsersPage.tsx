@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import type { User, FindUsersQuery, UserStatus } from '../../types/users';
 import { getUsers } from '../../api/users.api';
 import { useAuthStore } from '../../stores/authStore';
+import { useDebounce } from '../../hooks/useDebounce';
 import UserStatusBadge from '../../components/users/UserStatusBadge';
 import UserDetailsModal from '../../components/users/UserDetailsModal';
 import UserFormModal from '../../components/users/UserFormModal';
@@ -26,6 +27,16 @@ const UsersPage: React.FC = () => {
     search: '',
     status: undefined,
   });
+
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 400);
+
+  useEffect(() => {
+    setQuery(prev => {
+      if (prev.search === debouncedSearch) return prev;
+      return { ...prev, search: debouncedSearch, page: 1 };
+    });
+  }, [debouncedSearch]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -74,12 +85,11 @@ const UsersPage: React.FC = () => {
   }, [query, canRead]);
 
   useEffect(() => {
-    const timer = setTimeout(fetchUsers, 300);
-    return () => clearTimeout(timer);
+    fetchUsers();
   }, [fetchUsers]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(prev => ({ ...prev, search: e.target.value, page: 1 }));
+    setSearchInput(e.target.value);
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -140,11 +150,20 @@ const UsersPage: React.FC = () => {
             </div>
             <input
               type="text"
-              value={query.search || ''}
+              value={searchInput}
               onChange={handleSearchChange}
               placeholder="Search by name or email..."
-              className="block w-full pl-11 pr-4 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
+              className="block w-full pl-11 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
             />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput('')}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="w-full sm:w-40">
             <select

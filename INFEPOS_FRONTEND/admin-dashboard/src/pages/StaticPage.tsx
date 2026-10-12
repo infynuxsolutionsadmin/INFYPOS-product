@@ -5,24 +5,23 @@ const InfeposLogoText: React.FC<{
   textSize?: string;
   isHeroTheme?: boolean;
 }> = ({ textSize = 'text-xl', isHeroTheme = false }) => {
+  const gradId = `infepos-e-gold-${isHeroTheme ? 'dark' : 'light'}`;
   return (
-    <span className={`${textSize} font-['Orbitron'] font-black tracking-[0.12em] inline-flex items-center leading-none select-none uppercase ${isHeroTheme ? 'text-white' : 'text-slate-950'}`}>
+    <span className={`${textSize} font-['Orbitron'] font-black tracking-[0.12em] inline-flex items-center leading-none select-none uppercase ${isHeroTheme ? 'text-white' : 'text-[#040b48]'}`}>
       <span>INF</span>
       <svg viewBox="0 0 78 70" className="inline-block h-[0.67em] w-auto align-middle mx-[0.05em]" fill="none">
-        {!isHeroTheme && (
-          <defs>
-            <linearGradient id="infepos-e-static-light" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#2563eb" />
-              <stop offset="35%" stopColor="#4f46e5" />
-              <stop offset="70%" stopColor="#7c3aed" />
-              <stop offset="100%" stopColor="#3b82f6" />
-            </linearGradient>
-          </defs>
-        )}
+        <defs>
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#c9953d" />
+            <stop offset="30%" stopColor="#eccd96" />
+            <stop offset="70%" stopColor="#dfb880" />
+            <stop offset="100%" stopColor="#d2a153" />
+          </linearGradient>
+        </defs>
         {/* Top Bar */}
         <rect x="0" y="0" width="78" height="18" rx="4" fill="currentColor" />
-        {/* Middle Bar: Solid White for Hero theme, Violet-Blue for Light themes */}
-        <rect x="0" y="26" width="78" height="18" rx="4" fill={isHeroTheme ? 'currentColor' : 'url(#infepos-e-static-light)'} />
+        {/* Middle Golden Ribbon Bar */}
+        <rect x="0" y="26" width="78" height="18" rx="4" fill={`url(#${gradId})`} />
         {/* Bottom Bar */}
         <rect x="0" y="52" width="78" height="18" rx="4" fill="currentColor" />
       </svg>
@@ -47,7 +46,7 @@ const StaticPage: React.FC<StaticPageProps> = ({ title }) => {
       <header className="bg-white border-b border-slate-200 py-4 px-6 md:px-12 flex items-center justify-between shadow-sm sticky top-0 z-50">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
           <div className="w-10 h-10 flex items-center justify-center">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            <img src="/a_clean_high_resolution_graphic_logo_on_a_transpa.png" alt="INFEPOS Logo" className="w-full h-full object-contain" />
           </div>
           <InfeposLogoText textSize="text-xl" isHeroTheme={false} />
         </div>

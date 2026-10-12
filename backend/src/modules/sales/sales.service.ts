@@ -10,6 +10,7 @@ import { InventoryStatus, Prisma, ProductStatus, StoreStatus, UserStatus, SaleSt
 import { PrismaService } from '../../database/prisma.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { FindSalesQueryDto } from './dto/find-sales-query.dto';
+import { calculateSaleRequestHash } from './utils/sale-idempotency.util';
 
 @Injectable()
 export class SalesService {
@@ -25,6 +26,60 @@ export class SalesService {
       cashierId: userId,
       itemCount: dto.items.length,
     });
+
+    const effectiveIdempotencyKey =
+      dto.idempotencyKey || (isSync && (dto as any).eventId ? (dto as any).eventId : undefined);
+
+    let requestHash: string | null = null;
+
+    if (effectiveIdempotencyKey) {
+      requestHash = calculateSaleRequestHash(dto);
+
+      const existingSale = await this.prisma.sale.findFirst({
+        where: {
+          tenantId,
+          idempotencyKey: effectiveIdempotencyKey,
+        },
+        include: {
+          items: true,
+          payments: true,
+        },
+      });
+
+      if (existingSale) {
+        if (existingSale.requestHash !== requestHash) {
+          this.logger.warn({
+            event: 'IDEMPOTENCY_CONFLICT',
+            tenantId,
+            idempotencyKey: effectiveIdempotencyKey,
+            existingHash: existingSale.requestHash,
+            incomingHash: requestHash,
+          });
+          throw new ConflictException(
+            'Idempotency key has already been used for a different checkout operation',
+          );
+        }
+
+        this.logger.log({
+          event: 'SALE_IDEMPOTENT_REPLAY',
+          tenantId,
+          saleId: existingSale.id,
+          saleNumber: existingSale.saleNumber,
+          idempotencyKey: effectiveIdempotencyKey,
+        });
+
+        return this.formatSaleResponse(existingSale);
+      }
+    } else {
+      this.logger.warn({
+        event: 'UNPROTECTED_SALE_CREATION',
+        tenantId,
+        cashierId: userId,
+        storeId: dto.storeId,
+        message:
+          'Direct sale creation request missing idempotency key. Client cannot be protected against duplicate submissions on network retries.',
+      });
+    }
 
     try {
       // 0. Validate Shift
@@ -103,210 +158,292 @@ export class SalesService {
         }
       }
 
-      return await this.prisma.$transaction(async (tx) => {
-        let subtotal = new Prisma.Decimal(0);
-        let taxAmount = new Prisma.Decimal(0);
-        const saleItemsToCreate = [];
-        const stockMovementsData = [];
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          let subtotal = new Prisma.Decimal(0);
+          let taxAmount = new Prisma.Decimal(0);
+          const saleItemsToCreate = [];
+          const stockMovementsData = [];
 
-        for (const item of dto.items) {
-          // Validate Product
-          const product = await tx.product.findFirst({
-            where: { id: item.productId, tenantId },
-          });
-
-          if (!product) {
-            throw new NotFoundException(`Product ${item.productId} not found or does not belong to tenant`);
-          }
-          if (product.status !== ProductStatus.ACTIVE) {
-            throw new BadRequestException(`Product ${product.name} is inactive`);
-          }
-
-          const quantity = new Prisma.Decimal(item.quantity);
-
-          if (product.trackInventory) {
-            // Validate Inventory
-            const inventory = await tx.inventory.findUnique({
-              where: {
-                storeId_productId: {
-                  storeId: dto.storeId,
-                  productId: item.productId,
-                },
-              },
+          for (const item of dto.items) {
+            // Validate Product
+            const product = await tx.product.findFirst({
+              where: { id: item.productId, tenantId },
             });
 
-            if (!inventory) {
-              throw new NotFoundException(
-                `Inventory record not found for product ${product.name} in this store`,
-              );
+            if (!product) {
+              throw new NotFoundException(`Product ${item.productId} not found or does not belong to tenant`);
             }
-            if (inventory.status !== InventoryStatus.ACTIVE) {
-              throw new BadRequestException(`Inventory for product ${product.name} is inactive`);
+            if (product.status !== ProductStatus.ACTIVE) {
+              throw new BadRequestException(`Product ${product.name} is inactive`);
             }
 
-            const availableStock = inventory.quantityOnHand.sub(inventory.reservedQuantity);
-            
-            if (!isSync && availableStock.lt(quantity)) {
-              throw new ConflictException(
-                `Insufficient stock for product ${product.name}. Available: ${availableStock.toString()}, Requested: ${quantity.toString()}`,
-              );
-            }
+            const quantity = new Prisma.Decimal(item.quantity);
 
-            // Atomic Inventory Deduction
-            const updateResult = await tx.inventory.updateMany({
-              where: {
-                id: inventory.id,
-                ...(isSync ? {} : {
-                  quantityOnHand: {
-                    gte: quantity, // Must still be enough stock atomically if not sync
+            if (product.trackInventory) {
+              // Validate Inventory
+              const inventory = await tx.inventory.findUnique({
+                where: {
+                  storeId_productId: {
+                    storeId: dto.storeId,
+                    productId: item.productId,
                   },
-                }),
-              },
-              data: {
-                quantityOnHand: {
-                  decrement: quantity,
                 },
-              },
+              });
+
+              if (!inventory) {
+                throw new NotFoundException(
+                  `Inventory record not found for product ${product.name} in this store`,
+                );
+              }
+              if (inventory.status !== InventoryStatus.ACTIVE) {
+                throw new BadRequestException(`Inventory for product ${product.name} is inactive`);
+              }
+
+              const availableStock = inventory.quantityOnHand.sub(inventory.reservedQuantity);
+              
+              if (!isSync && availableStock.lt(quantity)) {
+                throw new ConflictException(
+                  `Insufficient stock for product ${product.name}. Available: ${availableStock.toString()}, Requested: ${quantity.toString()}`,
+                );
+              }
+
+              // Atomic Inventory Deduction
+              const updateResult = await tx.inventory.updateMany({
+                where: {
+                  id: inventory.id,
+                  ...(isSync ? {} : {
+                    quantityOnHand: {
+                      gte: quantity, // Must still be enough stock atomically if not sync
+                    },
+                  }),
+                },
+                data: {
+                  quantityOnHand: {
+                    decrement: quantity,
+                  },
+                },
+              });
+
+              if (updateResult.count === 0) {
+                throw new ConflictException(
+                  `Race condition detected or insufficient stock during deduction for product ${product.name}`,
+                );
+              }
+              
+              const balanceBefore = inventory.quantityOnHand;
+              const balanceAfter = balanceBefore.sub(quantity);
+
+              // Record StockMovement
+              stockMovementsData.push({
+                tenantId,
+                storeId: dto.storeId,
+                productId: product.id,
+                inventoryId: inventory.id,
+                referenceType: 'SALE',
+                movementType: 'SALE',
+                quantity: quantity.mul(-1),
+                balanceBefore,
+                balanceAfter,
+                performedBy: userId,
+                remarks: `Product sold`,
+              });
+            }
+
+            // Decimal Computations
+            const unitPrice = new Prisma.Decimal(product.sellingPrice);
+            const vatRate = new Prisma.Decimal(product.vatRate);
+
+            const lineTotal = unitPrice.mul(quantity);
+            const lineTax = lineTotal.mul(vatRate.div(100));
+
+            subtotal = subtotal.add(lineTotal);
+            taxAmount = taxAmount.add(lineTax);
+
+            saleItemsToCreate.push({
+              productId: product.id,
+              productName: product.name,
+              sku: product.sku,
+              barcode: product.barcode,
+              quantity: quantity,
+              unitPrice: unitPrice,
+              vatRate: vatRate,
+              lineTotal: lineTotal,
             });
 
-            if (updateResult.count === 0) {
-              throw new ConflictException(
-                `Race condition detected or insufficient stock during deduction for product ${product.name}`,
-              );
-            }
-            
-            const balanceBefore = inventory.quantityOnHand;
-            const balanceAfter = balanceBefore.sub(quantity);
+          }
 
-            // Record StockMovement
-            stockMovementsData.push({
+          // FIN-02: Validate discount bounds
+          const discountAmount = dto.discountAmount ? new Prisma.Decimal(dto.discountAmount) : new Prisma.Decimal(0);
+          if (discountAmount.lt(0)) {
+            throw new BadRequestException('Discount amount cannot be negative');
+          }
+          if (discountAmount.gt(subtotal)) {
+            throw new BadRequestException('Discount amount cannot exceed the cart subtotal');
+          }
+
+          const grandTotal = subtotal.add(taxAmount).sub(discountAmount);
+          if (grandTotal.lt(0)) {
+            throw new BadRequestException('Grand total cannot be negative');
+          }
+
+          const roundedGrandTotal = new Prisma.Decimal(grandTotal.toFixed(2));
+
+          // FIN-01: Validate payment tenders against grand total
+          const paymentDtos = dto.payments && dto.payments.length > 0
+            ? dto.payments
+            : (dto as any).paymentMethod
+              ? [{ paymentMethod: (dto as any).paymentMethod, amount: Number(roundedGrandTotal.toFixed(2)) }]
+              : [];
+
+          if (paymentDtos.length === 0) {
+            throw new BadRequestException('At least one payment tender is required');
+          }
+
+          let totalPaid = new Prisma.Decimal(0);
+          for (const p of paymentDtos) {
+            const pAmount = new Prisma.Decimal(p.amount);
+            if (pAmount.lte(0)) {
+              throw new BadRequestException('Payment tender amount must be greater than zero');
+            }
+            totalPaid = totalPaid.add(pAmount);
+          }
+
+          const roundedTotalPaid = new Prisma.Decimal(totalPaid.toFixed(2));
+
+          if (!roundedTotalPaid.equals(roundedGrandTotal)) {
+            throw new BadRequestException(
+              `Total payments tendered (${roundedTotalPaid.toString()}) do not match the required grand total (${roundedGrandTotal.toString()})`,
+            );
+          }
+
+          // Generate Unique Sale Number safely
+          const dateNow = new Date();
+          const dateStr = dateNow.toISOString().slice(0, 10).replace(/-/g, '');
+          const timeUnique = Date.now().toString().slice(-6);
+          const randomDigits = Math.floor(1000 + Math.random() * 9000).toString();
+          const saleNumber = `INV-${dateStr}-${timeUnique}${randomDigits}`;
+
+          const sale = await tx.sale.create({
+            data: {
               tenantId,
               storeId: dto.storeId,
-              productId: product.id,
-              inventoryId: inventory.id,
-              referenceType: 'SALE',
-              movementType: 'SALE',
-              quantity: quantity.mul(-1),
-              balanceBefore,
-              balanceAfter,
-              performedBy: userId,
-              remarks: `Product sold`,
-            });
-          }
-
-          // Decimal Computations
-          const unitPrice = new Prisma.Decimal(product.sellingPrice);
-          const vatRate = new Prisma.Decimal(product.vatRate);
-
-          const lineTotal = unitPrice.mul(quantity);
-          const lineTax = lineTotal.mul(vatRate.div(100));
-
-          subtotal = subtotal.add(lineTotal);
-          taxAmount = taxAmount.add(lineTax);
-
-          saleItemsToCreate.push({
-            productId: product.id,
-            productName: product.name,
-            sku: product.sku,
-            barcode: product.barcode,
-            quantity: quantity,
-            unitPrice: unitPrice,
-            vatRate: vatRate,
-            lineTotal: lineTotal,
+              userId,
+              customerId: customer?.id || null,
+              customerName: customer ? `${customer.firstName} ${customer.lastName || ''}`.trim() : null,
+              customerCode: customer?.customerCode || null,
+              saleNumber,
+              idempotencyKey: effectiveIdempotencyKey || null,
+              requestHash: requestHash || null,
+              subtotal,
+              taxAmount,
+              discountAmount,
+              grandTotal: roundedGrandTotal,
+              status: SaleStatus.COMPLETED,
+              notes: dto.notes,
+              shiftId: dto.shiftId,
+              items: {
+                create: saleItemsToCreate,
+              },
+              payments: {
+                create: paymentDtos.map(p => ({
+                  paymentMethod: p.paymentMethod,
+                  amount: new Prisma.Decimal(p.amount),
+                  transactionReference: p.transactionReference
+                }))
+              }
+            },
+            include: {
+              items: true,
+              payments: true,
+            },
           });
 
-        }
+          if (stockMovementsData.length > 0) {
+            for (const sm of stockMovementsData) {
+              sm.referenceId = sale.id;
+            }
+            await tx.stockMovement.createMany({ data: stockMovementsData });
+          }
 
-        const discountAmount = dto.discountAmount ? new Prisma.Decimal(dto.discountAmount) : new Prisma.Decimal(0);
-        const grandTotal = subtotal.add(taxAmount).sub(discountAmount);
-
-        // Generate Unique Sale Number
-        const dateNow = new Date();
-        const saleNumber = `INV-${dateNow.getFullYear()}${(dateNow.getMonth() + 1)
-          .toString()
-          .padStart(2, '0')}${dateNow.getDate().toString().padStart(2, '0')}-${Math.floor(
-          Math.random() * 1000000,
-        ).toString().padStart(6, '0')}`;
-
-        const sale = await tx.sale.create({
-          data: {
+          this.logger.log({
+            event: 'SALE_CREATED_SUCCESS',
             tenantId,
             storeId: dto.storeId,
-            userId,
-            customerId: customer?.id || null,
-            customerName: customer ? `${customer.firstName} ${customer.lastName || ''}`.trim() : null,
-            customerCode: customer?.customerCode || null,
+            cashierId: userId,
             saleNumber,
-            subtotal,
-            taxAmount,
-            discountAmount: dto.discountAmount || 0,
-            grandTotal,
-            status: SaleStatus.COMPLETED,
-            notes: dto.notes,
-            shiftId: dto.shiftId,
-            items: {
-              create: saleItemsToCreate,
-            },
-            payments: {
-              create: dto.payments ? dto.payments.map(p => ({
-                paymentMethod: p.paymentMethod,
-                amount: p.amount,
-                transactionReference: p.transactionReference
-              })) : [{
-                paymentMethod: (dto as any).paymentMethod || PaymentMethod.CASH,
-                amount: grandTotal,
-              }]
-            }
-          },
-          include: {
-            items: true,
-            payments: true,
-          },
-        });
+            grandTotal: grandTotal.toString(),
+            idempotencyKey: effectiveIdempotencyKey || undefined,
+          });
 
-        if (stockMovementsData.length > 0) {
-          for (const sm of stockMovementsData) {
-            sm.referenceId = sale.id;
+          return this.formatSaleResponse(sale);
+        });
+      } catch (error: any) {
+        // Handle concurrent uniqueness collision (P2002)
+        if (error?.code === 'P2002' && effectiveIdempotencyKey) {
+          const target = error?.meta?.target;
+          const constraint = error?.meta?.constraint as string | undefined;
+
+          // Determine if target/constraint explicitly points to idempotency key
+          const hasExplicitIdempotencyTarget =
+            (Array.isArray(target) &&
+              target.some((t: string) => t.includes('idempotency_key') || t.includes('idempotencyKey'))) ||
+            (typeof target === 'string' && target.includes('idempotency_key')) ||
+            (typeof constraint === 'string' && constraint.includes('idempotency_key'));
+
+          // If target is explicitly something else (e.g. ['sale_number']), immediately rethrow
+          const hasExplicitOtherTarget =
+            (Array.isArray(target) && target.length > 0 && !hasExplicitIdempotencyTarget) ||
+            (typeof target === 'string' && target.length > 0 && !hasExplicitIdempotencyTarget);
+
+          if (hasExplicitOtherTarget) {
+            throw error;
           }
-          await tx.stockMovement.createMany({ data: stockMovementsData });
+
+          // If target is missing/ambiguous or explicitly idempotency, check whether winning sale can be reliably established
+          const winningSale = await this.prisma.sale.findFirst({
+            where: {
+              tenantId,
+              idempotencyKey: effectiveIdempotencyKey,
+            },
+            include: {
+              items: true,
+              payments: true,
+            },
+          });
+
+          if (winningSale) {
+            if (winningSale.requestHash !== requestHash) {
+              throw new ConflictException(
+                'Idempotency key has already been used for a different checkout operation',
+              );
+            }
+
+            this.logger.log({
+              event: 'SALE_CONCURRENT_IDEMPOTENT_RESOLVED',
+              tenantId,
+              saleId: winningSale.id,
+              saleNumber: winningSale.saleNumber,
+              idempotencyKey: effectiveIdempotencyKey,
+              targetExplicit: hasExplicitIdempotencyTarget,
+            });
+
+            return this.formatSaleResponse(winningSale);
+          } else {
+            // No winning sale found with this idempotency key.
+            // Collision was NOT caused by this idempotency key (or cannot be established reliably).
+            this.logger.warn({
+              event: 'UNRESOLVED_P2002_RETHROWN',
+              tenantId,
+              idempotencyKey: effectiveIdempotencyKey,
+              errorMeta: error?.meta,
+              message: 'P2002 constraint violation occurred but no committed sale exists for this idempotency key',
+            });
+            throw error;
+          }
         }
-
-        this.logger.log({
-          event: 'SALE_CREATED_SUCCESS',
-          tenantId,
-          storeId: dto.storeId,
-          cashierId: userId,
-          saleNumber,
-          grandTotal: grandTotal.toString(),
-        });
-
-        return {
-          saleNumber: sale.saleNumber,
-          customerId: sale.customerId,
-          customerName: sale.customerName,
-          customerCode: sale.customerCode,
-          grandTotal: sale.grandTotal.toString(),
-          subtotal: sale.subtotal.toString(),
-          taxAmount: sale.taxAmount.toString(),
-          discountAmount: sale.discountAmount.toString(),
-          status: sale.status,
-          createdAt: sale.createdAt,
-          items: sale.items.map(item => ({
-            productName: item.productName,
-            sku: item.sku,
-            barcode: item.barcode,
-            quantity: item.quantity.toString(),
-            unitPrice: item.unitPrice.toString(),
-            vatRate: item.vatRate.toString(),
-            lineTotal: item.lineTotal.toString(),
-          })),
-          payments: sale.payments.map(payment => ({
-            paymentMethod: payment.paymentMethod,
-            amount: payment.amount.toString(),
-            transactionReference: payment.transactionReference
-          })),
-        };
-      });
+        throw error;
+      }
     } catch (error) {
       this.logger.error({
         event: 'SALE_CREATION_FAILED',
@@ -317,6 +454,37 @@ export class SalesService {
       });
       throw error;
     }
+  }
+
+  private formatSaleResponse(sale: any) {
+    return {
+      id: sale.id,
+      saleNumber: sale.saleNumber,
+      customerId: sale.customerId,
+      customerName: sale.customerName,
+      customerCode: sale.customerCode,
+      grandTotal: sale.grandTotal.toString(),
+      subtotal: sale.subtotal.toString(),
+      taxAmount: sale.taxAmount.toString(),
+      discountAmount: sale.discountAmount.toString(),
+      status: sale.status,
+      createdAt: sale.createdAt,
+      items: (sale.items || []).map((item: any) => ({
+        id: item.id,
+        productName: item.productName,
+        sku: item.sku,
+        barcode: item.barcode,
+        quantity: item.quantity.toString(),
+        unitPrice: item.unitPrice.toString(),
+        vatRate: item.vatRate.toString(),
+        lineTotal: item.lineTotal.toString(),
+      })),
+      payments: (sale.payments || []).map((payment: any) => ({
+        paymentMethod: payment.paymentMethod,
+        amount: payment.amount.toString(),
+        transactionReference: payment.transactionReference,
+      })),
+    };
   }
 
   async findAll(tenantId: string, query: FindSalesQueryDto) {

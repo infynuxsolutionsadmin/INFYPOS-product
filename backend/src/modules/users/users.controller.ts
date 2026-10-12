@@ -64,7 +64,8 @@ export class UsersController {
     return this.usersService.remove(tenantId, id, currentUserId);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('sales.create')
   @Get('cashiers/:storeId')
   async getCashiersForStore(
     @CurrentUser('tenantId') tenantId: string,

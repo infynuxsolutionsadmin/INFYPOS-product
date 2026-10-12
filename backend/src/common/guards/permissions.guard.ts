@@ -32,7 +32,21 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('User context missing for permissions validation');
     }
 
-    if (user.roleCode === 'SUPER_ADMIN' || user.roleCode === 'OWNER') {
+    if (user.roleCode === 'SUPER_ADMIN') {
+      return true;
+    }
+
+    // System-level operations (e.g., system.tenants.manage, portal.customers.manage) strictly require SUPER_ADMIN
+    const hasSystemPermission = requiredPermissions.some(
+      (permission) => permission.startsWith('system.') || permission.startsWith('portal.'),
+    );
+    if (hasSystemPermission) {
+      throw new ForbiddenException(
+        'Access denied. Platform administrator privileges required.',
+      );
+    }
+
+    if (user.roleCode === 'OWNER') {
       return true;
     }
 

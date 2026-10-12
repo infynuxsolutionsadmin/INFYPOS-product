@@ -16,12 +16,19 @@ import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('tenants')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Permissions('system.tenants.manage')
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
+
+  @Get('me')
+  @Permissions('tenants.read')
+  getMyTenant(@CurrentUser('tenantId') tenantId: string) {
+    return this.tenantsService.findOne(tenantId);
+  }
 
   @Post()
   create(@Body() dto: CreateTenantDto) {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Edit, Trash2, Search, Shield, Users as UsersIcon } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Search, Shield, Users as UsersIcon, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Role, FindRolesQuery, RoleStatus } from '../../types/roles';
 import { getRoles, getRoleById } from '../../api/roles.api';
 import { useAuthStore } from '../../stores/authStore';
+import { useDebounce } from '../../hooks/useDebounce';
 import RoleStatusBadge from '../../components/roles/RoleStatusBadge';
 import RoleDetailsModal from '../../components/roles/RoleDetailsModal';
 import RoleFormModal from '../../components/roles/RoleFormModal';
@@ -24,6 +25,17 @@ const RolesPermissionsPage: React.FC = () => {
   const [query, setQuery] = useState<FindRolesQuery>({
     page: 1, limit: 10, search: '', status: undefined,
   });
+
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 400);
+
+  useEffect(() => {
+    setQuery(prev => {
+      if (prev.search === debouncedSearch) return prev;
+      return { ...prev, search: debouncedSearch, page: 1 };
+    });
+  }, [debouncedSearch]);
+
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -62,8 +74,7 @@ const RolesPermissionsPage: React.FC = () => {
   }, [query, canRead]);
 
   useEffect(() => {
-    const timer = setTimeout(fetchRoles, 300);
-    return () => clearTimeout(timer);
+    fetchRoles();
   }, [fetchRoles]);
 
   const openPermissions = async (role: Role) => {
@@ -115,11 +126,22 @@ const RolesPermissionsPage: React.FC = () => {
               <Search className="h-4 w-4 text-gray-400" />
             </div>
             <input
-              type="text" value={query.search || ''}
-              onChange={e => setQuery(prev => ({ ...prev, search: e.target.value, page: 1 }))}
+              type="text"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
               placeholder="Search by name or code..."
-              className="block w-full pl-11 pr-4 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
+              className="block w-full pl-11 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
             />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => setSearchInput('')}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="w-full sm:w-40">
             <select

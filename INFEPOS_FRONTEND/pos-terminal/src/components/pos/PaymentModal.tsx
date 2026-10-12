@@ -34,6 +34,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Stable idempotency key generated once per checkout modal session and reused on retries
+  const [idempotencyKey] = useState<string>(() => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  });
+
   const parsedDiscount = parseFloat(discountAmount) || 0;
   const finalTotal = Math.max(0, cartSummary.grandTotal - parsedDiscount);
 
@@ -68,6 +76,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
       storeId: user.storeId,
       customerPhone: customerPhone.trim() || undefined,
       discountAmount: parsedDiscount,
+      idempotencyKey,
       payments: [{
         paymentMethod,
         amount: finalTotal,

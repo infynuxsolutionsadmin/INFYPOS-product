@@ -60,7 +60,8 @@ export const createSale = async (data: CreateSaleRequest): Promise<Sale> => {
   }
 
   // Fallback for Web/Browser testing (non-Electron)
-  const response = await client.post<BackendResponse<Sale>>('/sales', data);
+  const headers = data.idempotencyKey ? { 'Idempotency-Key': data.idempotencyKey } : undefined;
+  const response = await client.post<BackendResponse<Sale>>('/sales', data, { headers });
   return response.data.data;
 };
 

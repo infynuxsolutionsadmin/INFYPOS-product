@@ -268,32 +268,41 @@ export class ReportsService {
     const { page = 1, limit = 20, storeId, status, search } = query;
     const skip = (Number(page) - 1) * Number(limit);
     
-    let whereQuery: string = `WHERE i."tenant_id" = '${tenantId}'::uuid`;
-    if (storeId) whereQuery += ` AND i."store_id" = '${storeId}'::uuid`;
-    if (status) whereQuery += ` AND i."status" = '${status}'`;
-    if (search) whereQuery += ` AND (p."name" ILIKE '%${search}%' OR p."sku" ILIKE '%${search}%')`;
+    const storeIdFilter = storeId ? Prisma.sql`AND i."store_id" = ${storeId}::uuid` : Prisma.empty;
+    const statusFilter = status && Object.values(InventoryStatus).includes(status as any)
+      ? Prisma.sql`AND i."status" = ${status}::"InventoryStatus"`
+      : Prisma.empty;
+    const searchFilter = search && typeof search === 'string'
+      ? Prisma.sql`AND (p."name" ILIKE ${`%${search}%`} OR p."sku" ILIKE ${`%${search}%`})`
+      : Prisma.empty;
 
-    // Calculate Available Stock safely using Raw Query
-    const totalRaw: any[] = await this.prisma.$queryRawUnsafe(`
+    // Calculate Available Stock safely using parameterized Raw Query
+    const totalRaw: any[] = await this.prisma.$queryRaw`
       SELECT COUNT(*) as count 
       FROM "inventories" i 
       INNER JOIN "products" p ON p."id" = i."product_id"
-      ${whereQuery}
-    `);
+      WHERE i."tenant_id" = ${tenantId}::uuid
+      ${storeIdFilter}
+      ${statusFilter}
+      ${searchFilter}
+    `;
 
     const total = Number(totalRaw[0]?.count || 0);
 
-    const itemsRaw: any[] = await this.prisma.$queryRawUnsafe(`
+    const itemsRaw: any[] = await this.prisma.$queryRaw`
       SELECT i.*, 
              p."name" as "productName", 
              p."sku" as "productSku",
              (i."quantity_on_hand" - i."reserved_quantity") as "availableStock"
       FROM "inventories" i 
       INNER JOIN "products" p ON p."id" = i."product_id"
-      ${whereQuery}
+      WHERE i."tenant_id" = ${tenantId}::uuid
+      ${storeIdFilter}
+      ${statusFilter}
+      ${searchFilter}
       ORDER BY p."name" ASC
       LIMIT ${Number(limit)} OFFSET ${skip}
-    `);
+    `;
 
     return {
       items: itemsRaw.map(r => ({

@@ -262,6 +262,59 @@ export class ProductsService {
     return this.findOne(tenantId, id);
   }
 
+  async restore(tenantId: string, id: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    await this.prisma.product.update({
+      where: { id },
+      data: { status: ProductStatus.ACTIVE },
+    });
+
+    return this.findOne(tenantId, id);
+  }
+
+  async permanentDelete(tenantId: string, id: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    // Check if product has any sales transaction history
+    const saleItemsCount = await this.prisma.saleItem.count({
+      where: { productId: id },
+    });
+    const saleReturnCount = await this.prisma.saleReturnItem.count({
+      where: { productId: id },
+    });
+
+    if (saleItemsCount > 0 || saleReturnCount > 0) {
+      throw new BadRequestException(
+        `Cannot permanently delete "${product.name}" because it is linked to ${saleItemsCount + saleReturnCount} completed sales transaction(s). To maintain financial tax audit compliance and receipt history, this product must remain Archived (Soft Deleted).`,
+      );
+    }
+
+    // Safe catalog cleanup for products with NO sales history
+    await this.prisma.stockMovement.deleteMany({ where: { productId: id } });
+    await this.prisma.inventoryAdjustmentItem.deleteMany({ where: { productId: id } });
+    await this.prisma.stockTransferItem.deleteMany({ where: { productId: id } });
+    await this.prisma.goodsReceiptItem.deleteMany({ where: { productId: id } });
+    await this.prisma.purchaseItem.deleteMany({ where: { productId: id } });
+    await this.prisma.inventory.deleteMany({ where: { productId: id } });
+
+    await this.prisma.product.delete({ where: { id } });
+
+    return { message: 'Product permanently deleted', id };
+  }
+
   async deleteAll(tenantId: string) {
     // 1. Delete all stock movements first (foreign key to inventory)
     await this.prisma.stockMovement.deleteMany({ where: { tenantId } });

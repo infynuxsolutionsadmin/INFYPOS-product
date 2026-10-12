@@ -18,6 +18,7 @@ export interface CreateSaleRequest {
   }>;
   notes?: string;
   items: CreateSaleItemRequest[];
+  idempotencyKey?: string;
 }
 
 export type SaleStatus = 'COMPLETED' | 'VOIDED' | 'REFUNDED';

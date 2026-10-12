@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Search, RotateCcw } from 'lucide-react';
+import { Plus, Eye, Search, RotateCcw, X } from 'lucide-react';
 import type { SaleReturn, FindSaleReturnsQuery, ReturnStatus, ReturnType } from '../../types/salesReturns';
 import { getSaleReturns } from '../../api/salesReturns.api';
 import { useAuthStore } from '../../stores/authStore';
+import { useDebounce } from '../../hooks/useDebounce';
 import SaleReturnDetailsModal from '../../components/salesReturns/SaleReturnDetailsModal';
 import SaleReturnFormModal from '../../components/salesReturns/SaleReturnFormModal';
 import SaleReturnStatusBadge from '../../components/salesReturns/SaleReturnStatusBadge';
@@ -27,6 +28,16 @@ const SalesReturnsPage: React.FC = () => {
     status: undefined,
     returnType: undefined,
   });
+
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 400);
+
+  useEffect(() => {
+    setQuery(prev => {
+      if (prev.search === debouncedSearch) return prev;
+      return { ...prev, search: debouncedSearch, page: 1 };
+    });
+  }, [debouncedSearch]);
 
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -66,12 +77,11 @@ const SalesReturnsPage: React.FC = () => {
   }, [query, canRead]);
 
   useEffect(() => {
-    const timer = setTimeout(fetchReturns, 300);
-    return () => clearTimeout(timer);
+    fetchReturns();
   }, [fetchReturns]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(prev => ({ ...prev, search: e.target.value, page: 1 }));
+    setSearchInput(e.target.value);
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -115,11 +125,21 @@ const SalesReturnsPage: React.FC = () => {
             </div>
             <input
               type="text"
-              value={query.search || ''}
+              value={searchInput}
               onChange={handleSearchChange}
               placeholder="Search by return number or notes..."
-              className="block w-full pl-11 pr-4 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
+              className="block w-full pl-11 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
             />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => setSearchInput('')}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="w-full sm:w-40">
             <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>

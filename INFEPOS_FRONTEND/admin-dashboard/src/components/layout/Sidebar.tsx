@@ -23,7 +23,7 @@ const Sidebar: React.FC = () => {
   return (
     <div className="flex flex-col w-64 bg-gray-800 border-r border-gray-700">
       <div className="flex items-center justify-center h-16 bg-gray-900 space-x-2 px-4">
-        <img src="/logo.png" alt="Logo" className="h-10 w-auto object-contain" />
+        <img src="/logo_large_transparent.png" alt="INFEPOS Logo" className="h-10 w-auto object-contain" />
         <span className="text-white font-bold text-xl uppercase tracking-wider">INFEPOS Admin</span>
       </div>
       <div className="flex-1 overflow-y-auto">

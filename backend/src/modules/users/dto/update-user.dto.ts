@@ -1,5 +1,5 @@
 import { UserStatus } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, Length, Matches, MaxLength } from 'class-validator';
 
 export class UpdateUserDto {
   @IsString()
@@ -31,5 +31,8 @@ export class UpdateUserDto {
 
   @IsString()
   @IsOptional()
+  @Length(4, 4, { message: 'PIN code must be exactly 4 digits' })
+  @Matches(/^\d{4}$/, { message: 'PIN code must contain only numbers' })
   pinCode?: string;
 }
+

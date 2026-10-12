@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Eye } from 'lucide-react';
+import { Plus, Search, Eye, X } from 'lucide-react';
 import type { InventoryAdjustment, FindInventoryAdjustmentsQuery, AdjustmentReason, AdjustmentStatus } from '../../types/inventoryAdjustments';
 import type { Store } from '../../types/stores';
 import { getInventoryAdjustments } from '../../api/inventoryAdjustments.api';
 import { getStores } from '../../api/stores.api';
 import { useAuthStore } from '../../stores/authStore';
+import { useDebounce } from '../../hooks/useDebounce';
 import InventoryAdjustmentFormModal from '../../components/inventoryAdjustments/InventoryAdjustmentFormModal';
 import InventoryAdjustmentDetailsModal from '../../components/inventoryAdjustments/InventoryAdjustmentDetailsModal';
 
@@ -36,6 +37,16 @@ const InventoryAdjustmentsPage: React.FC = () => {
     reason: undefined,
     storeId: undefined,
   });
+
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 400);
+
+  useEffect(() => {
+    setQuery(prev => {
+      if (prev.search === debouncedSearch) return prev;
+      return { ...prev, search: debouncedSearch, page: 1 };
+    });
+  }, [debouncedSearch]);
   
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -79,15 +90,11 @@ const InventoryAdjustmentsPage: React.FC = () => {
   }, [query, canRead]);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchAdjustments();
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
+    fetchAdjustments();
   }, [fetchAdjustments]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(prev => ({ ...prev, search: e.target.value, page: 1 }));
+    setSearchInput(e.target.value);
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -144,11 +151,21 @@ const InventoryAdjustmentsPage: React.FC = () => {
             </div>
             <input
               type="text"
-              value={query.search || ''}
+              value={searchInput}
               onChange={handleSearchChange}
-              className="block w-full pl-11 pr-4 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
+              className="block w-full pl-11 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
               placeholder="Search Adjustment No. or Notes..."
             />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => setSearchInput('')}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="w-full sm:w-40">
             <select

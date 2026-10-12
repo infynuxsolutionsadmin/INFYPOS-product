@@ -147,65 +147,143 @@ export class AuthService {
   }
 
   async refresh(dto: RefreshTokenDto) {
-    let payload;
+    let payload: any;
     try {
       payload = await this.jwtService.verifyAsync(dto.refreshToken, {
         secret: this.configService.get<string>('jwt.refreshSecret'),
       });
     } catch (e) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const { userId, tenantId, roleId, roleCode, storeId, email } = payload;
-
+    const { userId, tenantId } = payload;
     const tokenHash = crypto.createHash('sha256').update(dto.refreshToken).digest('hex');
 
-    const matchedToken = await this.prisma.refreshToken.findUnique({
-      where: { tokenHash },
+    // Atomic refresh rotation within an interactive database transaction
+    return this.prisma.$transaction(async (tx) => {
+      const matchedToken = await tx.refreshToken.findUnique({
+        where: { tokenHash },
+      });
+
+      if (!matchedToken || matchedToken.userId !== userId) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      // 1. Expiration validation
+      if (matchedToken.expiresAt < new Date()) {
+        throw new UnauthorizedException('Refresh token has expired');
+      }
+
+      // 2. Token reuse / concurrency detection
+      if (matchedToken.revokedAt) {
+        const revokedDurationMs = Date.now() - matchedToken.revokedAt.getTime();
+        // Concurrency window (5000ms): Permits in-flight concurrent requests to fail gracefully
+        // without triggering false-positive family revocation.
+        // Security constraint: NO new token is ever issued to an already-revoked token.
+        const CONCURRENCY_WINDOW_MS = 5000;
+
+        if (revokedDurationMs > CONCURRENCY_WINDOW_MS) {
+          // Genuine stolen/replayed token reuse: Invalidate ALL active sessions for this user
+          await tx.refreshToken.updateMany({
+            where: { userId, revokedAt: null },
+            data: { revokedAt: new Date() },
+          });
+          throw new UnauthorizedException(
+            'Refresh token reuse detected. All active sessions have been invalidated. Please sign in again.',
+          );
+        } else {
+          // Concurrent request during in-flight rotation: Reject without revoking active sessions
+          throw new UnauthorizedException(
+            'Refresh token was consumed by a concurrent request. Please use the updated token.',
+          );
+        }
+      }
+
+      // 3. Atomic conditional CAS update: succeeds ONLY if revokedAt is still null
+      const updateResult = await tx.refreshToken.updateMany({
+        where: {
+          id: matchedToken.id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+
+      if (updateResult.count === 0) {
+        // Another concurrent request consumed it at this exact millisecond
+        throw new UnauthorizedException(
+          'Refresh token was consumed by a concurrent request. Please use the updated token.',
+        );
+      }
+
+      // 4. Validate user and tenant active status
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        include: { role: true, tenant: true },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      if (user.tenant.status !== 'ACTIVE' && user.tenant.code.toLowerCase() !== 'infynux') {
+        throw new ForbiddenException(`Company account is ${user.tenant.status.toLowerCase()}`);
+      }
+
+      if (user.status === UserStatus.INACTIVE || user.status === UserStatus.LOCKED) {
+        throw new ForbiddenException(`Account is ${user.status.toLowerCase()}`);
+      }
+
+      // 5. Generate and persist new token pair within transaction
+      const newPayload = {
+        userId,
+        tenantId,
+        roleId: user.roleId,
+        roleCode: user.role.code,
+        storeId: user.storeId,
+        email: user.email,
+      };
+
+      const accessToken = await this.jwtService.signAsync(newPayload, {
+        secret: this.configService.get<string>('jwt.secret'),
+        expiresIn: this.configService.get<string>('jwt.expiresIn') as any,
+      });
+
+      const refreshExpiresInStr = this.configService.get<string>('jwt.refreshExpiresIn') || '7d';
+
+      const newRefreshToken = await this.jwtService.signAsync(newPayload, {
+        secret: this.configService.get<string>('jwt.refreshSecret'),
+        expiresIn: refreshExpiresInStr as any,
+      });
+
+      const newTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
+      const expiresAt = this.calculateExpirationDate(refreshExpiresInStr);
+
+      await tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: newTokenHash,
+          expiresAt,
+        },
+      });
+
+      return {
+        accessToken,
+        refreshToken: newRefreshToken,
+      };
     });
+  }
 
-    if (!matchedToken || matchedToken.revokedAt || matchedToken.userId !== userId) {
-      throw new UnauthorizedException('Invalid refresh token');
+  async logout(dto: RefreshTokenDto) {
+    if (dto?.refreshToken) {
+      const tokenHash = crypto.createHash('sha256').update(dto.refreshToken).digest('hex');
+      await this.prisma.refreshToken.updateMany({
+        where: { tokenHash, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
     }
-
-    if (matchedToken.expiresAt < new Date()) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { role: true, tenant: true },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    if (user.tenant.status !== 'ACTIVE' && user.tenant.code.toLowerCase() !== 'infynux') {
-      throw new ForbiddenException(`Company account is ${user.tenant.status.toLowerCase()}`);
-    }
-
-    if (user.status === UserStatus.INACTIVE || user.status === UserStatus.LOCKED) {
-      throw new ForbiddenException(`Account is ${user.status.toLowerCase()}`);
-    }
-
-    const newPayload = {
-      userId,
-      tenantId,
-      roleId: user.roleId,
-      roleCode: user.role.code,
-      storeId: user.storeId,
-      email: user.email,
-    };
-
-    const accessToken = await this.jwtService.signAsync(newPayload, {
-      secret: this.configService.get<string>('jwt.secret'),
-      expiresIn: this.configService.get<string>('jwt.expiresIn') as any,
-    });
-
-    return {
-      accessToken,
-    };
+    return { message: 'Logged out successfully' };
   }
 
   async getRolePermissions(roleCode: string, tenantId: string): Promise<string[]> {

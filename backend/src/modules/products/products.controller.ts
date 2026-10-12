@@ -77,6 +77,15 @@ export class ProductsController {
     return this.productsService.update(tenantId, id, currentUserId, dto);
   }
 
+  @Permissions('products.update')
+  @Patch(':id/restore')
+  async restore(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.productsService.restore(tenantId, id);
+  }
+
   @Permissions('products.delete')
   @Delete('delete-all')
   async deleteAll(@CurrentUser('tenantId') tenantId: string) {
@@ -84,11 +93,24 @@ export class ProductsController {
   }
 
   @Permissions('products.delete')
+  @Delete(':id/permanent')
+  async permanentDelete(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.productsService.permanentDelete(tenantId, id);
+  }
+
+  @Permissions('products.delete')
   @Delete(':id')
   async remove(
     @CurrentUser('tenantId') tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
+    @Query('permanent') permanent?: string,
   ) {
+    if (permanent === 'true') {
+      return this.productsService.permanentDelete(tenantId, id);
+    }
     return this.productsService.remove(tenantId, id);
   }
 }

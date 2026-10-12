@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Search, ScanBarcode, X, Monitor, Refrigerator, WashingMachine, Smartphone, Tv, Package, Upload, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, ScanBarcode, X, Monitor, Refrigerator, WashingMachine, Smartphone, Tv, Package, Upload, Download, Archive, RotateCcw, CheckCircle2 } from 'lucide-react';
 import type { Product, FindProductsQuery, ProductStatus } from '../../types/products';
-import { getProducts } from '../../api/products.api';
+import { getProducts, restoreProduct } from '../../api/products.api';
 import { useAuthStore } from '../../stores/authStore';
 import ProductFormModal from '../../components/products/ProductFormModal';
 import DeleteConfirmModal from '../../components/products/DeleteConfirmModal';
@@ -111,6 +111,8 @@ const ProductsPage: React.FC = () => {
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'archive' | 'permanent'>('archive');
+  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
 
   const handleExportCsv = () => {
     if (products.length === 0) return;
@@ -165,16 +167,26 @@ const ProductsPage: React.FC = () => {
     }
   }, [query, canRead]);
 
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchProducts();
-    }, 300);
+  const [searchInput, setSearchInput] = useState('');
 
-    return () => clearTimeout(delayDebounceFn);
+  // Debounce search input to prevent rapid multi-keystroke API requests
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setQuery(prev => {
+        if (prev.search === searchInput) return prev;
+        return { ...prev, search: searchInput, page: 1 };
+      });
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
+  useEffect(() => {
+    fetchProducts();
   }, [fetchProducts]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(prev => ({ ...prev, search: e.target.value, page: 1 }));
+    setSearchInput(e.target.value);
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -196,9 +208,28 @@ const ProductsPage: React.FC = () => {
     setIsFormModalOpen(true);
   };
 
-  const openDeleteModal = (product: Product) => {
+  const openArchiveModal = (product: Product) => {
     setSelectedProduct(product);
+    setDeleteMode('archive');
     setIsDeleteModalOpen(true);
+  };
+
+  const openPermanentDeleteModal = (product: Product) => {
+    setSelectedProduct(product);
+    setDeleteMode('permanent');
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleRestoreProduct = async (product: Product) => {
+    try {
+      setError(null);
+      await restoreProduct(product.id);
+      setActionSuccessMessage(`Successfully restored "${product.name}" to Active catalog.`);
+      setTimeout(() => setActionSuccessMessage(null), 4000);
+      fetchProducts();
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Failed to restore product');
+    }
   };
 
   return (
@@ -260,11 +291,20 @@ const ProductsPage: React.FC = () => {
           </div>
           <input
             type="text"
-            value={query.search || ''}
+            value={searchInput}
             onChange={handleSearchChange}
-            className="block w-full pl-11 pr-4 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
+            className="block w-full pl-11 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
             placeholder="Search by Name, SKU, Barcode..."
           />
+          {searchInput && (
+            <button
+              onClick={() => { setSearchInput(''); setQuery(prev => ({ ...prev, search: '', page: 1 })); }}
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600"
+              title="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
         <div className="w-full sm:w-56">
           <select
@@ -279,6 +319,18 @@ const ProductsPage: React.FC = () => {
           </select>
         </div>
       </div>
+
+      {actionSuccessMessage && (
+        <div className="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+            <span>{actionSuccessMessage}</span>
+          </div>
+          <button onClick={() => setActionSuccessMessage(null)} className="text-emerald-600 hover:text-emerald-800 p-1">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div className="bg-white rounded-[30px] shadow-[0px_4px_24px_rgba(149,157,165,0.08)] border border-gray-100 p-6 overflow-hidden">
         {error ? (
@@ -375,10 +427,39 @@ const ProductsPage: React.FC = () => {
                             <Edit2 className="h-4 w-4" />
                           </button>
                         )}
-                        {canDelete && (
-                          <button onClick={() => openDeleteModal(product)} className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors" title="Delete">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                        {product.status === 'INACTIVE' ? (
+                          <>
+                            {canUpdate && (
+                              <button
+                                onClick={() => handleRestoreProduct(product)}
+                                className="p-2 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
+                                title="Restore Product to Active Catalog"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                onClick={() => openPermanentDeleteModal(product)}
+                                className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                title="Permanently Delete (Hard Delete)"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {canDelete && (
+                              <button
+                                onClick={() => openArchiveModal(product)}
+                                className="p-2 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                                title="Archive Product (Soft Delete)"
+                              >
+                                <Archive className="h-4 w-4" />
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
@@ -434,6 +515,7 @@ const ProductsPage: React.FC = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onSuccess={fetchProducts}
         product={selectedProduct}
+        initialMode={deleteMode}
       />
 
       <BarcodeModal

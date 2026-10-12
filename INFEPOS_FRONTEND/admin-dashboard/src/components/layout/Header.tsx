@@ -25,7 +25,7 @@ const Header: React.FC = () => {
         {/* Logo Area */}
         <div className="flex items-center space-x-2">
           <div className="w-12 h-12 flex items-center justify-center">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            <img src="/a_clean_high_resolution_graphic_logo_on_a_transpa.png" alt="INFEPOS Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 leading-tight">INFEPOS</h1>

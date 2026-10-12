@@ -316,6 +316,8 @@ model Sale {
   customerName   String?       @map("customer_name") @db.VarChar(255)
   customerCode   String?       @map("customer_code") @db.VarChar(100)
   saleNumber     String        @map("sale_number") @db.VarChar(50)
+  idempotencyKey String?       @map("idempotency_key") @db.VarChar(100)
+  requestHash    String?       @map("request_hash") @db.VarChar(64)
   subtotal       Decimal       @db.Decimal(10, 2)
   taxAmount      Decimal       @map("tax_amount") @db.Decimal(10, 2)
   discountAmount Decimal       @default(0) @map("discount_amount") @db.Decimal(10, 2)
@@ -336,10 +338,12 @@ model Sale {
   shiftId  String?      @db.Uuid
 
   @@unique([tenantId, saleNumber])
+  @@unique([tenantId, idempotencyKey])
   @@index([tenantId])
   @@index([storeId])
   @@index([userId])
   @@index([customerId])
+  @@index([idempotencyKey])
   @@index([status])
   @@map("sales")
 }

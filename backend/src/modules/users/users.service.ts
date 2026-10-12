@@ -159,7 +159,6 @@ export class UsersService {
           lastName: true,
           email: true,
           phone: true,
-          pinCode: true,
           status: true,
           roleId: true,
           storeId: true,
@@ -224,8 +223,8 @@ export class UsersService {
         lastName: true,
         email: true,
         phone: true,
-        pinCode: true,
         status: true,
+        pinCode: true,
         role: {
           select: {
             id: true,
@@ -308,6 +307,25 @@ export class UsersService {
     }
 
     if (dto.pinCode) {
+      const targetStoreId = dto.storeId !== undefined ? dto.storeId : user.storeId;
+      if (targetStoreId) {
+        const storeCashiers = await this.prisma.user.findMany({
+          where: {
+            storeId: targetStoreId,
+            role: { code: 'CASHIER' },
+            status: 'ACTIVE',
+            id: { not: id },
+          },
+          select: { pinCodeHash: true },
+        });
+
+        for (const cashier of storeCashiers) {
+          if (cashier.pinCodeHash && (await this.passwordService.compare(dto.pinCode, cashier.pinCodeHash))) {
+            throw new ConflictException('This PIN code is already in use by another cashier in the store');
+          }
+        }
+      }
+
       updates.pinCodeHash = await this.passwordService.hash(dto.pinCode);
       updates.pinCode = dto.pinCode;
     }

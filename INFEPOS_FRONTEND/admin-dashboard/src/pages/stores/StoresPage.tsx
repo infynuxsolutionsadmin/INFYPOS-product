@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Search, Store as StoreIcon } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Store as StoreIcon, X } from 'lucide-react';
 import type { Store, FindStoresQuery, StoreStatus } from '../../types/stores';
 import { getStores } from '../../api/stores.api';
 import { useAuthStore } from '../../stores/authStore';
+import { useDebounce } from '../../hooks/useDebounce';
 import StoreFormModal from '../../components/stores/StoreFormModal';
 import DeleteStoreConfirmModal from '../../components/stores/DeleteStoreConfirmModal';
 
@@ -23,6 +24,16 @@ const StoresPage: React.FC = () => {
     search: '',
     status: undefined,
   });
+
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 400);
+
+  useEffect(() => {
+    setQuery(prev => {
+      if (prev.search === debouncedSearch) return prev;
+      return { ...prev, search: debouncedSearch, page: 1 };
+    });
+  }, [debouncedSearch]);
   
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -53,15 +64,11 @@ const StoresPage: React.FC = () => {
   }, [query, canRead]);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchStores();
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
+    fetchStores();
   }, [fetchStores]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(prev => ({ ...prev, search: e.target.value, page: 1 }));
+    setSearchInput(e.target.value);
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -113,11 +120,20 @@ const StoresPage: React.FC = () => {
             </div>
             <input
               type="text"
-              value={query.search || ''}
+              value={searchInput}
               onChange={handleSearchChange}
-              className="block w-full pl-11 pr-4 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
+              className="block w-full pl-11 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
               placeholder="Search by Name, Code..."
             />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput('')}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="w-full sm:w-56">
             <select
