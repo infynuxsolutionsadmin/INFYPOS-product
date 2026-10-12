@@ -30,7 +30,7 @@ export const RequireShift: React.FC = () => {
     return null;
   }
 
-  if (!isShiftOpen(user?.storeId)) {
+  if (!isShiftOpen(user?.storeId || undefined)) {
     return <Navigate to="/open-shift" replace />;
   }
 

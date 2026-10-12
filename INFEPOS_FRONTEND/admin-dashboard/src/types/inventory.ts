@@ -12,6 +12,7 @@ export interface InventoryProduct {
   sku: string;
   barcode: string | null;
   unit: string;
+  status?: string;
 }
 
 export interface Inventory {

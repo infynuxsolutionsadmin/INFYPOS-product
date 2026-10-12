@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -162,6 +163,8 @@ export class UsersService {
           status: true,
           roleId: true,
           storeId: true,
+          pinCode: true,
+          pinCodeHash: true,
           role: {
             select: {
               id: true,
@@ -183,7 +186,10 @@ export class UsersService {
     const pages = Math.ceil(total / limit);
 
     return {
-      items,
+      items: items.map((u) => ({
+        ...u,
+        hasPin: Boolean(u.pinCode || u.pinCodeHash),
+      })),
       pagination: {
         page,
         limit,
@@ -205,7 +211,15 @@ export class UsersService {
         id: true,
         firstName: true,
         lastName: true,
+        status: true,
         pinCodeHash: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
       }
     });
     return cashiers;
@@ -225,6 +239,7 @@ export class UsersService {
         phone: true,
         status: true,
         pinCode: true,
+        pinCodeHash: true,
         role: {
           select: {
             id: true,
@@ -246,7 +261,10 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    return {
+      ...user,
+      hasPin: Boolean(user.pinCode || user.pinCodeHash),
+    };
   }
 
   async update(tenantId: string, id: string, dto: UpdateUserDto) {
@@ -376,5 +394,81 @@ export class UsersService {
     ]);
 
     return this.findOne(tenantId, id);
+  }
+
+  async resetPin(tenantId: string, id: string, customPin?: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, tenantId },
+      include: { role: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role.code !== 'CASHIER') {
+      throw new BadRequestException('PIN code can only be set for cashiers');
+    }
+
+    if (!user.storeId) {
+      throw new BadRequestException('Cashier must be assigned to a store to have a PIN code');
+    }
+
+    let plainPinCode = customPin;
+    if (plainPinCode) {
+      if (!/^\d{4}$/.test(plainPinCode)) {
+        throw new BadRequestException('PIN code must be exactly 4 digits');
+      }
+      const storeCashiers = await this.prisma.user.findMany({
+        where: {
+          storeId: user.storeId,
+          role: { code: 'CASHIER' },
+          status: 'ACTIVE',
+          id: { not: id },
+        },
+        select: { pinCodeHash: true },
+      });
+      for (const cashier of storeCashiers) {
+        if (cashier.pinCodeHash && (await this.passwordService.compare(plainPinCode, cashier.pinCodeHash))) {
+          throw new ConflictException('This PIN code is already in use by another cashier in the store');
+        }
+      }
+    } else {
+      const storeCashiers = await this.prisma.user.findMany({
+        where: {
+          storeId: user.storeId,
+          role: { code: 'CASHIER' },
+          status: 'ACTIVE',
+          id: { not: id },
+        },
+        select: { pinCodeHash: true },
+      });
+      let isUnique = false;
+      while (!isUnique) {
+        plainPinCode = Math.floor(1000 + Math.random() * 9000).toString();
+        isUnique = true;
+        for (const cashier of storeCashiers) {
+          if (cashier.pinCodeHash && (await this.passwordService.compare(plainPinCode, cashier.pinCodeHash))) {
+            isUnique = false;
+            break;
+          }
+        }
+      }
+    }
+
+    const pinCodeHash = await this.passwordService.hash(plainPinCode);
+
+    await this.prisma.user.update({
+      where: { id },
+      data: {
+        pinCode: plainPinCode,
+        pinCodeHash,
+      },
+    });
+
+    return {
+      message: 'PIN successfully reset',
+      generatedPin: plainPinCode,
+    };
   }
 }

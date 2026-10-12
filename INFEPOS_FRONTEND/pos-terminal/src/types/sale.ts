@@ -43,6 +43,7 @@ export interface Sale {
   updatedAt: string;
   shiftId: string | null;
   items: SaleItem[];
+  isOffline?: boolean;
 }
 
 export interface SaleItem {

@@ -102,8 +102,12 @@ export const dismissFailedSyncEvent = async (id: string) => {
   }
 };
 
-export const syncProductsToLocalDb = async (products: any[]) => {
+import { useAuthStore } from '../stores/authStore';
+
+export const syncProductsToLocalDb = async (products: any[], storeId?: string) => {
   if (!isDesktopApp() || !products || products.length === 0) return;
+
+  const currentStoreId = storeId || useAuthStore.getState().pairedStoreId || useAuthStore.getState().user?.storeId;
 
   try {
     await queryLocalDb('BEGIN TRANSACTION');
@@ -112,8 +116,24 @@ export const syncProductsToLocalDb = async (products: any[]) => {
     for (const p of products) {
       if (p.status === 'INACTIVE') continue;
 
-      const stock = p.inventories?.[0]?.quantityOnHand !== undefined
-        ? parseFloat(p.inventories[0].quantityOnHand)
+      // Find store-specific inventory record
+      let storeInv: any = null;
+      if (Array.isArray(p.inventories) && p.inventories.length > 0) {
+        if (currentStoreId) {
+          storeInv = p.inventories.find((i: any) => i.storeId === currentStoreId);
+        }
+        if (!storeInv) {
+          storeInv = p.inventories[0];
+        }
+      }
+
+      // If this product's inventory is marked INACTIVE for this store, hide it in this Till!
+      if (storeInv && storeInv.status === 'INACTIVE') {
+        continue;
+      }
+
+      const stock = storeInv?.quantityOnHand !== undefined
+        ? parseFloat(storeInv.quantityOnHand)
         : (p.stockQuantity !== undefined ? parseFloat(p.stockQuantity) : 0);
 
       await queryLocalDb(
@@ -164,23 +184,35 @@ export const decrementLocalProductStock = async (items: { productId: string; qua
 };
 
 export const syncCashiersToLocalDb = async (cashiers: any[]) => {
+  const activeCashiers = (cashiers || []).filter(c => c.status !== 'INACTIVE');
+
   if (!isDesktopApp()) {
-    localStorage.setItem('pos-cashiers-cache', JSON.stringify(cashiers));
+    localStorage.setItem('pos-cashiers-cache', JSON.stringify(activeCashiers));
     return;
   }
 
-  for (const c of cashiers) {
-    await queryLocalDb(
-      `INSERT OR REPLACE INTO cashiers (id, firstName, lastName, pinCodeHash) VALUES (?, ?, ?, ?)`,
-      c.id, c.firstName, c.lastName || '', c.pinCodeHash || ''
-    );
+  try {
+    await queryLocalDb('BEGIN TRANSACTION');
+    await queryLocalDb('DELETE FROM cashiers');
+
+    for (const c of activeCashiers) {
+      await queryLocalDb(
+        `INSERT OR REPLACE INTO cashiers (id, firstName, lastName, pinCodeHash) VALUES (?, ?, ?, ?)`,
+        c.id, c.firstName, c.lastName || '', c.pinCodeHash || ''
+      );
+    }
+    await queryLocalDb('COMMIT');
+  } catch (err) {
+    try { await queryLocalDb('ROLLBACK'); } catch { }
+    console.error('Failed to sync cashiers to local database:', err);
   }
 };
 
 export const getLocalCashiers = async (): Promise<any[]> => {
   if (!isDesktopApp()) {
     try {
-      return JSON.parse(localStorage.getItem('pos-cashiers-cache') || '[]');
+      const cached = JSON.parse(localStorage.getItem('pos-cashiers-cache') || '[]');
+      return (cached || []).filter((c: any) => c.status !== 'INACTIVE');
     } catch {
       return [];
     }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut, RotateCw } from 'lucide-react';
 import { login } from '../api/auth.api';
 import { useAuthStore } from '../stores/authStore';
 import { useShiftStore } from '../stores/shiftStore';
@@ -47,19 +47,34 @@ const LoginPage: React.FC = () => {
     setCashiersLoading(true);
     setCashiersError(null);
     try {
-      const res = await client.get('/users', { 
-        params: { storeId: pairedStoreId, limit: 100, status: 'ACTIVE' } 
-      });
-      // The users endpoint returns paginated data (res.data.data.items)
-      const data = res.data?.data?.items || res.data?.items || res.data?.data || res.data || [];
-      
-      // Map passwordHash to pinCodeHash and filter out SYSTEM Owner/Admin roles
-      const cashiersList = (Array.isArray(data) ? data : [])
-        .filter(u => u.role?.code !== 'OWNER' && u.role?.code !== 'SYSTEM_ADMIN')
-        .map(u => ({
-          ...u,
-          pinCodeHash: u.passwordHash || u.pinCodeHash || ''
-        }));
+      let cashiersList: any[] = [];
+      try {
+        const res = await client.get(`/users/cashiers/${pairedStoreId}`);
+        const data = res.data?.data || res.data || [];
+        if (Array.isArray(data) && data.length > 0) {
+          cashiersList = data
+            .filter((u: any) => u.status !== 'INACTIVE')
+            .map((u: any) => ({
+              ...u,
+              pinCodeHash: u.pinCodeHash || u.passwordHash || ''
+            }));
+        }
+      } catch (err) {
+        console.warn('Dedicated cashiers endpoint failed, trying /users', err);
+      }
+
+      if (cashiersList.length === 0) {
+        const res = await client.get('/users', { 
+          params: { storeId: pairedStoreId, limit: 100, status: 'ACTIVE' } 
+        });
+        const data = res.data?.data?.items || res.data?.items || res.data?.data || res.data || [];
+        cashiersList = (Array.isArray(data) ? data : [])
+          .filter(u => u.status !== 'INACTIVE' && u.role?.code !== 'OWNER' && u.role?.code !== 'SYSTEM_ADMIN')
+          .map(u => ({
+            ...u,
+            pinCodeHash: u.pinCodeHash || u.passwordHash || ''
+          }));
+      }
       
       setCashiers(cashiersList);
       // Cache for offline use
@@ -68,7 +83,13 @@ const LoginPage: React.FC = () => {
       console.warn('Failed to fetch cashiers online, falling back to local DB', err);
       try {
         const localCashiers = await getLocalCashiers();
-        const filteredLocal = (localCashiers || []).filter((c: any) => c.role?.code !== 'OWNER' && c.role?.code !== 'SYSTEM_ADMIN' && c.role !== 'OWNER' && c.role !== 'System Owner');
+        const filteredLocal = (localCashiers || []).filter((c: any) => 
+          c.status !== 'INACTIVE' &&
+          c.role?.code !== 'OWNER' && 
+          c.role?.code !== 'SYSTEM_ADMIN' && 
+          c.role !== 'OWNER' && 
+          c.role !== 'System Owner'
+        );
         setCashiers(filteredLocal);
       } catch (e) {
         console.error('Failed to load local cashiers', e);
@@ -117,11 +138,36 @@ const LoginPage: React.FC = () => {
     if (pin.length < 4) return;
     setLoading(true);
     setError(null);
+
+    if (!selectedCashier.pinCodeHash) {
+      setError('No PIN configured for this cashier. Please configure a 4-digit PIN in the Admin Dashboard.');
+      setPin('');
+      setLoading(false);
+      return;
+    }
     
-    // Simulate slight delay to prevent brute-forcing and allow UI to update
-    setTimeout(() => {
+    // Check PIN against cached hash; if mismatch, attempt live re-fetch in case PIN was recently reset
+    setTimeout(async () => {
       try {
-        const isValid = compareSync(pin, selectedCashier.pinCodeHash || '');
+        let isValid = compareSync(pin, selectedCashier.pinCodeHash || '');
+
+        if (!isValid && pairedStoreId) {
+          try {
+            const res = await client.get(`/users/cashiers/${pairedStoreId}`);
+            const freshList = res.data?.data || res.data || [];
+            if (Array.isArray(freshList)) {
+              const freshCashier = freshList.find((c: any) => c.id === selectedCashier.id);
+              if (freshCashier?.pinCodeHash && compareSync(pin, freshCashier.pinCodeHash)) {
+                isValid = true;
+                selectedCashier.pinCodeHash = freshCashier.pinCodeHash;
+                await syncCashiersToLocalDb(freshList);
+                setCashiers(freshList);
+              }
+            }
+          } catch (syncErr) {
+            console.warn('Live PIN re-verification attempt failed', syncErr);
+          }
+        }
         
         if (isValid) {
           // Success! Log the cashier in
@@ -151,7 +197,7 @@ const LoginPage: React.FC = () => {
       } finally {
         setLoading(false);
       }
-    }, 500);
+    }, 300);
   };
 
   const handleManagerLogin = async (e: React.FormEvent) => {
@@ -334,9 +380,33 @@ const LoginPage: React.FC = () => {
                 </div>
               ) : !selectedCashier ? (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', color: 'var(--pos-text)' }}>
-                    <Users size={20} />
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Who is working?</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', color: 'var(--pos-text)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Users size={20} />
+                      <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Who is working?</h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fetchCashiers}
+                      disabled={cashiersLoading}
+                      title="Sync Cashiers / Refresh PINs"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '8px',
+                        padding: '0.4rem 0.75rem',
+                        fontSize: '0.75rem',
+                        color: 'var(--pos-text-dim)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <RotateCw size={13} className={cashiersLoading ? 'animate-spin' : ''} />
+                      Sync
+                    </button>
                   </div>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', width: '100%' }}>
@@ -356,14 +426,21 @@ const LoginPage: React.FC = () => {
                     ) : cashiers.map(c => {
                       const fInitial = c.firstName ? c.firstName.charAt(0).toUpperCase() : '';
                       const lInitial = c.lastName ? c.lastName.charAt(0).toUpperCase() : '';
+                      const hasPin = Boolean(c.pinCodeHash);
                       
                       return (
                         <button
                           key={c.id}
-                          onClick={() => setSelectedCashier(c)}
+                          onClick={() => {
+                            if (!hasPin) {
+                              setError(`No PIN configured for ${c.firstName} ${c.lastName || ''}. Please generate a PIN in Admin Dashboard.`);
+                              return;
+                            }
+                            setSelectedCashier(c);
+                          }}
                           style={{
                             background: 'rgba(255,255,255,0.03)',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            border: hasPin ? '1px solid rgba(255,255,255,0.1)' : '1px dashed rgba(239,68,68,0.4)',
                             borderRadius: '12px',
                             padding: '1.5rem 1rem',
                             display: 'flex',
@@ -372,16 +449,22 @@ const LoginPage: React.FC = () => {
                             gap: '0.5rem',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
+                            opacity: hasPin ? 1 : 0.7,
                           }}
                           onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
                           onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
                         >
-                          <div style={{ width: 48, height: 48, borderRadius: 24, background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
+                          <div style={{ width: 48, height: 48, borderRadius: 24, background: hasPin ? '#6366f1' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
                             {fInitial}{lInitial}
                           </div>
                           <div style={{ textAlign: 'center' }}>
                             <div style={{ color: 'var(--pos-text)', fontWeight: 600 }}>{c.firstName} {c.lastName || ''}</div>
                             <div style={{ color: 'var(--pos-text-dim)', fontSize: '0.75rem' }}>{c.role?.name || (typeof c.role === 'string' ? c.role : 'Cashier')}</div>
+                            {!hasPin && (
+                              <span style={{ display: 'inline-block', marginTop: '0.3rem', fontSize: '0.65rem', background: 'rgba(239,68,68,0.2)', color: '#fca5a5', padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>
+                                No PIN
+                              </span>
+                            )}
                           </div>
                         </button>
                       );

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { X, Upload, Download, FileSpreadsheet, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Upload, Download, FileSpreadsheet, CheckCircle2, AlertTriangle, RefreshCw, Store as StoreIcon } from 'lucide-react';
 import { bulkImportProducts, type BulkImportResult } from '../../api/products.api';
+import { getStores } from '../../api/stores.api';
+import type { Store } from '../../types/stores';
 
 interface BulkImportModalProps {
   isOpen: boolean;
@@ -15,16 +17,32 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
   const [loading, setLoading] = useState(false);
   const [importResult, setImportResult] = useState<BulkImportResult | null>(null);
   const [progressStatus, setProgressStatus] = useState<string>('');
+  const [stores, setStores] = useState<Store[]>([]);
+  const [targetStoreId, setTargetStoreId] = useState<string>('');
+
+  useEffect(() => {
+    if (isOpen) {
+      getStores({ limit: 100 })
+        .then((res) => {
+          const list = res.items || [];
+          setStores(list);
+          if (list.length === 1) {
+            setTargetStoreId(list[0].id);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const downloadSampleTemplate = () => {
-    const csvContent = `Name,SKU,Barcode,SellingPrice,CostPrice,VatRate,Category,Unit,StockInHand,MinStock,MaxStock,Description
-Organic Whole Milk 1L,MILK-101,5012345678901,1.50,0.90,0,Dairy,L,150,10,500,1 Liter Fresh Organic Milk
-Wholewheat Bread 800g,BREAD-202,5012345678902,1.20,0.60,0,Bakery,Loaf,80,5,200,Fresh Baked Wheat Bread
-Sparkling Water 500ml,WTR-303,5012345678903,0.85,0.30,20,Beverages,Bottles,300,20,1000,Carbonated Mineral Water
-Dark Chocolate Bar 100g,CHOC-404,5012345678904,2.50,1.20,20,Confectionery,Bar,200,15,600,70% Cocoa Artisan Chocolate
-Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,5,150,Cold-pressed Italian Olive Oil`;
+    const csvContent = `Name,SKU,Barcode,SellingPrice,CostPrice,VatRate,Category,Unit,StockInHand,MinStock,MaxStock,Description,StoreCode
+Organic Whole Milk 1L,MILK-101,5012345678901,1.50,0.90,0,Dairy,L,150,10,500,1 Liter Fresh Organic Milk,apple
+Wholewheat Bread 800g,BREAD-202,5012345678902,1.20,0.60,0,Bakery,Loaf,80,5,200,Fresh Baked Wheat Bread,apple
+Sparkling Water 500ml,WTR-303,5012345678903,0.85,0.30,20,Beverages,Bottles,300,20,1000,Carbonated Mineral Water,apple
+Dark Chocolate Bar 100g,CHOC-404,5012345678904,2.50,1.20,20,Confectionery,Bar,200,15,600,70% Cocoa Artisan Chocolate,apple
+Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,5,150,Cold-pressed Italian Olive Oil,apple`;
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -82,6 +100,7 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,
         const minStockIdx = findIndex(['minstock', 'min_stock', 'minimumstock', 'minimum_stock', 'min_qty']);
         const maxStockIdx = findIndex(['maxstock', 'max_stock', 'maximumstock', 'maximum_stock', 'max_qty']);
         const reorderLevelIdx = findIndex(['reorderlevel', 'reorder_level', 'reorder', 'reorder_point']);
+        const storeCodeIdx = findIndex(['storecode', 'store_code', 'store', 'shop', 'branch', 'store_name']);
 
         if (nameIdx === -1) {
           setParseError('Could not find a "Name" column in CSV header. Required columns: Name, SellingPrice.');
@@ -117,6 +136,7 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,
           const rawMinStock = minStockIdx !== -1 ? parseInt(values[minStockIdx]) : NaN;
           const rawMaxStock = maxStockIdx !== -1 ? parseInt(values[maxStockIdx]) : NaN;
           const rawReorder = reorderLevelIdx !== -1 ? parseInt(values[reorderLevelIdx]) : NaN;
+          const storeCode = storeCodeIdx !== -1 ? values[storeCodeIdx] || '' : '';
 
           products.push({
             name,
@@ -132,6 +152,7 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,
             minimumStock: !isNaN(rawMinStock) && rawMinStock >= 0 ? rawMinStock : 5,
             maximumStock: !isNaN(rawMaxStock) && rawMaxStock >= 0 ? rawMaxStock : 1000,
             reorderLevel: !isNaN(rawReorder) && rawReorder >= 0 ? rawReorder : 10,
+            storeCode,
           });
         }
 
@@ -152,6 +173,11 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,
   const handleImportSubmit = async () => {
     if (parsedData.length === 0) return;
 
+    if (!targetStoreId) {
+      setParseError('Please select which store to assign initial stock to, or choose "Catalog Only".');
+      return;
+    }
+
     setLoading(true);
     setParseError(null);
     setProgressStatus('Starting import...');
@@ -171,7 +197,7 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,
 
         setProgressStatus(`Importing items ${startNum} to ${endNum} of ${parsedData.length} (${Math.round((endNum / parsedData.length) * 100)}%)...`);
 
-        const result = await bulkImportProducts(chunk);
+        const result = await bulkImportProducts(chunk, targetStoreId);
         totalImported += result.importedCount;
         totalSkipped += result.skippedCount;
         if (result.errors && result.errors.length > 0) {
@@ -274,6 +300,44 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Store Assignment Selector */}
+            {!importResult && (
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
+                    <StoreIcon className="h-4 w-4 text-indigo-600" />
+                    Assign Initial Stock To Store:
+                  </label>
+                  <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                    Required Selection
+                  </span>
+                </div>
+                <select
+                  value={targetStoreId}
+                  onChange={(e) => setTargetStoreId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm cursor-pointer"
+                >
+                  <option value="">-- Choose Store to Stock --</option>
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      Store: {s.name} ({s.code})
+                    </option>
+                  ))}
+                  <option value="FROM_CSV">From CSV (Use StoreCode column in spreadsheet)</option>
+                  <option value="NONE">Catalog Only (Do not assign stock / 0 stock everywhere)</option>
+                </select>
+                <p className="text-[11px] text-gray-500">
+                  {targetStoreId === 'NONE'
+                    ? 'Products will be added globally with 0 stock. Stock can be received later via Inventory or Goods Receipts.'
+                    : targetStoreId === 'FROM_CSV'
+                    ? 'Each row will be stocked in the specific shop defined in the "StoreCode" column.'
+                    : targetStoreId
+                    ? `Initial stock from the CSV will be assigned specifically to this store. Other stores start with 0 stock.`
+                    : 'Choose which store receives this initial stock, or choose "Catalog Only". We will never blindly dump stock across all stores.'}
+                </p>
               </div>
             )}
 

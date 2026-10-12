@@ -236,6 +236,7 @@ export class InventoryService {
           sku: true,
           barcode: true,
           unit: true,
+          status: true,
         },
       },
     };

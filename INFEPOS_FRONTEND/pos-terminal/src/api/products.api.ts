@@ -16,8 +16,8 @@ export const getProducts = async (query?: FindProductsQuery): Promise<PaginatedP
     const category = query?.category || '';
 
     const reqStatus = query?.status || 'ACTIVE';
-    let sql = "SELECT * FROM products WHERE (status IS NULL OR status = 'ACTIVE' OR status != 'INACTIVE')";
-    let countSql = "SELECT COUNT(*) as total FROM products WHERE (status IS NULL OR status = 'ACTIVE' OR status != 'INACTIVE')";
+    let sql = "SELECT * FROM products WHERE status = 'ACTIVE'";
+    let countSql = "SELECT COUNT(*) as total FROM products WHERE status = 'ACTIVE'";
     const params: any[] = [];
 
     if (reqStatus && reqStatus !== 'ACTIVE') {
@@ -27,10 +27,10 @@ export const getProducts = async (query?: FindProductsQuery): Promise<PaginatedP
     }
 
     if (search) {
-      sql += ' AND (LOWER(name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(barcode) LIKE ? OR LOWER(categoryId) LIKE ?)';
-      countSql += ' AND (LOWER(name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(barcode) LIKE ? OR LOWER(categoryId) LIKE ?)';
+      sql += ' AND (id = ? OR LOWER(name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(barcode) LIKE ? OR LOWER(categoryId) LIKE ?)';
+      countSql += ' AND (id = ? OR LOWER(name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(barcode) LIKE ? OR LOWER(categoryId) LIKE ?)';
       const term = `%${search}%`;
-      params.push(term, term, term, term);
+      params.push(search, term, term, term, term);
     }
     
     if (category) {
@@ -108,6 +108,22 @@ export const getProducts = async (query?: FindProductsQuery): Promise<PaginatedP
  * Requires permission: products.read
  */
 export const getProduct = async (id: string): Promise<Product> => {
+  if (isDesktopApp()) {
+    try {
+      const rows = await queryLocalDb('SELECT * FROM products WHERE id = ?', id);
+      if (rows && rows.length > 0) {
+        const row = rows[0];
+        return {
+          ...row,
+          sellingPrice: row.price,
+          category: row.categoryId,
+          stockQuantity: row.stockQuantity !== undefined ? parseFloat(row.stockQuantity) : 0,
+        };
+      }
+    } catch {
+      // fallback to online
+    }
+  }
   const response = await client.get<BackendResponse<Product>>(`/products/${id}`);
   return response.data.data;
 };

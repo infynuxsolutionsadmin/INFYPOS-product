@@ -60,7 +60,7 @@ export interface BulkImportResult {
   errors: string[];
 }
 
-export const bulkImportProducts = async (products: any[]): Promise<BulkImportResult> => {
-  const response = await client.post<BackendResponse<BulkImportResult>>('/products/bulk-import', { products });
+export const bulkImportProducts = async (products: any[], targetStoreId?: string): Promise<BulkImportResult> => {
+  const response = await client.post<BackendResponse<BulkImportResult>>('/products/bulk-import', { products, targetStoreId });
   return response.data.data;
 };

@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, ScanBarcode, X, Loader2, Package, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getProducts } from '../../api/products.api';
 import { useCartStore } from '../../stores/cartStore';
+import { useAuthStore } from '../../stores/authStore';
 import type { Product } from '../../types/product';
 import { useBarcodeScanner } from './useBarcodeScanner';
 
 const ProductCatalog: React.FC = () => {
   const addItem = useCartStore((s) => s.addItem);
+  const { user } = useAuthStore();
 
   const [search, setSearch] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -61,7 +63,7 @@ const ProductCatalog: React.FC = () => {
       const client = (await import('../../api/client')).default;
       const res = await client.get('/products', { params: { status: 'ACTIVE', limit: 10000 } });
       const cloudItems = res.data.data.items || [];
-      await syncProductsToLocalDb(cloudItems);
+      await syncProductsToLocalDb(cloudItems, user?.storeId || undefined);
       // Re-fetch local to show updated catalog
       fetchProducts(search, 1, selectedCategory);
     } catch (err: any) {
@@ -86,6 +88,24 @@ const ProductCatalog: React.FC = () => {
 
   useEffect(() => {
     fetchProducts(search, page, selectedCategory);
+
+    // In desktop mode, run background sync to auto-purge any deactivated products from SQLite
+    if (page === 1 && !search && !selectedCategory) {
+      import('../../services/localDb').then(({ isDesktopApp, syncProductsToLocalDb }) => {
+        if (isDesktopApp()) {
+          import('../../api/client').then(({ default: client }) => {
+            client.get('/products', { params: { status: 'ACTIVE', limit: 10000 } })
+              .then(async (res) => {
+                const cloudItems = res.data?.data?.items || [];
+                if (Array.isArray(cloudItems) && cloudItems.length > 0) {
+                  await syncProductsToLocalDb(cloudItems, user?.storeId || undefined);
+                }
+              })
+              .catch(() => {});
+          });
+        }
+      });
+    }
   }, [page]);
 
   useEffect(() => {
@@ -97,6 +117,10 @@ const ProductCatalog: React.FC = () => {
   }, [fetchProducts, search, page, selectedCategory]);
 
   const handleAdd = useCallback((product: Product) => {
+    if (product.status === 'INACTIVE') {
+      alert(`"${product.name}" is marked as inactive and cannot be added.`);
+      return;
+    }
     addItem(product);
     setAddedIds((prev) => {
       const next = new Set(prev);
@@ -337,6 +361,10 @@ const ProductCatalog: React.FC = () => {
                   id={`product-card-${product.id}`}
                   type="button"
                   onClick={() => {
+                    if (product.status === 'INACTIVE') {
+                      alert(`"${product.name}" is inactive and cannot be sold.`);
+                      return;
+                    }
                     if (isOutOfStock) {
                       alert(`"${product.name}" is currently Out of Stock in this store.`);
                       return;

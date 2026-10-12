@@ -30,12 +30,12 @@ export class ProductsController {
   async bulkImport(
     @CurrentUser('tenantId') tenantId: string,
     @CurrentUser('id') currentUserId: string,
-    @Body() dto: { products: any[] },
+    @Body() dto: { products: any[]; targetStoreId?: string },
   ) {
     if (!dto.products || !Array.isArray(dto.products)) {
       throw new BadRequestException('products array is required');
     }
-    return this.productsService.bulkImport(tenantId, currentUserId, dto.products);
+    return this.productsService.bulkImport(tenantId, currentUserId, dto.products, dto.targetStoreId);
   }
 
   @Permissions('products.create')

@@ -68,6 +68,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
       return;
     }
 
+    const inactiveItem = cartItems.find((i) => i.product.status === 'INACTIVE');
+    if (inactiveItem) {
+      setError(`Cannot complete sale: "${inactiveItem.product.name}" is inactive. Please remove it from the cart.`);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -89,8 +95,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
 
     try {
       const sale = await createSale(payload);
+      const isOfflineSale = Boolean(sale.isOffline);
 
-      if (isDesktopApp()) {
+      if (isOfflineSale || !sale.items || sale.items.length === 0 || sale.items[0].productName === 'Offline Item') {
         sale.subtotal = cartSummary.subtotal;
         sale.taxAmount = cartSummary.totalVat;
         sale.items = cartItems.map(i => ({
@@ -109,7 +116,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
         }));
       }
 
-      onSuccess(sale, isDesktopApp());
+      onSuccess(sale, isOfflineSale);
     } catch (err: any) {
       // Check if it's a network error (no response)
       if (!err.response && !isDesktopApp()) {

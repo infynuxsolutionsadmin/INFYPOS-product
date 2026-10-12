@@ -73,4 +73,15 @@ export class UsersController {
   ) {
     return this.usersService.getCashiersForStore(tenantId, storeId);
   }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('users.update')
+  @Post(':id/reset-pin')
+  async resetPin(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('pin') pin?: string,
+  ) {
+    return this.usersService.resetPin(tenantId, id, pin);
+  }
 }

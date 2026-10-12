@@ -242,6 +242,15 @@ export class ProductsService {
       data: updateData,
     });
 
+    if (updateData.status) {
+      await this.prisma.inventory.updateMany({
+        where: { productId: id, tenantId },
+        data: {
+          status: updateData.status === ProductStatus.ACTIVE ? 'ACTIVE' : 'INACTIVE',
+        },
+      });
+    }
+
     return this.findOne(tenantId, id);
   }
 
@@ -254,10 +263,16 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
-    await this.prisma.product.update({
-      where: { id },
-      data: { status: ProductStatus.INACTIVE },
-    });
+    await this.prisma.$transaction([
+      this.prisma.product.update({
+        where: { id },
+        data: { status: ProductStatus.INACTIVE },
+      }),
+      this.prisma.inventory.updateMany({
+        where: { productId: id, tenantId },
+        data: { status: 'INACTIVE' },
+      }),
+    ]);
 
     return this.findOne(tenantId, id);
   }
@@ -271,10 +286,16 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
-    await this.prisma.product.update({
-      where: { id },
-      data: { status: ProductStatus.ACTIVE },
-    });
+    await this.prisma.$transaction([
+      this.prisma.product.update({
+        where: { id },
+        data: { status: ProductStatus.ACTIVE },
+      }),
+      this.prisma.inventory.updateMany({
+        where: { productId: id, tenantId },
+        data: { status: 'ACTIVE' },
+      }),
+    ]);
 
     return this.findOne(tenantId, id);
   }
@@ -372,7 +393,7 @@ export class ProductsService {
     };
   }
 
-  async bulkImport(tenantId: string, currentUserId: string, products: any[]) {
+  async bulkImport(tenantId: string, currentUserId: string, products: any[], targetStoreId?: string) {
     let imported = 0;
     let skipped = 0;
     const errors: string[] = [];
@@ -393,6 +414,7 @@ export class ProductsService {
       minimumStock: number;
       maximumStock: number;
       reorderLevel: number;
+      storeCode?: string;
     }>();
 
     for (let index = 0; index < products.length; index++) {
@@ -446,12 +468,14 @@ export class ProductsService {
       const minimumStock = parseStock(item.minimumStock ?? item.minStock, 5);
       const maximumStock = parseStock(item.maximumStock ?? item.maxStock, 1000);
       const reorderLevel = parseStock(item.reorderLevel ?? item.reorder, 10);
+      const storeCode = item.storeCode ? String(item.storeCode).trim() : (item.store ? String(item.store).trim() : undefined);
 
       skuMapToInventory.set(sku, {
         quantityOnHand: initialStock,
         minimumStock,
         maximumStock,
         reorderLevel,
+        storeCode,
       });
 
       validItemsToInsert.push({
@@ -486,7 +510,7 @@ export class ProductsService {
     // Auto-create Inventory records for all active stores
     const stores = await this.prisma.store.findMany({
       where: { tenantId, status: 'ACTIVE' },
-      select: { id: true },
+      select: { id: true, code: true, name: true },
     });
 
     if (stores.length > 0) {
@@ -505,19 +529,39 @@ export class ProductsService {
 
       for (const prod of allProducts) {
         const invSettings = skuMapToInventory.get(prod.sku);
-        const quantityOnHand = invSettings?.quantityOnHand ?? 100;
+        const rawQty = invSettings?.quantityOnHand ?? 100;
         const minimumStock = invSettings?.minimumStock ?? 5;
         const maximumStock = invSettings?.maximumStock ?? 1000;
         const reorderLevel = invSettings?.reorderLevel ?? 10;
+        const specifiedStore = invSettings?.storeCode?.trim().toUpperCase();
 
         for (const store of stores) {
           const key = `${store.id}_${prod.id}`;
           if (!existingKeys.has(key)) {
+            let qty = 0;
+            if (targetStoreId && targetStoreId !== 'NONE' && targetStoreId !== 'FROM_CSV') {
+              // User explicitly selected this store during import
+              if (store.id === targetStoreId) {
+                qty = rawQty;
+              }
+            } else if (targetStoreId === 'NONE') {
+              // Pure catalog import: 0 stock everywhere
+              qty = 0;
+            } else if (specifiedStore) {
+              // Row in CSV specifies a store code/name
+              if (store.code.toUpperCase() === specifiedStore || store.name.toUpperCase() === specifiedStore) {
+                qty = rawQty;
+              }
+            } else {
+              // No store specified or selected: NEVER blindly assign stock!
+              qty = 0;
+            }
+
             invToCreate.push({
               tenantId,
               storeId: store.id,
               productId: prod.id,
-              quantityOnHand,
+              quantityOnHand: qty,
               reservedQuantity: 0,
               minimumStock,
               maximumStock,

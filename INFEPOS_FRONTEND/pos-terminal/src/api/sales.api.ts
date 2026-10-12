@@ -5,17 +5,46 @@ import type { BackendResponse } from '../types/product';
 import { queueSyncEvent, isDesktopApp, decrementLocalProductStock } from '../services/localDb';
 
 export const createSale = async (data: CreateSaleRequest): Promise<Sale> => {
+  const headers = data.idempotencyKey ? { 'Idempotency-Key': data.idempotencyKey } : undefined;
+
+  // 1. If online, attempt direct cloud checkout first
+  if (typeof navigator === 'undefined' || navigator.onLine) {
+    try {
+      const response = await client.post<BackendResponse<Sale>>('/sales', data, { headers });
+      const onlineSale = response.data.data;
+
+      // Decrement local stock immediately so POS UI reflects real-time remaining stock
+      if (isDesktopApp()) {
+        await decrementLocalProductStock(data.items);
+      }
+
+      return {
+        ...onlineSale,
+        isOffline: false,
+      };
+    } catch (err: any) {
+      // If server returned a business validation error (4xx like inactive item, closed shift, etc),
+      // DO NOT mask it as an offline sale — rethrow so cashier sees the exact validation error!
+      if (err.response && err.response.status >= 400 && err.response.status < 500) {
+        throw err;
+      }
+      // If network error / timeout, fall through to offline buffer
+      console.warn('Direct sale submission failed due to network error, falling back to offline buffer:', err);
+    }
+  }
+
+  // 2. Offline Fallback for Desktop App
   if (isDesktopApp()) {
-    // 1. Queue it locally for background sync
+    // Queue it locally for background sync
     const eventId = await queueSyncEvent('SALE', data);
     
-    // 2. Decrement local stock immediately so POS UI reflects real-time remaining stock
+    // Decrement local stock immediately so POS UI reflects real-time remaining stock
     await decrementLocalProductStock(data.items);
     
     // Calculate totals loosely for mock
     let grandTotal = data.payments.reduce((acc, p) => acc + p.amount, 0);
 
-    // 2. Mock a successful sale response so the UI clears the basket immediately
+    // Mock a successful sale response so the UI clears the basket immediately
     const mockSale: Sale = {
       id: typeof eventId === 'string' ? eventId : crypto.randomUUID(),
       saleNumber: 'OFFLINE-' + Math.floor(Math.random() * 10000),
@@ -48,7 +77,8 @@ export const createSale = async (data: CreateSaleRequest): Promise<Sale> => {
         vatRate: 0,
         lineTotal: 0,
         createdAt: new Date().toISOString(),
-      }))
+      })),
+      isOffline: true,
     };
     
     // Notify background sync manager to sync the queued item idempotently
@@ -59,10 +89,12 @@ export const createSale = async (data: CreateSaleRequest): Promise<Sale> => {
     return mockSale;
   }
 
-  // Fallback for Web/Browser testing (non-Electron)
-  const headers = data.idempotencyKey ? { 'Idempotency-Key': data.idempotencyKey } : undefined;
+  // 3. Fallback for Web/Browser testing (non-Electron)
   const response = await client.post<BackendResponse<Sale>>('/sales', data, { headers });
-  return response.data.data;
+  return {
+    ...response.data.data,
+    isOffline: false,
+  };
 };
 
 export const getSalesHistory = async (params?: any): Promise<{ items: Sale[]; pagination: any }> => {

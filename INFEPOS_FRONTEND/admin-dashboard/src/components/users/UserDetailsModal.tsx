@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User as UserIcon, Briefcase, RotateCcw, KeyRound, Copy, Check, CheckCircle2 } from 'lucide-react';
+import { X, User as UserIcon, Briefcase, RotateCcw, KeyRound, Copy, Check, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import type { User } from '../../types/users';
 import { getUserById, resetUserPin } from '../../api/users.api';
 import { useAuthStore } from '../../stores/authStore';
@@ -19,6 +19,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [showPlainPin, setShowPlainPin] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -30,6 +31,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
     setRevealedPin(null);
     setResetError(null);
     setCopied(false);
+    setShowPlainPin(false);
     onClose();
   };
 
@@ -39,7 +41,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
     setResetError(null);
     try {
       const res = await resetUserPin(user.id);
-      setUser(prev => prev ? { ...prev, hasPin: true } : null);
+      setUser(prev => prev ? { ...prev, hasPin: true, pinCode: res.generatedPin } : null);
       setShowResetConfirm(false);
       setRevealedPin(res.generatedPin);
     } catch (err: any) {
@@ -176,12 +178,47 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
                         <div>
                           <dt className="text-xs font-medium text-gray-400 mb-1">PIN Code</dt>
                           {user.role?.code === 'CASHIER' ? (
-                            <dd className="flex flex-col items-start gap-1.5">
-                              {user.hasPin ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                  Configured
-                                </span>
+                            <dd className="flex flex-col items-start gap-2">
+                              {Boolean(user.hasPin || user.pinCode) ? (
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-xl px-2.5 py-1">
+                                    <span className="font-mono text-sm font-bold tracking-widest text-[#1a1f36] select-all">
+                                      {showPlainPin && user.pinCode ? user.pinCode : '••••'}
+                                    </span>
+                                    {user.pinCode && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => setShowPlainPin(!showPlainPin)}
+                                          className="p-1 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-200/60 transition-colors focus:outline-none cursor-pointer"
+                                          title={showPlainPin ? 'Hide PIN' : 'Show PIN'}
+                                        >
+                                          {showPlainPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (user.pinCode) {
+                                              navigator.clipboard.writeText(user.pinCode);
+                                              setCopied(true);
+                                              setTimeout(() => setCopied(false), 2000);
+                                            }
+                                          }}
+                                          className="p-1 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-200/60 transition-colors focus:outline-none cursor-pointer"
+                                          title="Copy PIN"
+                                        >
+                                          {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                      Configured
+                                    </span>
+                                  </div>
+                                </div>
                               ) : (
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200/60">
                                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
@@ -195,7 +232,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ isOpen, onClose, us
                                     setResetError(null);
                                     setShowResetConfirm(true);
                                   }}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-100 focus:outline-none"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-100 focus:outline-none cursor-pointer"
                                 >
                                   <RotateCcw className="w-3 h-3" />
                                   Reset PIN

@@ -4,7 +4,7 @@ import { getFailedSyncEvents, retryFailedSyncEvent, dismissFailedSyncEvent, isDe
 import { useSyncStore } from '../../stores/syncStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useShiftStore } from '../../stores/shiftStore';
-import { getProducts } from '../../api/products.api';
+import { getProduct, getProducts } from '../../api/products.api';
 
 interface FailedSyncModalProps {
   onClose: () => void;
@@ -112,12 +112,17 @@ const FailedSyncModal: React.FC<FailedSyncModalProps> = ({ onClose }) => {
       // 4. Validate live product stock before retry
       if (Array.isArray(event.payload.items)) {
         for (const item of event.payload.items) {
-          const productRes = await getProducts({
-            search: item.productId,
-            limit: 1,
-            status: 'ACTIVE',
-          });
-          const product = productRes.items.find((p) => p.id === item.productId);
+          let product: any = null;
+          try {
+            product = await getProduct(item.productId);
+          } catch {
+            const productRes = await getProducts({
+              search: item.productId,
+              limit: 1,
+              status: 'ACTIVE',
+            });
+            product = productRes.items.find((p) => p.id === item.productId);
+          }
           if (!product) {
             throw new Error(`Product ID ${item.productId} was not found or is inactive.`);
           }
