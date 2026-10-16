@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut, RotateCw } from 'lucide-react';
-import { login } from '../api/auth.api';
+import { login, verifyPin } from '../api/auth.api';
+import { compareSync } from 'bcrypt-ts';
 import { useAuthStore } from '../stores/authStore';
 import { useShiftStore } from '../stores/shiftStore';
 import client from '../api/client';
-import { compareSync } from 'bcrypt-ts';
 import { getLocalCashiers, syncCashiersToLocalDb } from '../services/localDb';
 
 const LoginPage: React.FC = () => {
@@ -135,7 +135,7 @@ const LoginPage: React.FC = () => {
   };
 
   const handlePinSubmit = async () => {
-    if (pin.length < 4) return;
+    if (pin.length < 4 || loading || !selectedCashier) return;
     setLoading(true);
     setError(null);
 
@@ -150,6 +150,17 @@ const LoginPage: React.FC = () => {
     setTimeout(async () => {
       try {
         let isValid = compareSync(pin, selectedCashier.pinCodeHash || '');
+
+        if (!isValid) {
+          try {
+            const res = await verifyPin(selectedCashier.id, pin);
+            if (res?.user) {
+              isValid = true;
+            }
+          } catch {
+            // fallback
+          }
+        }
 
         if (!isValid && pairedStoreId) {
           try {
@@ -180,8 +191,8 @@ const LoginPage: React.FC = () => {
             id: selectedCashier.id,
             firstName: selectedCashier.firstName,
             lastName: selectedCashier.lastName,
-            email: 'cashier@store.com', // Not needed for offline cashier
-            roleId: 'cashier-role',
+            email: selectedCashier.email || 'cashier@store.com',
+            roleId: selectedCashier.roleId || 'cashier-role',
             storeId: pairedStoreId,
             tenantId: pairedTenantId || 'tenant-id'
           }, ['sales.create']);
@@ -191,9 +202,10 @@ const LoginPage: React.FC = () => {
           setError('Invalid PIN code');
           setPin('');
         }
-      } catch (e) {
-        console.error(e);
-        setError('Error verifying PIN');
+      } catch (err: any) {
+        const msg = err.response?.data?.message || err.message || 'Authentication error occurred';
+        setError(Array.isArray(msg) ? msg.join(', ') : msg);
+        setPin('');
       } finally {
         setLoading(false);
       }
@@ -241,24 +253,32 @@ const LoginPage: React.FC = () => {
   };
 
   const handlePinInput = (num: string) => {
-    if (pin.length < 6) setPin(prev => prev + num);
+    if (loading) return;
+    if (pin.length < 4) setPin(prev => prev + num);
   };
 
   const handleDeletePin = () => {
+    if (loading) return;
     setPin(prev => prev.slice(0, -1));
   };
 
   return (
     <div
+      className="login-page-wrapper"
       style={{
-        minHeight: '100vh',
+        height: '100%',
+        width: '100%',
+        minHeight: '100%',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         background: 'var(--pos-bg)',
-        padding: '1.5rem',
+        padding: 'clamp(0.75rem, 2vh, 1.5rem) clamp(0.75rem, 2vw, 1.25rem) clamp(1.5rem, 3.5vh, 2.5rem)',
         position: 'relative',
-        overflow: 'hidden',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        boxSizing: 'border-box',
       }}
     >
       {/* Background grid pattern */}
@@ -272,36 +292,48 @@ const LoginPage: React.FC = () => {
         }}
       />
 
-      <div className="animate-fade-in" style={{ width: '100%', maxWidth: isPaired ? '600px' : '420px', position: 'relative' }}>
+      <div
+        className="animate-fade-in login-container"
+        style={{
+          width: '100%',
+          maxWidth: isPaired ? (!selectedCashier && !showManagerLogin ? '680px' : '480px') : '420px',
+          position: 'relative',
+          transition: 'max-width 0.2s ease',
+          margin: 'auto',
+          paddingTop: '0.25rem',
+          paddingBottom: '1rem',
+          boxSizing: 'border-box',
+        }}
+      >
         
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div className="login-header" style={{ textAlign: 'center', marginBottom: 'clamp(0.6rem, 1.5vh, 1rem)' }}>
           <div
+            className="login-logo"
             style={{
-              width: 100,
-              height: 100,
+              width: 'clamp(46px, 6.5vh, 60px)',
+              height: 'clamp(46px, 6.5vh, 60px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 0.5rem',
+              margin: '0 auto 0.25rem',
             }}
           >
             <img src="/logo.png" alt="INFEPOS Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--pos-text)', letterSpacing: '-0.02em' }}>
+          <h1 className="login-title" style={{ fontSize: 'clamp(1.25rem, 2.2vh, 1.5rem)', fontWeight: 800, color: 'var(--pos-text)', letterSpacing: '-0.02em', margin: 0 }}>
             INFEPOS
           </h1>
-          <p style={{ color: 'var(--pos-text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+          <p className="login-subtitle" style={{ color: 'var(--pos-text-muted)', fontSize: 'clamp(0.76rem, 1.3vh, 0.84rem)', marginTop: '0.15rem' }}>
             {isPaired ? 'Select Cashier to Clock In' : 'Device Registration'}
           </p>
         </div>
 
         {/* Card */}
         <div
-          className="pos-card"
+          className="pos-card login-card"
           style={{
-            padding: isPaired ? '2.5rem' : '2rem',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
           }}
         >
           {error && (
@@ -380,10 +412,10 @@ const LoginPage: React.FC = () => {
                 </div>
               ) : !selectedCashier ? (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', color: 'var(--pos-text)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'clamp(0.65rem, 1.5vh, 1rem)', color: '#1E293B', width: '100%' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Users size={20} />
-                      <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Who is working?</h2>
+                      <Users size={18} color="#7C3AED" />
+                      <h2 style={{ fontSize: 'clamp(1.05rem, 1.8vh, 1.15rem)', fontWeight: 700, margin: 0, color: '#1E293B' }}>Who is working?</h2>
                     </div>
                     <button
                       type="button"
@@ -394,12 +426,13 @@ const LoginPage: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.4rem',
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '8px',
-                        padding: '0.4rem 0.75rem',
+                        padding: '0.35rem 0.65rem',
                         fontSize: '0.75rem',
-                        color: 'var(--pos-text-dim)',
+                        fontWeight: 600,
+                        color: '#475569',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
                       }}
@@ -409,61 +442,104 @@ const LoginPage: React.FC = () => {
                     </button>
                   </div>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', width: '100%' }}>
+                  <div className="cashier-grid">
                     {cashiersLoading ? (
                       <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--pos-text-dim)', width: '100%', gridColumn: '1 / -1' }}>
-                        <Loader2 size={32} className="animate-spin mx-auto" style={{ marginBottom: '1rem' }} />
+                        <Loader2 size={32} className="animate-spin mx-auto" style={{ marginBottom: '1rem', color: '#7C3AED' }} />
                         Loading team members...
                       </div>
                     ) : cashiersError ? (
-                      <div style={{ textAlign: 'center', padding: '2rem', color: '#ef4444', width: '100%', gridColumn: '1 / -1', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '12px' }}>
+                      <div style={{ textAlign: 'center', padding: '1.5rem', color: '#ef4444', width: '100%', gridColumn: '1 / -1', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '14px', fontSize: '0.9rem' }}>
                         {cashiersError}
                       </div>
                     ) : cashiers.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--pos-text-dim)', width: '100%', gridColumn: '1 / -1', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--pos-text-dim)', width: '100%', gridColumn: '1 / -1', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '14px' }}>
                         No team members available for this store.
                       </div>
                     ) : cashiers.map(c => {
                       const fInitial = c.firstName ? c.firstName.charAt(0).toUpperCase() : '';
                       const lInitial = c.lastName ? c.lastName.charAt(0).toUpperCase() : '';
-                      const hasPin = Boolean(c.pinCodeHash);
+                      const hasPin = Boolean(c.pinCodeHash || c.hasPin);
+                      const roleName = c.role?.name || (typeof c.role === 'string' ? c.role : 'Cashier');
                       
                       return (
                         <button
                           key={c.id}
+                          type="button"
+                          className="cashier-bubble-card"
                           onClick={() => {
                             if (!hasPin) {
-                              setError(`No PIN configured for ${c.firstName} ${c.lastName || ''}. Please generate a PIN in Admin Dashboard.`);
+                              setError(`No PIN configured for ${c.firstName} ${c.lastName || ''}. Please configure a PIN in the Admin Dashboard.`);
                               return;
                             }
                             setSelectedCashier(c);
                           }}
                           style={{
-                            background: 'rgba(255,255,255,0.03)',
-                            border: hasPin ? '1px solid rgba(255,255,255,0.1)' : '1px dashed rgba(239,68,68,0.4)',
-                            borderRadius: '12px',
-                            padding: '1.5rem 1rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            opacity: hasPin ? 1 : 0.7,
+                            opacity: hasPin ? 1 : 0.75,
+                            border: hasPin ? undefined : '1.5px dashed #f87171',
                           }}
-                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
                         >
-                          <div style={{ width: 48, height: 48, borderRadius: 24, background: hasPin ? '#6366f1' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
+                          <div
+                            className="cashier-avatar"
+                            style={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: '50%',
+                              backgroundColor: hasPin ? '#EDE9FE' : '#FEE2E2',
+                              border: hasPin ? '1.5px solid #DDD6FE' : '1.5px solid #FECACA',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '1.05rem',
+                              fontWeight: 700,
+                              color: hasPin ? '#011082ff' : '#DC2626',
+                              flexShrink: 0,
+                            }}
+                          >
                             {fInitial}{lInitial}
                           </div>
-                          <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: 'var(--pos-text)', fontWeight: 600 }}>{c.firstName} {c.lastName || ''}</div>
-                            <div style={{ color: 'var(--pos-text-dim)', fontSize: '0.75rem' }}>{c.role?.name || (typeof c.role === 'string' ? c.role : 'Cashier')}</div>
+                          <div style={{ width: '100%', minWidth: 0, overflow: 'hidden', textAlign: 'center' }}>
+                            <div
+                              style={{
+                                color: '#1E293B',
+                                fontWeight: 600,
+                                fontSize: 'clamp(0.82rem, 1.6vh, 0.9rem)',
+                                lineHeight: 1.25,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                              title={`${c.firstName} ${c.lastName || ''}`.trim()}
+                            >
+                              {c.firstName} {c.lastName || ''}
+                            </div>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                backgroundColor: '#F5F3FF',
+                                color: '#0535e3ff',
+                                border: '1px solid #E9D5FF',
+                                fontSize: '0.68rem',
+                                fontWeight: 600,
+                                padding: '0.12rem 0.5rem',
+                                borderRadius: '9999px',
+                                marginTop: '0.2rem',
+                                textTransform: 'capitalize',
+                                letterSpacing: '0.01em',
+                                maxWidth: '100%',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {roleName}
+                            </span>
                             {!hasPin && (
-                              <span style={{ display: 'inline-block', marginTop: '0.3rem', fontSize: '0.65rem', background: 'rgba(239,68,68,0.2)', color: '#fca5a5', padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>
-                                No PIN
-                              </span>
+                              <div>
+                                <span style={{ display: 'inline-block', marginTop: '0.2rem', fontSize: '0.65rem', background: '#fee2e2', color: '#b91c1c', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
+                                  No PIN
+                                </span>
+                              </div>
                             )}
                           </div>
                         </button>
@@ -471,65 +547,143 @@ const LoginPage: React.FC = () => {
                     })}
                   </div>
 
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <button onClick={() => setShowManagerLogin(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--pos-text-dim)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}>
-                      <Lock size={16} /> Manager Login
+                  <div className="login-action-buttons">
+                    <button
+                      type="button"
+                      className="btn-manager-action"
+                      onClick={() => setShowManagerLogin(true)}
+                    >
+                      <Lock size={15} strokeWidth={2.2} />
+                      <span>Manager Login</span>
                     </button>
-                    <button onClick={unpairDevice} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--pos-text-dim)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}>
-                      <LogOut size={16} /> Unpair Device (Admin)
+                    <button
+                      type="button"
+                      className="btn-admin-action"
+                      onClick={unpairDevice}
+                    >
+                      <LogOut size={15} strokeWidth={2} />
+                      <span>Unpair Device (Admin)</span>
                     </button>
                   </div>
                 </>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                  <button onClick={() => { setSelectedCashier(null); setPin(''); }} style={{ alignSelf: 'flex-start', color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedCashier(null); setPin(''); }}
+                    style={{
+                      alignSelf: 'flex-start',
+                      color: '#4c00ffff',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      marginBottom: 'clamp(0.4rem, 1.2vh, 0.75rem)',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: 0,
+                    }}
+                  >
                     ← Back to Users
                   </button>
                   
-                  <div style={{ width: 64, height: 64, borderRadius: 32, background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '1rem' }}>
-                    {selectedCashier.firstName.charAt(0)}{selectedCashier.lastName.charAt(0)}
+                  <div
+                    className="pin-avatar"
+                    style={{
+                      width: 'clamp(48px, 6.5vh, 60px)',
+                      height: 'clamp(48px, 6.5vh, 60px)',
+                      borderRadius: '50%',
+                      backgroundColor: '#EDE9FE',
+                      border: '1.5px solid #DDD6FE',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 'clamp(1.15rem, 2vh, 1.4rem)',
+                      fontWeight: 700,
+                      color: '#6D28D9',
+                      marginBottom: 'clamp(0.4rem, 1.2vh, 0.75rem)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {selectedCashier.firstName.charAt(0)}{selectedCashier.lastName ? selectedCashier.lastName.charAt(0) : ''}
                   </div>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--pos-text)', marginBottom: '0.5rem' }}>
-                    Welcome, {selectedCashier.firstName}
-                  </h2>
-                  <p style={{ color: 'var(--pos-text-dim)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-                    Enter your 4-digit PIN to clock in
-                  </p>
+                  <div className="pin-welcome-section" style={{ textAlign: 'center', marginBottom: 'clamp(0.6rem, 1.5vh, 1rem)' }}>
+                    <h2 style={{ fontSize: 'clamp(1.1rem, 2vh, 1.25rem)', fontWeight: 700, color: '#1E293B', margin: 0, marginBottom: '0.15rem' }}>
+                      Welcome, {selectedCashier.firstName}
+                    </h2>
+                    <p style={{ color: 'var(--pos-text-muted)', fontSize: 'clamp(0.78rem, 1.4vh, 0.85rem)', margin: 0 }}>
+                      Enter your 4-digit PIN to clock in
+                    </p>
+                  </div>
 
                   {/* PIN Display */}
-                  <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+                  <div className="pin-dots-wrapper" style={{ display: 'flex', gap: '0.85rem', marginBottom: 'clamp(0.85rem, 2vh, 1.35rem)', alignItems: 'center', justifyContent: 'center' }}>
                     {[...Array(4)].map((_, i) => (
-                      <div key={i} style={{
-                        width: 16, height: 16, borderRadius: 8,
-                        background: i < pin.length ? '#6366f1' : 'rgba(255,255,255,0.1)',
-                        boxShadow: i < pin.length ? '0 0 10px rgba(99,102,241,0.5)' : 'none',
-                        transition: 'all 0.2s'
-                      }} />
+                      <div
+                        key={i}
+                        style={{
+                          width: 'clamp(12px, 1.8vh, 15px)',
+                          height: 'clamp(12px, 1.8vh, 15px)',
+                          borderRadius: '50%',
+                          backgroundColor: i < pin.length ? '#6D28D9' : '#E2E8F0',
+                          border: i < pin.length ? 'none' : '1.5px solid #CBD5E1',
+                          boxShadow: i < pin.length ? '0 0 10px rgba(109, 40, 217, 0.45)' : 'none',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                      />
                     ))}
                   </div>
 
                   {/* Custom Numpad */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', width: '100%', maxWidth: '280px' }}>
+                  <div className="pin-numpad">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                      <button key={num} onClick={() => handlePinInput(num.toString())}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: 70, height: 70, fontSize: '1.5rem', fontWeight: 600, color: 'var(--pos-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                        onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      <button
+                        key={num}
+                        type="button"
+                        className="pin-key-btn"
+                        onClick={() => handlePinInput(num.toString())}
                       >
                         {num}
                       </button>
                     ))}
                     <div />
-                    <button onClick={() => handlePinInput('0')}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: 70, height: 70, fontSize: '1.5rem', fontWeight: 600, color: 'var(--pos-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                      >0</button>
-                    <button onClick={handleDeletePin}
-                        style={{ background: 'none', border: 'none', borderRadius: '50%', width: 70, height: 70, fontSize: '1rem', fontWeight: 600, color: 'var(--pos-text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                      >Del</button>
+                    <button
+                      type="button"
+                      className="pin-key-btn"
+                      onClick={() => handlePinInput('0')}
+                    >
+                      0
+                    </button>
+                    <button
+                      type="button"
+                      className="pin-del-btn"
+                      onClick={handleDeletePin}
+                    >
+                      Del
+                    </button>
                   </div>
 
-                  <button onClick={handlePinSubmit} disabled={pin.length < 4 || loading} className="btn-pos btn-primary" style={{ marginTop: '2rem', width: '100%', maxWidth: '280px', padding: '1rem' }}>
-                    {loading ? <Loader2 className="animate-spin" /> : <><Lock size={18} /> Authenticate</>}
+                  <button
+                    type="button"
+                    onClick={handlePinSubmit}
+                    disabled={pin.length < 4 || loading}
+                    className="btn-pos btn-primary pin-submit-btn"
+                    style={{
+                      marginTop: 'clamp(0.85rem, 2vh, 1.35rem)',
+                      width: '100%',
+                      maxWidth: '270px',
+                      padding: 'clamp(0.65rem, 1.5vh, 0.85rem)',
+                      fontSize: '0.95rem',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {loading ? <Loader2 className="animate-spin" size={18} /> : <><Lock size={16} strokeWidth={2.2} /> Authenticate</>}
                   </button>
                 </div>
               )}

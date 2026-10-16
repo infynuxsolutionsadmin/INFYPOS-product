@@ -191,7 +191,7 @@ const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({ onClose }) => {
       }}
     >
       <div
-        className="animate-fade-in"
+        className="animate-fade-in sales-history-modal-card"
         style={{
           width: '100%',
           maxWidth: '920px',
@@ -209,6 +209,7 @@ const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({ onClose }) => {
       >
         {/* Header */}
         <div
+          className="sales-history-header"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -426,6 +427,7 @@ const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({ onClose }) => {
 
         {/* Table Container */}
         <div
+          className="sales-history-table-container"
           style={{
             flex: 1,
             display: 'flex',

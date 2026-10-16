@@ -173,9 +173,10 @@ const ProductCatalog: React.FC = () => {
   const fmt = (n: number | string) => `£${Number(n).toFixed(2)}`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 0 }}>
+    <div className="pos-catalog-root" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 0 }}>
       {/* Search bar */}
       <div
+        className="pos-search-header"
         style={{
           padding: '0.75rem 1rem',
           borderBottom: '1px solid var(--pos-border)',
@@ -291,7 +292,7 @@ const ProductCatalog: React.FC = () => {
       )}
 
       {/* Product grid */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
+      <div className="pos-product-grid-container" style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', gap: '0.75rem', color: 'var(--pos-text-muted)' }}>
             <Loader2 size={24} style={{ animation: 'spin 0.7s linear infinite' }} />
@@ -343,6 +344,7 @@ const ProductCatalog: React.FC = () => {
           </div>
         ) : (
           <div
+            className="pos-product-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',

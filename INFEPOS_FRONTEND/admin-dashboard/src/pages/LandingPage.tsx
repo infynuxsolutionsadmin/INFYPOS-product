@@ -290,9 +290,8 @@ const InfeposLogoText: React.FC<{
 ───────────────────────────────────────────────────────────────── */
 const AnimatedDashboardPreviewCard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'Dashboard' | 'Products' | 'Stores' | 'Inventory' | 'Sales'>('Dashboard');
-  const [salesCount, setSalesCount] = useState(95);
-  const [netRevenue, setNetRevenue] = useState(133689698.70);
-  const [todaySales, setTodaySales] = useState(2);
+  const [salesCount, setSalesCount] = useState(96);
+  const [netRevenue, setNetRevenue] = useState(135689.00);
   const [liveToast, setLiveToast] = useState<{ id: number; text: string; amount: string } | null>(null);
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
 
@@ -300,16 +299,15 @@ const AnimatedDashboardPreviewCard: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       const items = [
-        { name: 'Organic Coffee 250g', price: 4.50 },
-        { name: 'Pastry Box Assorted', price: 12.00 },
-        { name: 'Wireless POS Scanner', price: 89.00 },
+        { name: 'Coffee 250g', price: 3.45 },
+        { name: 'Pastry Box', price: 12.00 },
+        { name: 'POS Scanner', price: 89.00 },
         { name: 'Espresso Beans 1kg', price: 24.00 },
-        { name: 'Artisan Tea Blend', price: 6.80 },
+        { name: 'Artisan Tea', price: 6.80 },
       ];
       const randomItem = items[Math.floor(Math.random() * items.length)];
 
       setSalesCount(prev => prev + 1);
-      setTodaySales(prev => prev + 1);
       setNetRevenue(prev => prev + randomItem.price);
 
       setLiveToast({
@@ -329,296 +327,347 @@ const AnimatedDashboardPreviewCard: React.FC = () => {
   }, []);
 
   const chartData = [
-    { day: 'Mon', rev: 14200, height: '45%' },
-    { day: 'Tue', rev: 18900, height: '60%' },
-    { day: 'Wed', rev: 22400, height: '75%' },
-    { day: 'Thu', rev: 19800, height: '65%' },
-    { day: 'Fri', rev: 28900, height: '90%' },
-    { day: 'Sat', rev: 34500, height: '100%' },
-    { day: 'Sun', rev: 26100, height: '82%' },
+    { day: 'Mon', rev: 14200, height: '42%' },
+    { day: 'Tue', rev: 18900, height: '58%' },
+    { day: 'Wed', rev: 22400, height: '72%' },
+    { day: 'Thu', rev: 19800, height: '62%' },
+    { day: 'Fri', rev: 28900, height: '88%' },
+    { day: 'Sat', rev: 34500, height: '98%' },
+    { day: 'Sun', rev: 26100, height: '80%' },
   ];
 
   return (
-    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-blue-100/70 via-sky-50 to-indigo-100/70 p-4 sm:p-7 shadow-2xl border border-blue-100/50 overflow-hidden group">
-      {/* Antigravity ambient background glows */}
-      <div className="absolute -top-12 -right-12 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-sky-300/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-gradient-to-tr from-amber-300/20 to-emerald-300/20 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative w-full max-w-[690px] mx-auto select-none">
+      {/* Atmospheric ambient background glow */}
+      <div className="absolute -top-10 -right-10 w-80 sm:w-96 h-80 sm:h-96 bg-blue-100/60 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="absolute -bottom-10 -left-10 w-72 sm:w-80 h-72 sm:h-80 bg-sky-100/40 rounded-full blur-3xl pointer-events-none -z-10" />
 
-      {/* Main Inner App Canvas (Clean frameless white card) */}
-      <div className="relative bg-white text-slate-900 rounded-3xl p-5 sm:p-7 shadow-xl border border-slate-200/70 min-h-[480px] flex flex-col justify-between select-none overflow-hidden">
-
-        {/* Top Header & Pill Nav */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 flex items-center justify-center bg-blue-600 rounded-xl text-white font-bold text-xs shadow-md shadow-blue-500/20">
-              iE
-            </div>
-            <div>
-              <div className="font-extrabold text-slate-950 text-sm tracking-tight leading-none">INFEPOS</div>
-              <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Admin Dashboard</div>
+      {/* Realistic Laptop Frame */}
+      <div className="relative group">
+        {/* Laptop Display Lid (Top Display Unit) */}
+        <div className="relative w-[94%] mx-auto bg-[#0c0f16] rounded-t-[20px] sm:rounded-t-[24px] pt-2 sm:pt-2.5 px-2 sm:px-2.5 pb-0 shadow-[0_20px_50px_-12px_rgba(15,23,42,0.35)] border border-slate-700/70">
+          {/* Top Bezel Webcam Dot & Sensor */}
+          <div className="absolute top-1 sm:top-1.5 left-1/2 -translate-x-1/2 flex items-center justify-center">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#05070a] border border-slate-700/70 flex items-center justify-center">
+              <div className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full bg-[#1e293b] ring-[0.5px] ring-sky-500/30" />
             </div>
           </div>
 
-          {/* Interactive Navigation Pills */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-full text-xs font-semibold text-slate-600 border border-slate-200/60 overflow-x-auto max-w-full">
-            {(['Dashboard', 'Products', 'Stores', 'Inventory', 'Sales'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-3.5 py-1.5 rounded-full transition-all duration-300 ${
-                  activeTab === tab
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 font-bold scale-105'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+          {/* Screen Glass / Display Canvas (Fixed Dimensions Across All Tabs) */}
+          <div className="relative bg-white text-slate-900 rounded-t-[8px] sm:rounded-t-[10px] p-3 sm:p-4 h-[440px] max-h-[440px] flex flex-col overflow-hidden shadow-inner ring-1 ring-black/5">
+            {/* Subtle Screen Reflection Glare */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.02] to-white/[0.06] rounded-t-[8px] z-10" />
 
-          <div className="hidden md:flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Live Cloud Sync</span>
-            </span>
-          </div>
-        </div>
-
-        {/* Dashboard Content View */}
-        {activeTab === 'Dashboard' && (
-          <div className="space-y-4 pt-3 animate-fadeIn">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-extrabold text-slate-950 tracking-tight">Dashboard</h3>
-                <p className="text-xs text-slate-400 font-medium">Financial Overview</p>
-              </div>
-              <div className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                GBP (£)
-              </div>
-            </div>
-
-            {/* Financial Overview 4 Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">🛒</div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">TOTAL SALES</span>
-                </div>
-                <div className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight flex items-baseline gap-2">
-                  <span>{salesCount}</span>
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100/80 px-1.5 py-0.5 rounded-md">+14%</span>
-                </div>
-              </div>
-
-              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-7 h-7 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">£</div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">NET REVENUE</span>
-                </div>
-                <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight truncate">
-                  £{netRevenue.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              </div>
-
-              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">💷</div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">GROSS REVENUE</span>
-                </div>
-                <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight truncate">
-                  £134,651,498.70
-                </div>
-              </div>
-
-              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">🛍️</div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">AVG BASKET</span>
-                </div>
-                <div className="text-base sm:text-lg font-black text-slate-950 tracking-tight truncate">
-                  £1,417,384.20
-                </div>
-              </div>
-            </div>
-
-            {/* Weekly Revenue Chart */}
-            <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/60">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-slate-800">Weekly Revenue Telemetry</span>
-                <span className="text-[10px] font-semibold text-blue-600 bg-blue-100/80 px-2.5 py-0.5 rounded-full">Real-Time</span>
-              </div>
-
-              <div className="h-28 flex items-end justify-between gap-2 pt-2 px-2 border-b border-slate-200/60">
-                {chartData.map((item, index) => (
-                  <div
-                    key={item.day}
-                    className="flex-1 flex flex-col items-center gap-1 group/bar cursor-pointer"
-                    onMouseEnter={() => setHoveredBar(index)}
-                    onMouseLeave={() => setHoveredBar(null)}
-                  >
-                    <div className={`text-[9px] font-bold text-white bg-slate-900 px-1.5 py-0.5 rounded transition-opacity ${
-                      hoveredBar === index ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                    }`}>
-                      £{item.rev.toLocaleString()}
-                    </div>
-                    <div className="w-full bg-slate-200/70 rounded-t-lg h-20 relative overflow-hidden flex items-end">
-                      <div
-                        style={{ height: item.height }}
-                        className={`w-full rounded-t-lg transition-all duration-500 ${
-                          hoveredBar === index
-                            ? 'bg-gradient-to-t from-blue-600 to-sky-400 shadow-md'
-                            : 'bg-gradient-to-t from-blue-600 to-blue-500 group-hover/bar:bg-blue-600'
-                        }`}
-                      />
-                    </div>
-                    <span className="text-[10px] font-semibold text-slate-500">{item.day}</span>
+            {/* Top Header & Pill Nav (Fixed Header) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100 flex-shrink-0 z-0">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 flex items-center justify-center bg-blue-600 rounded-xl text-white font-bold text-xs shadow-md shadow-blue-500/20">
+                    iE
                   </div>
+                  <div>
+                    <div className="font-extrabold text-slate-950 text-xs sm:text-sm tracking-tight leading-none">INFEPOS</div>
+                    <div className="text-[9px] text-slate-400 font-semibold mt-0.5 leading-none">Admin Dashboard</div>
+                  </div>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] sm:text-[10px] font-bold border border-emerald-200/70 w-fit">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Live Cloud Sync</span>
+                </div>
+              </div>
+
+              {/* Interactive Navigation Pills */}
+              <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-slate-100 rounded-full text-[11px] sm:text-xs font-semibold text-slate-600 border border-slate-200/60 overflow-x-auto max-w-full">
+                {(['Dashboard', 'Products', 'Stores', 'Inventory', 'Sales'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full transition-all duration-300 ${
+                      activeTab === tab
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 font-bold scale-105'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                  >
+                    {tab}
+                  </button>
                 ))}
               </div>
             </div>
 
-            {/* Today's Activity */}
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 mb-2 uppercase tracking-wider">Today's Activity</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
-                  <div>
-                    <div className="text-[9px] font-semibold text-slate-400">TODAY'S SALES</div>
-                    <div className="text-lg font-black text-slate-950">{todaySales}</div>
-                  </div>
-                  <div className="w-6 h-6 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center font-bold text-xs">📊</div>
-                </div>
-
-                <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
-                  <div>
-                    <div className="text-[9px] font-semibold text-slate-400">TODAY'S RETURNS</div>
-                    <div className="text-lg font-black text-slate-950">0</div>
-                  </div>
-                  <div className="w-6 h-6 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs">↩️</div>
-                </div>
-
-                <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
-                  <div>
-                    <div className="text-[9px] font-semibold text-slate-400">CUSTOMERS</div>
-                    <div className="text-lg font-black text-slate-950">14</div>
-                  </div>
-                  <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">👥</div>
-                </div>
-
-                <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
-                  <div>
-                    <div className="text-[9px] font-semibold text-slate-400">ACTIVE POS</div>
-                    <div className="text-lg font-black text-emerald-600">12 / 12</div>
-                  </div>
-                  <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">💻</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Products View */}
-        {activeTab === 'Products' && (
-          <div className="space-y-3 pt-2 animate-fadeIn">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-950 tracking-tight">Product Catalog</h3>
-                <p className="text-xs text-slate-400 font-medium">1,200 active SKUs across stores</p>
-              </div>
-              <button className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-md shadow-blue-500/20">
-                + Add SKU
-              </button>
-            </div>
-
-            <div className="bg-slate-50/80 rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-100/80 border-b border-slate-200/60 text-slate-400 font-bold uppercase tracking-wider text-[9px]">
-                    <th className="p-2.5">Product</th>
-                    <th className="p-2.5">Category</th>
-                    <th className="p-2.5">Price</th>
-                    <th className="p-2.5">Stock</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  <tr className="hover:bg-white transition-colors">
-                    <td className="p-2.5 font-bold text-slate-950">Organic Coffee 250g</td>
-                    <td className="p-2.5 text-slate-400">Beverages</td>
-                    <td className="p-2.5 font-extrabold text-slate-950">£4.50</td>
-                    <td className="p-2.5"><span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold rounded-full text-[9px]">In Stock (142)</span></td>
-                  </tr>
-                  <tr className="hover:bg-white transition-colors">
-                    <td className="p-2.5 font-bold text-slate-950">Pastry Box (Assorted)</td>
-                    <td className="p-2.5 text-slate-400">Bakery</td>
-                    <td className="p-2.5 font-extrabold text-slate-950">£12.00</td>
-                    <td className="p-2.5"><span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold rounded-full text-[9px]">In Stock (48)</span></td>
-                  </tr>
-                  <tr className="hover:bg-white transition-colors">
-                    <td className="p-2.5 font-bold text-slate-950">Wireless Thermal Printer</td>
-                    <td className="p-2.5 text-slate-400">Hardware</td>
-                    <td className="p-2.5 font-extrabold text-slate-950">£149.00</td>
-                    <td className="p-2.5"><span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold rounded-full text-[9px]">Low Stock (3)</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Stores View */}
-        {activeTab === 'Stores' && (
-          <div className="space-y-3 pt-2 animate-fadeIn">
-            <div>
-              <h3 className="text-lg font-extrabold text-slate-950 tracking-tight">Multi-Store Locations</h3>
-              <p className="text-xs text-slate-400 font-medium">3 store locations online</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {[
-                { name: 'London Central Store', terminals: 5, status: 'Active', rev: '£42,890' },
-                { name: 'Manchester Hub', terminals: 4, status: 'Active', rev: '£31,450' },
-                { name: 'Edinburgh Store', terminals: 3, status: 'Active', rev: '£28,120' },
-              ].map(store => (
-                <div key={store.name} className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/60 shadow-sm space-y-1.5">
+            {/* Constrained Tab Content Area (Fixed Height, Zero Laptop Layout Shift) */}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {/* Dashboard Content View */}
+              {activeTab === 'Dashboard' && (
+                <div className="space-y-2.5 sm:space-y-3 animate-fadeIn">
                   <div className="flex items-center justify-between">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">{store.status}</span>
+                    <div>
+                      <h3 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight leading-tight">Dashboard</h3>
+                      <p className="text-[10px] sm:text-xs text-slate-400 font-medium">Financial Overview</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1 rounded-full border border-slate-200 cursor-pointer transition-colors">
+                      <span>📅</span>
+                      <span>Last 7 Days</span>
+                      <span className="text-[9px]">▼</span>
+                    </div>
                   </div>
-                  <div className="font-bold text-slate-950 text-xs">{store.name}</div>
-                  <div className="text-[10px] text-slate-400">{store.terminals} Terminals Online</div>
-                  <div className="pt-1.5 border-t border-slate-200/60 flex justify-between items-center text-[10px]">
-                    <span className="text-slate-400">Sales</span>
-                    <span className="font-extrabold text-blue-600">{store.rev}</span>
+
+                  {/* Financial Overview 4 Cards */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    <div className="bg-slate-50/80 rounded-2xl p-2 sm:p-2.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-[10px] sm:text-xs">🛒</div>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">TOTAL SALES</span>
+                      </div>
+                      <div className="text-lg sm:text-xl font-black text-slate-950 tracking-tight flex items-baseline gap-1">
+                        <span>{salesCount}</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 bg-emerald-100/80 px-1 py-0.5 rounded">▲ 12%</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50/80 rounded-2xl p-2 sm:p-2.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px] sm:text-xs">£</div>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">NET REVENUE</span>
+                      </div>
+                      <div className="text-xs sm:text-sm font-black text-slate-950 tracking-tight flex items-baseline gap-1">
+                        <span>£{netRevenue.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 bg-emerald-100/80 px-1 py-0.5 rounded">▼ 8%</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50/80 rounded-2xl p-2 sm:p-2.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-[10px] sm:text-xs">💷</div>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">GROSS PROFIT</span>
+                      </div>
+                      <div className="text-xs sm:text-sm font-black text-slate-950 tracking-tight flex items-baseline gap-1">
+                        <span>£134,651.00</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 bg-emerald-100/80 px-1 py-0.5 rounded">▼ 6%</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50/80 rounded-2xl p-2 sm:p-2.5 border border-slate-200/60 hover:bg-white hover:shadow-md transition-all">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-[10px] sm:text-xs">🛍️</div>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">AVG. TICKET</span>
+                      </div>
+                      <div className="text-xs sm:text-sm font-black text-slate-950 tracking-tight flex items-baseline gap-1">
+                        <span>£1,417.38</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 bg-emerald-100/80 px-1 py-0.5 rounded">▼ 5%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Weekly Revenue Chart */}
+                  <div className="bg-slate-50/80 rounded-2xl p-2.5 sm:p-3 border border-slate-200/60">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] sm:text-xs font-bold text-slate-800">Weekly Revenue Telemetry</span>
+                      <span className="text-[9px] sm:text-[10px] font-bold text-blue-600 bg-blue-100/80 px-2 py-0.5 rounded-full">▲ +12.8%</span>
+                    </div>
+
+                    <div className="h-18 sm:h-20 flex items-end justify-between gap-1.5 pt-1 px-1 border-b border-slate-200/60">
+                      {chartData.map((item, index) => (
+                        <div
+                          key={item.day}
+                          className="flex-1 flex flex-col items-center gap-1 group/bar cursor-pointer"
+                          onMouseEnter={() => setHoveredBar(index)}
+                          onMouseLeave={() => setHoveredBar(null)}
+                        >
+                          <div className={`text-[8px] font-bold text-white bg-slate-900 px-1 py-0.5 rounded transition-opacity ${
+                            hoveredBar === index ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                          }`}>
+                            £{item.rev.toLocaleString()}
+                          </div>
+                          <div className="w-full bg-slate-200/70 rounded-t-lg h-12 sm:h-14 relative overflow-hidden flex items-end">
+                            <div
+                              style={{ height: item.height }}
+                              className={`w-full rounded-t-lg transition-all duration-500 ${
+                                hoveredBar === index
+                                  ? 'bg-gradient-to-t from-blue-600 to-sky-400 shadow-md'
+                                  : 'bg-gradient-to-t from-blue-600 to-blue-500 group-hover/bar:bg-blue-600'
+                              }`}
+                            />
+                          </div>
+                          <span className="text-[9px] font-semibold text-slate-500">{item.day}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Today's Activity */}
+                  <div>
+                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">TODAY'S ACTIVITY</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+                      <div className="bg-slate-50/80 rounded-xl p-1.5 sm:p-2 border border-slate-200/60 flex items-center justify-between">
+                        <div>
+                          <div className="text-[8px] font-semibold text-slate-400">NEW CUSTOMERS</div>
+                          <div className="text-sm sm:text-base font-black text-slate-950 flex items-baseline gap-1">
+                            <span>3</span>
+                            <span className="text-[8px] font-bold text-emerald-600">▲ 20%</span>
+                          </div>
+                        </div>
+                        <div className="w-5 h-5 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center font-bold text-[10px]">👥</div>
+                      </div>
+
+                      <div className="bg-slate-50/80 rounded-xl p-1.5 sm:p-2 border border-slate-200/60 flex items-center justify-between">
+                        <div>
+                          <div className="text-[8px] font-semibold text-slate-400">STORE RETURNS</div>
+                          <div className="text-sm sm:text-base font-black text-slate-950 flex items-baseline gap-1">
+                            <span>0</span>
+                            <span className="text-[8px] font-bold text-amber-600">▼ 0%</span>
+                          </div>
+                        </div>
+                        <div className="w-5 h-5 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-[10px]">↩️</div>
+                      </div>
+
+                      <div className="bg-slate-50/80 rounded-xl p-1.5 sm:p-2 border border-slate-200/60 flex items-center justify-between">
+                        <div>
+                          <div className="text-[8px] font-semibold text-slate-400">CANCELLED ORDERS</div>
+                          <div className="text-sm sm:text-base font-black text-slate-950 flex items-baseline gap-1">
+                            <span>14</span>
+                            <span className="text-[8px] font-bold text-emerald-600">▲ 7%</span>
+                          </div>
+                        </div>
+                        <div className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-[10px]">📊</div>
+                      </div>
+
+                      <div className="bg-slate-950 text-white rounded-xl p-1.5 sm:p-2 border border-slate-800 flex items-center gap-1.5 shadow-md">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                        <div className="text-[8px] leading-tight truncate">
+                          <div className="font-bold text-white truncate">New Sale Created - Coffee 250g</div>
+                          <div className="text-[7px] sm:text-[8px] text-emerald-400 font-semibold truncate">£3.45 - Store 3 - 09:24 AM</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              )}
 
-        {/* Other Tabs */}
-        {(activeTab === 'Inventory' || activeTab === 'Sales') && (
-          <div className="space-y-3 animate-fadeIn py-8 text-center">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg mx-auto mb-1">
-              ⚡
-            </div>
-            <h4 className="text-base font-bold text-slate-950">Real-Time {activeTab} Engine</h4>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto">
-              Automated FIFO batch tracking, stock transfer workflows, and live store sync.
-            </p>
-          </div>
-        )}
+              {/* Products View */}
+              {activeTab === 'Products' && (
+                <div className="space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-extrabold text-slate-950 tracking-tight">Product Catalog</h3>
+                      <p className="text-xs text-slate-400 font-medium">1,200 active SKUs across stores</p>
+                    </div>
+                    <button className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-md shadow-blue-500/20">
+                      + Add SKU
+                    </button>
+                  </div>
 
-        {/* Floating Toast */}
-        {liveToast && (
-          <div className="absolute bottom-4 right-4 bg-slate-950 text-white px-3.5 py-2 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-2.5 animate-bounce">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <div className="text-[11px]">
-              <div className="font-bold text-white">{liveToast.text}</div>
-              <div className="text-[9px] text-emerald-400 font-semibold">{liveToast.amount} • POS Synced</div>
+                  <div className="bg-slate-50/80 rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-100/80 border-b border-slate-200/60 text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                          <th className="p-2.5">Product</th>
+                          <th className="p-2.5">Category</th>
+                          <th className="p-2.5">Price</th>
+                          <th className="p-2.5">Stock</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                        <tr className="hover:bg-white transition-colors">
+                          <td className="p-2.5 font-bold text-slate-950">Organic Coffee 250g</td>
+                          <td className="p-2.5 text-slate-400">Beverages</td>
+                          <td className="p-2.5 font-extrabold text-slate-950">£4.50</td>
+                          <td className="p-2.5"><span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold rounded-full text-[9px]">In Stock (142)</span></td>
+                        </tr>
+                        <tr className="hover:bg-white transition-colors">
+                          <td className="p-2.5 font-bold text-slate-950">Pastry Box (Assorted)</td>
+                          <td className="p-2.5 text-slate-400">Bakery</td>
+                          <td className="p-2.5 font-extrabold text-slate-950">£12.00</td>
+                          <td className="p-2.5"><span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold rounded-full text-[9px]">In Stock (48)</span></td>
+                        </tr>
+                        <tr className="hover:bg-white transition-colors">
+                          <td className="p-2.5 font-bold text-slate-950">Wireless Thermal Printer</td>
+                          <td className="p-2.5 text-slate-400">Hardware</td>
+                          <td className="p-2.5 font-extrabold text-slate-950">£149.00</td>
+                          <td className="p-2.5"><span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold rounded-full text-[9px]">Low Stock (3)</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Stores View */}
+              {activeTab === 'Stores' && (
+                <div className="space-y-3 animate-fadeIn">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-slate-950 tracking-tight">Multi-Store Locations</h3>
+                    <p className="text-xs text-slate-400 font-medium">3 store locations online</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {[
+                      { name: 'London Central Store', terminals: 5, status: 'Active', rev: '£42,890' },
+                      { name: 'Manchester Hub', terminals: 4, status: 'Active', rev: '£31,450' },
+                      { name: 'Edinburgh Store', terminals: 3, status: 'Active', rev: '£28,120' },
+                    ].map(store => (
+                      <div key={store.name} className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/60 shadow-sm space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">{store.status}</span>
+                        </div>
+                        <div className="font-bold text-slate-950 text-xs">{store.name}</div>
+                        <div className="text-[10px] text-slate-400">{store.terminals} Terminals Online</div>
+                        <div className="pt-1.5 border-t border-slate-200/60 flex justify-between items-center text-[10px]">
+                          <span className="text-slate-400">Sales</span>
+                          <span className="font-extrabold text-blue-600">{store.rev}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other Tabs */}
+              {(activeTab === 'Inventory' || activeTab === 'Sales') && (
+                <div className="h-full min-h-[260px] flex flex-col items-center justify-center space-y-3 animate-fadeIn py-6 text-center">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg mx-auto mb-1">
+                    ⚡
+                  </div>
+                  <h4 className="text-base font-bold text-slate-950">Real-Time {activeTab} Engine</h4>
+                  <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                    Automated FIFO batch tracking, stock transfer workflows, and live store sync.
+                  </p>
+                </div>
+              )}
             </div>
+
+            {/* Floating Toast */}
+            {liveToast && (
+              <div className="absolute bottom-3 right-3 bg-slate-950 text-white px-3.5 py-2 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-2.5 animate-bounce z-20 pointer-events-none">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <div className="text-[11px]">
+                  <div className="font-bold text-white">{liveToast.text}</div>
+                  <div className="text-[9px] text-emerald-400 font-semibold">{liveToast.amount} • POS Synced</div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Laptop Hinge (Recessed dark pivot bar) */}
+        <div className="w-[86%] sm:w-[88%] h-1 sm:h-1.5 mx-auto bg-[#0a0d14] rounded-b-sm border-t border-slate-900/90" />
+
+        {/* Laptop Bottom Chassis / Aluminum Base */}
+        <div className="relative w-full">
+          {/* Main Metallic Aluminum Base Front Edge */}
+          <div className="relative h-3.5 sm:h-4.5 bg-gradient-to-b from-[#d8dee8] via-[#cbd5e1] to-[#94a3b8] rounded-b-[14px] sm:rounded-b-[18px] border-t border-white/95 border-b border-slate-500/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(15,23,42,0.3)] flex items-start justify-center overflow-hidden">
+            {/* Center Thumb Scoop / Opening Notch */}
+            <div className="w-16 sm:w-20 h-1 sm:h-1.5 bg-[#475569]/60 rounded-b-md shadow-inner border-t border-slate-500/50" />
+          </div>
+
+          {/* Bottom Under-Lip / Contact Edge */}
+          <div className="w-[96%] h-0.5 sm:h-1 mx-auto bg-[#1e293b]/80 rounded-b-md" />
+
+          {/* Realistic Multi-Layer Table Surface Shadows */}
+          <div className="w-[84%] h-2.5 bg-slate-950/40 blur-sm mx-auto -mt-0.5 rounded-full pointer-events-none" />
+          <div className="w-[96%] h-7 sm:h-9 bg-slate-900/25 blur-xl mx-auto -mt-1 rounded-full pointer-events-none" />
+          <div className="w-[90%] h-4 bg-blue-900/10 blur-2xl mx-auto -mt-3 rounded-full pointer-events-none" />
+        </div>
       </div>
     </div>
   );
@@ -637,8 +686,12 @@ interface TillCartItem {
 const AnimatedTillAppPreviewCard: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [cart, setCart] = useState<TillCartItem[]>([
-    { id: 'p2', name: 'Dabur Lip Balm 50ml', price: 7.25, qty: 1 },
-    { id: 'p3', name: 'Aavin Buttermilk 200ml', price: 1.25, qty: 2 },
+    { id: 'p2', name: 'Dabur Lip Balm 50ml', price: 7.25, qty: 7 },
+    { id: 'p3', name: 'Aavin Buttermilk 200ml', price: 1.25, qty: 8 },
+    { id: 'p5', name: 'Bingo Bhujia 100g', price: 2.10, qty: 7 },
+    { id: 'p1', name: 'Harpic Dishwash 5kg', price: 8.00, qty: 17 },
+    { id: 'p4', name: 'Coca-Cola Mango 200ml', price: 3.50, qty: 9 },
+    { id: 'p6', name: 'Aashirvaad Coffee 10kg', price: 5.30, qty: 1 },
   ]);
   const [checkoutToast, setCheckoutToast] = useState<string | null>(null);
   const [scanningItem, setScanningItem] = useState<string | null>(null);
@@ -692,156 +745,223 @@ const AnimatedTillAppPreviewCard: React.FC = () => {
   const totalAmount = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
 
   return (
-    <div className="relative rounded-[2.5rem] bg-gradient-to-tr from-emerald-100/70 via-sky-50 to-blue-100/70 p-4 sm:p-7 shadow-2xl border border-emerald-100/50 overflow-hidden group">
-      {/* Antigravity ambient background glows */}
-      <div className="absolute -top-12 -left-12 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-teal-300/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-12 -right-12 w-80 h-80 bg-gradient-to-tr from-sky-400/20 to-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative w-full max-w-[605px] mx-auto select-none py-2 sm:py-4">
+      {/* Subtle atmospheric ambient glow */}
+      <div className="absolute -top-10 -left-10 w-72 sm:w-80 h-72 sm:h-80 bg-emerald-100/40 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="absolute -bottom-10 -right-10 w-64 sm:w-72 h-64 sm:h-72 bg-sky-100/40 rounded-full blur-3xl pointer-events-none -z-10" />
 
-      {/* Main Inner POS App Canvas (Clean frameless white card) */}
-      <div className="relative bg-white text-slate-900 rounded-3xl p-4 sm:p-6 shadow-xl border border-slate-200/70 min-h-[480px] flex flex-col justify-between select-none overflow-hidden">
-
-        {/* POS Top Header Bar (Matching Screenshot 3) */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-slate-900 text-white font-bold rounded-lg flex items-center justify-center text-xs shadow-sm">
-              iE
-            </div>
-            <div>
-              <div className="font-black text-slate-950 text-xs tracking-tight">INFEPOS Terminal</div>
-              <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
-                <span>yogesh d</span> • <span className="text-emerald-600 font-bold">🟢 Shift Open</span>
+      {/* Realistic 3D Angled POS Terminal Device */}
+      <div
+        className="relative group transition-transform duration-500"
+        style={{
+          perspective: '1400px',
+        }}
+      >
+        <div
+          className="relative transition-transform duration-500 ease-out"
+          style={{
+            transform: 'perspective(1400px) rotateY(10deg) rotateX(3.5deg) rotateZ(-1deg)',
+            transformStyle: 'preserve-3d',
+          }}
+        >
+          {/* POS Terminal Head (Display Housing & Bezel) */}
+          <div className="relative bg-[#0d1017] rounded-[20px] sm:rounded-[24px] p-2 sm:p-3 border-[2px] sm:border-[2.5px] border-[#222836] shadow-[-12px_16px_36px_rgba(0,0,0,0.36),0_18px_40px_-10px_rgba(15,23,42,0.35),inset_0_1px_1px_rgba(255,255,255,0.15)] relative z-10">
+            {/* Top Bezel Front Camera / Sensor Pinhole */}
+            <div className="absolute top-1.5 sm:top-2 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-20">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#05070a] border border-slate-700/80 flex items-center justify-center shadow-inner">
+                <div className="w-0.5 h-0.5 rounded-full bg-[#38bdf8]/60" />
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 text-[10px]">
-            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 font-mono text-slate-500 font-semibold border border-slate-200">
-              12:46:27 Fri 09 Oct
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Offline Mode Active</span>
-            </span>
-          </div>
-        </div>
+            {/* Screen Glass Canvas (Fixed Height to Prevent Layout Shift on State Changes) */}
+            <div className="relative bg-white text-slate-900 rounded-[10px] sm:rounded-[12px] p-2.5 sm:p-3 h-[415px] max-h-[415px] flex flex-col justify-between overflow-hidden shadow-inner ring-1 ring-black/15">
+              {/* Subtle Screen Reflection Glare */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.02] to-white/[0.06] rounded-[10px] sm:rounded-[12px] z-10" />
 
-        {/* Search Bar & Category Filter Pills */}
-        <div className="space-y-2 mb-3">
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-slate-50 border border-slate-200/70 rounded-xl px-3 py-1.5 text-xs text-slate-400 flex items-center gap-2">
-              <Search size={14} className="text-slate-400" />
-              <span>Search SKU, barcode or item name...</span>
-            </div>
-            <button className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-bold text-slate-700 border border-slate-200">
-              Sync Catalog
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${
-                  selectedCategory === cat
-                    ? 'bg-slate-900 text-white font-bold shadow-md scale-105'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Products Grid & Cart Drawer */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 flex-1">
-          {/* Products Grid */}
-          <div className="md:col-span-8 grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {filteredProducts.map(product => (
-              <div
-                key={product.id}
-                onClick={() => addToCart(product)}
-                className={`bg-slate-50/80 hover:bg-white border rounded-2xl p-2.5 flex flex-col justify-between cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] relative ${
-                  scanningItem === product.name ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/50' : 'border-slate-200/70'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[8px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded-full">
-                    {product.stock} IN STOCK
-                  </span>
-                  <span className="text-[8px] font-semibold text-slate-400">{product.vat}</span>
+              {/* POS Top Header Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-100 flex-shrink-0 z-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-blue-600 text-white font-bold rounded-lg flex items-center justify-center text-xs shadow-sm">
+                    IE
+                  </div>
+                  <div>
+                    <div className="font-black text-slate-950 text-xs tracking-tight">INFEPOS Terminal</div>
+                    <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                      <span>yogesh d</span> • <span className="text-emerald-600 font-bold">🟢 Shift Open</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="font-bold text-slate-950 text-xs line-clamp-2 my-1">{product.name}</div>
-                <div className="text-xs font-black text-blue-600 pt-1 border-t border-slate-200/50 flex justify-between items-center">
-                  <span>£{product.price.toFixed(2)}</span>
-                  <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px]">
-                    +
+
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 font-mono text-slate-500 font-semibold border border-slate-200">
+                    12:46:27 Fri 09 Oct
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Offline Mode Active</span>
                   </span>
                 </div>
               </div>
-            ))}
-          </div>
 
-          {/* Cart Sidebar */}
-          <div className="md:col-span-4 bg-slate-50/90 border border-slate-200/80 rounded-2xl p-3 flex flex-col justify-between shadow-inner">
-            <div>
-              <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 mb-2">
-                <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                  <ShoppingCart size={14} className="text-blue-600" /> Cart
-                </span>
-                <span className="text-[10px] font-semibold text-slate-400">{cart.length} Items</span>
+              {/* Search Bar & Category Filter Pills */}
+              <div className="space-y-1.5 mb-2 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-slate-50 border border-slate-200/70 rounded-xl px-3 py-1.5 text-xs text-slate-400 flex items-center gap-2">
+                    <Search size={14} className="text-slate-400" />
+                    <span>Search SKU, barcode or item name...</span>
+                  </div>
+                  <button className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-bold text-slate-700 border border-slate-200">
+                    Sync Catalog
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${
+                        selectedCategory === cat
+                          ? 'bg-slate-900 text-white font-bold shadow-md scale-105'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {cart.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">
-                  <ShoppingCart size={28} className="mx-auto mb-1 opacity-40" />
-                  <div className="text-[11px] font-semibold">Cart is empty</div>
-                  <div className="text-[9px] text-slate-400">Tap items to scan & add</div>
-                </div>
-              ) : (
-                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                  {cart.map(item => (
-                    <div key={item.id} className="bg-white rounded-xl p-2 border border-slate-200/60 flex items-center justify-between text-[11px]">
-                      <div>
-                        <div className="font-bold text-slate-950 line-clamp-1">{item.name}</div>
-                        <div className="text-[9px] text-slate-400">£{item.price.toFixed(2)} x {item.qty}</div>
+              {/* Products Grid & Cart Drawer */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 sm:gap-3 flex-1 min-h-0">
+                {/* Products Grid */}
+                <div className="md:col-span-8 grid grid-cols-2 sm:grid-cols-3 gap-2 content-between">
+                  {filteredProducts.map(product => (
+                    <div
+                      key={product.id}
+                      onClick={() => addToCart(product)}
+                      className={`bg-slate-50/80 hover:bg-white border rounded-2xl p-2 flex flex-col justify-between cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] relative ${
+                        scanningItem === product.name ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/50' : 'border-slate-200/70'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[8px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded-full">
+                          {product.stock} IN STOCK
+                        </span>
+                        <span className="text-[8px] font-semibold text-slate-400">{product.vat}</span>
                       </div>
-                      <div className="font-black text-slate-950">£{(item.price * item.qty).toFixed(2)}</div>
+                      <div className="font-bold text-slate-950 text-xs line-clamp-2 my-0.5">{product.name}</div>
+                      <div className="text-xs font-black text-blue-600 pt-1 border-t border-slate-200/50 flex justify-between items-center">
+                        <span>£{product.price.toFixed(2)}</span>
+                        <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px]">
+                          +
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
+
+                {/* Cart Sidebar */}
+                <div className="md:col-span-4 bg-slate-50/90 border border-slate-200/80 rounded-2xl p-2 sm:p-2.5 flex flex-col justify-between shadow-inner h-full min-h-0 overflow-hidden">
+                  <div className="flex flex-col min-h-0 flex-1">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/80 mb-1.5 flex-shrink-0">
+                      <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                        <ShoppingCart size={14} className="text-blue-600" /> Cart
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-400">{cart.length} items</span>
+                    </div>
+
+                    {cart.length === 0 ? (
+                      <div className="text-center py-6 text-slate-400 my-auto">
+                        <ShoppingCart size={24} className="mx-auto mb-1 opacity-40" />
+                        <div className="text-[11px] font-semibold">Cart is empty</div>
+                        <div className="text-[9px] text-slate-400">Tap items to scan & add</div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 max-h-[110px] overflow-y-auto pr-1 [scrollbar-width:thin]">
+                        {cart.map(item => (
+                          <div key={item.id} className="bg-white rounded-xl p-1.5 border border-slate-200/60 flex items-center justify-between text-[11px]">
+                            <div className="min-w-0 pr-1">
+                              <div className="font-bold text-slate-950 truncate text-[11px]">{item.name}</div>
+                              <div className="text-[9px] text-slate-400">£{item.price.toFixed(2)} x {item.qty}</div>
+                            </div>
+                            <div className="font-black text-slate-950 text-[11px] flex-shrink-0">£{(item.price * item.qty).toFixed(2)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Cart Footer */}
+                  <div className="pt-1.5 border-t border-slate-200/80 space-y-1.5 flex-shrink-0">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-slate-600">Total</span>
+                      <span className="font-black text-slate-950 text-base">£{totalAmount.toFixed(2)}</span>
+                    </div>
+                    <button
+                      onClick={handleCheckout}
+                      disabled={cart.length === 0}
+                      className={`w-full py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-md ${
+                        cart.length > 0
+                          ? 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-[1.02] cursor-pointer'
+                          : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <span>Checkout / Pay</span> &rarr;
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Toast Notification */}
+              {checkoutToast && (
+                <div className="absolute bottom-3 left-3 right-3 bg-slate-950 text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-2.5 animate-bounce z-20">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                  <div className="text-xs font-semibold text-emerald-300">{checkoutToast}</div>
+                </div>
               )}
             </div>
+          </div>
 
-            {/* Cart Footer */}
-            <div className="pt-2 border-t border-slate-200/80 space-y-2">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-600">Total</span>
-                <span className="font-black text-slate-950 text-base">£{totalAmount.toFixed(2)}</span>
-              </div>
-              <button
-                onClick={handleCheckout}
-                disabled={cart.length === 0}
-                className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-md ${
-                  cart.length > 0
-                    ? 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-[1.02] cursor-pointer'
-                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                <span>Checkout / Pay</span> &rarr;
-              </button>
+          {/* POS Terminal Physical Stand & Weighted Base */}
+          <div className="relative w-full flex flex-col items-center -mt-2.5 z-0">
+            {/* Dark Articulated Neck / Display Hinge Column */}
+            <div className="w-[44%] sm:w-[48%] h-6 sm:h-7.5 bg-gradient-to-b from-[#11141c] via-[#161b24] to-[#0d1017] shadow-inner border-t border-slate-700/60 [clip-path:polygon(4%_0%,96%_0%,100%_100%,0%_100%)] relative z-0 flex items-center justify-center">
+              {/* Subtle vertical center spine / seam */}
+              <div className="w-0.5 h-full bg-slate-800/40" />
             </div>
+
+            {/* Heavy-Duty Commercial Counter Base Plate */}
+            <div className="relative w-[62%] sm:w-[66%] mx-auto z-10 flex flex-col items-center">
+              {/* Main Base Housing (With 3D Left Facet & Sloped Top Deck) */}
+              <div className="w-full relative">
+                {/* 3D Left Chamfer / Flank Facet (giving authentic perspective depth) */}
+                <div className="absolute -left-2.5 sm:-left-3.5 top-0.5 bottom-0 w-4 sm:w-5 bg-gradient-to-r from-[#0d1017] to-[#1c222e] [clip-path:polygon(100%_0%,100%_100%,0%_92%,25%_10%)] opacity-95 pointer-events-none" />
+
+                {/* Base Top Sloped Deck */}
+                <div className="relative bg-gradient-to-b from-[#252c3b] via-[#1c222e] to-[#131721] rounded-t-xl sm:rounded-t-2xl pt-1.5 pb-1.5 px-5 border-t border-l border-slate-500/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.22),inset_-1px_0_1px_rgba(0,0,0,0.5)]">
+                  {/* Recessed Cable Management / Counter Slot */}
+                  <div className="w-14 sm:w-16 h-1.5 bg-[#06080d] rounded-full mx-auto shadow-[inset_0_1px_2px_rgba(0,0,0,0.9)] border-t border-slate-800/90" />
+                </div>
+
+                {/* Base Front Face / Skirt (Angled vertical drop) */}
+                <div className="h-4.5 sm:h-5 bg-gradient-to-b from-[#1a202c] via-[#131720] to-[#0a0d13] rounded-b-[14px] sm:rounded-b-[18px] border-b border-l border-[#06080c] shadow-lg relative overflow-hidden">
+                  {/* Front bevel highlight line */}
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-slate-500/60 via-slate-400/40 to-transparent" />
+                </div>
+
+                {/* Bottom Base Contact Lip / Rubber Feet */}
+                <div className="w-[96%] h-1 mx-auto bg-[#07090d] rounded-b-md" />
+              </div>
+            </div>
+
+            {/* Realistic Multi-Layer Countertop Table Shadows */}
+            <div className="w-[64%] sm:w-[68%] h-2.5 bg-slate-950/80 blur-[3px] mx-auto -mt-1 rounded-full pointer-events-none" />
+            <div className="w-[78%] sm:w-[82%] h-4.5 bg-slate-950/50 blur-md mx-auto -mt-2 rounded-full pointer-events-none" />
+            <div className="w-[98%] sm:w-[102%] h-8 sm:h-10 bg-slate-900/30 blur-2xl mx-auto -mt-2.5 rounded-full -translate-x-5 pointer-events-none" />
+            <div className="w-[82%] h-5 bg-slate-900/15 blur-xl mx-auto -mt-1.5 -translate-x-3 rounded-full pointer-events-none" />
           </div>
         </div>
-
-        {/* Floating Toast Notification */}
-        {checkoutToast && (
-          <div className="absolute bottom-3 left-3 right-3 bg-slate-950 text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-2.5 animate-bounce">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-            <div className="text-xs font-semibold text-emerald-300">{checkoutToast}</div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -2816,58 +2936,91 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ── 9. CONTACT SECTION ── */}
-      <section id="enterprise" className="py-28 bg-white border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 md:px-12">
-          <div className="grid md:grid-cols-2 gap-16 items-start">
+      <section id="enterprise" className="py-24 sm:py-28 bg-white border-t border-slate-100">
+        <div className="max-w-6xl mx-auto px-6 md:px-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left: Contact Info */}
             <div>
-              <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-6">Contact</p>
-              <h2 className="text-5xl font-bold tracking-tight text-slate-900 leading-[1.05] mb-6">
-                Get in touch.
+              <span className="inline-flex items-center px-3.5 py-1 rounded-full bg-[#eff6ff] text-[#0066ff] text-xs font-bold uppercase tracking-wider mb-6">
+                CONTACT
+              </span>
+              <h2 className="text-4xl sm:text-5xl lg:text-5xl font-extrabold tracking-tight text-slate-950 leading-[1.1] mb-6">
+                Get in <span className="text-[#0066ff]">touch.</span>
               </h2>
-              <p className="text-xl text-slate-500 font-light leading-relaxed mb-12 max-w-md">
+              <p className="text-base sm:text-lg text-slate-500 font-normal leading-relaxed mb-10 sm:mb-12 max-w-md">
                 Ready to upgrade your retail operations? Talk to our team about enterprise pricing, demos, and onboarding.
               </p>
-              <div className="space-y-5">
+              <div className="space-y-6 sm:space-y-7">
                 {[
-                  { icon: <Mail size={20} />, text: 'sales@infynux.com' },
-                  { icon: <Phone size={20} />, text: '+1 (800) 123-4567' },
-                  { icon: <Globe size={20} />, text: 'www.infynux.com' },
-                  { icon: <MapPin size={20} />, text: '100 Tech Hub Blvd, Suite 400' },
-                ].map(({ icon, text }) => (
-                  <div key={text} className="flex items-center gap-4 text-slate-700">
-                    <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">{icon}</div>
-                    <span className="font-medium">{text}</span>
+                  { label: 'Email', value: 'sales@infynux.com', icon: <Mail size={20} className="text-[#0066ff]" /> },
+                  { label: 'Phone', value: '+1 (800) 123-4567', icon: <Phone size={20} className="text-[#0066ff]" /> },
+                  { label: 'Website', value: 'www.infynux.com', icon: <Globe size={20} className="text-[#0066ff]" /> },
+                  { label: 'Address', value: '100 Tech Hub Blvd, Suite 400', icon: <MapPin size={20} className="text-[#0066ff]" /> },
+                ].map(({ label, value, icon }) => (
+                  <div key={label} className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-[#eff6ff] rounded-2xl flex items-center justify-center flex-shrink-0">
+                      {icon}
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-slate-400 mb-0.5">{label}</div>
+                      <div className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight">{value}</div>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100">
-              <form className="flex flex-col gap-5" onSubmit={(e) => { e.preventDefault(); alert('Message sent!'); }}>
-                <div className="grid grid-cols-2 gap-4">
+            {/* Right: Contact Form Card */}
+            <div className="bg-[#f8fafc] rounded-[28px] sm:rounded-[32px] p-7 sm:p-9 lg:p-10 border border-slate-200/60 shadow-[0_10px_35px_-10px_rgba(15,23,42,0.04)]">
+              <form className="flex flex-col gap-5 sm:gap-6" onSubmit={(e) => { e.preventDefault(); alert('Message sent!'); }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">First Name</label>
-                    <input type="text" placeholder="John" className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                    <label className="block text-xs sm:text-sm font-semibold text-slate-800 mb-2">First Name</label>
+                    <input
+                      type="text"
+                      placeholder="John"
+                      className="w-full px-4.5 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0066ff] transition-all text-sm sm:text-base font-normal shadow-sm"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Last Name</label>
-                    <input type="text" placeholder="Doe" className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                    <label className="block text-xs sm:text-sm font-semibold text-slate-800 mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      placeholder="Doe"
+                      className="w-full px-4.5 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0066ff] transition-all text-sm sm:text-base font-normal shadow-sm"
+                    />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Work Email</label>
-                  <input type="email" placeholder="john@company.com" className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                  <label className="block text-xs sm:text-sm font-semibold text-slate-800 mb-2">Work Email</label>
+                  <input
+                    type="email"
+                    placeholder="john@company.com"
+                    className="w-full px-4.5 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0066ff] transition-all text-sm sm:text-base font-normal shadow-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Company</label>
-                  <input type="text" placeholder="Your Company" className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                  <label className="block text-xs sm:text-sm font-semibold text-slate-800 mb-2">Company</label>
+                  <input
+                    type="text"
+                    placeholder="Your Company"
+                    className="w-full px-4.5 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0066ff] transition-all text-sm sm:text-base font-normal shadow-sm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Message</label>
-                  <textarea rows={4} placeholder="How can we help?" className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none" />
+                  <label className="block text-xs sm:text-sm font-semibold text-slate-800 mb-2">Message</label>
+                  <textarea
+                    rows={4}
+                    placeholder="How can we help?"
+                    className="w-full px-4.5 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0066ff] transition-all text-sm sm:text-base font-normal shadow-sm"
+                  />
                 </div>
-                <button className="w-full py-4 bg-slate-900 text-white rounded-full font-semibold text-base hover:bg-black transition-all hover:scale-[1.01] shadow-lg mt-2">
-                  Send Message
+                <button
+                  type="submit"
+                  className="w-full py-4 bg-[#0066ff] hover:bg-[#0055d4] text-white rounded-full font-semibold text-base transition-all hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.99] flex items-center justify-center gap-2 mt-1 cursor-pointer group"
+                >
+                  <span>Send Message</span>
+                  <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
                 </button>
               </form>
             </div>

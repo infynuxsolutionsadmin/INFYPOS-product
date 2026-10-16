@@ -185,7 +185,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
       }}
     >
       <div
-        className="animate-fade-in"
+        className="animate-fade-in payment-modal-card"
         style={{
           width: '100%',
           maxWidth: '740px',
@@ -234,14 +234,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
             />
           </div>
 
-          <div style={{ 
-            background: '#f8fafc', 
-            borderRadius: '12px', 
-            padding: '1.25rem 1.75rem', 
-            display: 'flex', 
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
+          <div
+            className="payment-summary-box"
+            style={{ 
+              background: '#f8fafc', 
+              borderRadius: '12px', 
+              padding: '1.25rem 1.75rem', 
+              display: 'flex', 
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
               <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
                 <Wallet size={24} />
@@ -252,7 +255,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
               </div>
             </div>
 
-            <div style={{ width: '1px', background: '#e2e8f0', alignSelf: 'stretch', margin: '0 1.5rem' }}></div>
+            <div className="payment-summary-divider" style={{ width: '1px', background: '#e2e8f0', alignSelf: 'stretch', margin: '0 1.5rem' }}></div>
 
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.9rem' }}>
@@ -298,7 +301,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
         {/* Payment Methods */}
         <div style={{ padding: '1.5rem 2rem 1.25rem 2rem' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Select Payment Method</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+          <div className="payment-methods-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
             {PAYMENT_METHODS.map((method) => {
               const isSelected = paymentMethod === method.id;
               return (

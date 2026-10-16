@@ -52,6 +52,7 @@ const POSHeader: React.FC = () => {
 
   return (
     <header
+      className="pos-header"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -65,7 +66,7 @@ const POSHeader: React.FC = () => {
       }}
     >
       {/* Left: Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0', flexShrink: 0 }}>
+      <div className="pos-header-logo-group" style={{ display: 'flex', alignItems: 'center', gap: '0', flexShrink: 0 }}>
         <div
           style={{
             width: 96,
@@ -86,9 +87,9 @@ const POSHeader: React.FC = () => {
       </div>
 
       {/* Center: Cashier & shift info */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: 1, justifyContent: 'center' }}>
+      <div className="pos-header-center-info" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: 1, justifyContent: 'center' }}>
         {/* Cashier */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div className="pos-header-cashier" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <User size={14} color="var(--pos-text-muted)" />
           <span style={{ fontSize: '0.82rem', color: 'var(--pos-text-muted)' }}>
             <strong style={{ color: 'var(--pos-text)' }}>{cashierName}</strong>
@@ -97,7 +98,7 @@ const POSHeader: React.FC = () => {
 
         {/* Store ID */}
         {user?.storeId && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div className="pos-header-store" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Store size={14} color="var(--pos-text-muted)" />
             <span style={{ fontSize: '0.78rem', color: 'var(--pos-text-muted)', fontFamily: 'monospace' }}>
               {user.storeId.slice(0, 8).toUpperCase()}
@@ -107,7 +108,7 @@ const POSHeader: React.FC = () => {
 
         {/* Shift Status */}
         {currentShift && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div className="pos-header-shift" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <div
               className="pulse-green"
               style={{
@@ -121,17 +122,18 @@ const POSHeader: React.FC = () => {
               Shift Open
             </span>
             {shiftOpenedAt && (
-              <span style={{ fontSize: '0.72rem', color: 'var(--pos-text-dim)' }}>since {shiftOpenedAt}</span>
+              <span className="pos-header-shift-time" style={{ fontSize: '0.72rem', color: 'var(--pos-text-dim)' }}>since {shiftOpenedAt}</span>
             )}
           </div>
         )}
       </div>
 
       {/* Right: clock + logout */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+      <div className="pos-header-right-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
         
         {/* Sync Indicator */}
         <div 
+          className="pos-header-sync"
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -220,11 +222,11 @@ const POSHeader: React.FC = () => {
           )}
         </div>
 
-        <div style={{ textAlign: 'right' }}>
+        <div className="pos-header-clock" style={{ textAlign: 'right' }}>
           <p style={{ fontWeight: 700, fontSize: '0.9rem', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
             {timeStr}
           </p>
-          <p style={{ fontSize: '0.65rem', color: 'var(--pos-text-dim)', lineHeight: 1 }}>{dateStr}</p>
+          <p className="pos-header-date" style={{ fontSize: '0.65rem', color: 'var(--pos-text-dim)', lineHeight: 1 }}>{dateStr}</p>
         </div>
 
         <button

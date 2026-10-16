@@ -8,8 +8,10 @@ const POSPage: React.FC = () => {
     <POSLayout>
       {/* Left: Product search & catalog — takes remaining width */}
       <div
+        className="pos-catalog-panel"
         style={{
           flex: 1,
+          minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -21,6 +23,7 @@ const POSPage: React.FC = () => {
 
       {/* Right: Cart — fixed width panel */}
       <div
+        className="pos-cart-panel"
         style={{
           width: 340,
           flexShrink: 0,

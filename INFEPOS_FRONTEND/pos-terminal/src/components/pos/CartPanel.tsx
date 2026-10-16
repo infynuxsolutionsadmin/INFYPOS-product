@@ -23,6 +23,7 @@ const CartPanel: React.FC = () => {
 
   return (
     <div
+      className="pos-cart-panel-inner"
       style={{
         display: 'flex',
         flexDirection: 'column',

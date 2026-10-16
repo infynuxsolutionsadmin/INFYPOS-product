@@ -7,9 +7,9 @@ interface POSLayoutProps {
 
 const POSLayout: React.FC<POSLayoutProps> = ({ children }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div className="pos-layout-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '100%', overflow: 'hidden' }}>
       <POSHeader />
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+      <div className="pos-main-container" style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
         {children}
       </div>
     </div>

@@ -104,7 +104,7 @@ const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({ onClose }) => {
       }}
     >
       <div
-        className="animate-fade-in"
+        className="animate-fade-in shift-close-modal-card"
         style={{
           width: '100%',
           maxWidth: '520px',

@@ -54,3 +54,25 @@ export const refreshAccessToken = async (refreshToken: string): Promise<string> 
   localStorage.setItem('pos_access_token', newToken);
   return newToken;
 };
+
+export interface VerifyPinResponse {
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string | null;
+    email: string;
+    roleId: string;
+    roleCode: string;
+    storeId: string;
+    tenantId: string;
+  };
+}
+
+export const verifyPin = async (userId: string, pin: string): Promise<VerifyPinResponse> => {
+  const response = await client.post<{ success: boolean; data: VerifyPinResponse }>('/auth/verify-pin', {
+    userId,
+    pin,
+  });
+  return response.data.data;
+};
+

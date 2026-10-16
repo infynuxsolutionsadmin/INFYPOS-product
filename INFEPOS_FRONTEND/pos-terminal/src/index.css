@@ -191,3 +191,628 @@ body {
   50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
 }
 .pulse-green { animation: pulse-glow 2s infinite; }
+
+/* Cashier Selection Bubble Cards & Responsive Login Layout */
+.login-card {
+  container-type: inline-size;
+  padding: clamp(1.25rem, 2.2vh, 1.75rem) clamp(1rem, 2.5vw, 1.75rem);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .login-card {
+    padding: 1.25rem 1rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .login-card {
+    padding: 1rem 0.75rem;
+  }
+}
+
+.cashier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(0.75rem, 1.5vh, 1rem);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Container query rules: responds directly to the card width */
+@container (max-width: 490px) {
+  .cashier-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+@container (max-width: 310px) {
+  .cashier-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+}
+
+/* Viewport fallback rules */
+@media (max-width: 660px) {
+  .cashier-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .cashier-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+}
+
+.cashier-bubble-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 30px;
+  padding: clamp(0.9rem, 1.6vh, 1.15rem) 0.65rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  outline: none;
+}
+
+@media (max-width: 380px) {
+  .cashier-bubble-card {
+    padding: 0.85rem 0.65rem;
+    border-radius: 18px;
+    gap: 0.4rem;
+  }
+}
+
+.cashier-bubble-card:hover {
+  background-color: #faf5ff;
+  border-color: #ddd6fe;
+  box-shadow: 0 8px 20px -4px rgba(109, 40, 217, 0.1), 0 4px 8px -2px rgba(109, 40, 217, 0.04);
+  transform: translateY(-2px);
+}
+
+.cashier-bubble-card:focus-visible {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25), 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.cashier-bubble-card:active {
+  background-color: #f3e8ff;
+  transform: translateY(0);
+}
+
+/* Manager Login & Unpair Device Actions */
+.login-action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: clamp(1rem, 2vh, 1.5rem);
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .login-action-buttons {
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-top: 1.15rem;
+  }
+  .login-action-buttons .btn-manager-action,
+  .login-action-buttons .btn-admin-action {
+    width: 100%;
+  }
+}
+
+.btn-manager-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.15rem;
+  background-color: #f5f3ff;
+  border: 1.5px solid #ddd6fe;
+  border-radius: 12px;
+  color: #6d28d9;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(109, 40, 217, 0.06);
+  transition: all 200ms ease;
+  outline: none;
+}
+
+.btn-manager-action:hover {
+  background-color: #ede9fe;
+  border-color: #c4b5fd;
+  color: #5b21b6;
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.14);
+  transform: translateY(-1px);
+}
+
+.btn-manager-action:focus-visible {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
+}
+
+.btn-manager-action:active {
+  transform: translateY(0);
+  background-color: #ddd6fe;
+}
+
+.btn-admin-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.15rem;
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  color: #1e293b;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 200ms ease;
+  outline: none;
+}
+
+.btn-admin-action:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.btn-admin-action:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.3);
+}
+
+.btn-admin-action:active {
+  transform: translateY(0);
+  background-color: #f1f5f9;
+}
+
+/* Responsive PIN Authentication Keypad */
+.pin-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(0.5rem, 1.4vh, 0.875rem);
+  width: 100%;
+  max-width: 270px;
+  margin: 0 auto;
+  justify-items: center;
+  box-sizing: border-box;
+}
+
+.pin-key-btn {
+  width: clamp(52px, 6.8vh, 66px);
+  height: clamp(52px, 6.8vh, 66px);
+  border-radius: 50%;
+  background-color: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  font-size: clamp(1.2rem, 2.5vh, 1.45rem);
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 150ms ease;
+  outline: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pin-key-btn:hover {
+  background-color: #ede9fe;
+  border-color: #ddd6fe;
+  color: #6d28d9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(109, 40, 217, 0.12);
+}
+
+.pin-key-btn:active {
+  transform: scale(0.95);
+  background-color: #ddd6fe;
+}
+
+.pin-del-btn {
+  width: clamp(52px, 6.8vh, 66px);
+  height: clamp(52px, 6.8vh, 66px);
+  border-radius: 50%;
+  background-color: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  font-size: clamp(0.85rem, 1.8vh, 0.95rem);
+  font-weight: 600;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 150ms ease;
+  outline: none;
+  user-select: none;
+}
+
+.pin-del-btn:hover {
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.1);
+}
+
+.pin-del-btn:active {
+  transform: scale(0.95);
+  background-color: #fecaca;
+}
+
+/* Height-adaptive adaptations for laptops, tablets, and short viewports */
+@media (max-height: 740px) {
+  .login-page-wrapper {
+    padding-top: 0.5rem !important;
+    padding-bottom: 1.5rem !important;
+  }
+  .login-header {
+    margin-bottom: 0.5rem !important;
+  }
+  .login-logo {
+    width: 44px !important;
+    height: 44px !important;
+    margin-bottom: 0.2rem !important;
+  }
+  .login-title {
+    font-size: 1.25rem !important;
+  }
+  .login-card {
+    padding: 1.15rem 1.25rem !important;
+  }
+  .cashier-bubble-card {
+    padding: 0.75rem 0.5rem !important;
+    gap: 0.35rem !important;
+  }
+  .cashier-avatar {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 1rem !important;
+  }
+  .login-action-buttons {
+    margin-top: 0.85rem !important;
+  }
+  .pin-dots-wrapper {
+    margin-bottom: 0.85rem !important;
+  }
+  .pin-welcome-section {
+    margin-bottom: 0.65rem !important;
+  }
+  .pin-submit-btn {
+    margin-top: 0.85rem !important;
+  }
+}
+
+@media (max-height: 580px) {
+  .login-logo {
+    display: none !important;
+  }
+  .pin-avatar {
+    display: none !important;
+  }
+  .login-header {
+    margin-bottom: 0.35rem !important;
+  }
+  .login-card {
+    padding: 0.85rem 1rem !important;
+  }
+  .pin-welcome-section {
+    margin-bottom: 0.45rem !important;
+  }
+  .pin-dots-wrapper {
+    margin-bottom: 0.65rem !important;
+  }
+  .pin-submit-btn {
+    margin-top: 0.65rem !important;
+    padding: 0.55rem !important;
+  }
+}
+
+/* Height-adaptive adaptations for Resume Shift page */
+@media (max-height: 720px) {
+  .resume-shift-header {
+    margin-bottom: 0.85rem !important;
+  }
+  .resume-clock-bubble {
+    width: 44px !important;
+    height: 44px !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .resume-time-pill {
+    margin-bottom: 0.65rem !important;
+  }
+  .resume-title {
+    font-size: 1.5rem !important;
+  }
+  .resume-card {
+    padding: 1.25rem 1.35rem !important;
+  }
+  .resume-info-panel {
+    padding: 0.95rem 1rem !important;
+    margin-bottom: 1.15rem !important;
+  }
+}
+
+@media (max-height: 560px) {
+  .resume-clock-bubble {
+    display: none !important;
+  }
+  .resume-shift-header {
+    margin-bottom: 0.45rem !important;
+  }
+}
+
+/* ==========================================================================
+   POS Terminal Responsive Layout (Desktop, Tablet, Mobile, Window Resizing)
+   ========================================================================== */
+
+/* Main Layout Wrapper */
+.pos-layout-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.pos-main-container {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  width: 100%;
+  min-height: 0;
+}
+
+.pos-catalog-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--pos-bg);
+}
+
+.pos-cart-panel {
+  width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--pos-surface);
+}
+
+/* Responsive Header */
+.pos-header {
+  min-height: 54px;
+}
+
+@media (max-width: 1100px) {
+  .pos-header {
+    padding: 0 0.85rem !important;
+    gap: 0.65rem !important;
+  }
+  .pos-header-center-info {
+    gap: 0.85rem !important;
+  }
+  .pos-header-right-actions {
+    gap: 0.5rem !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .pos-header-shift-time {
+    display: none !important;
+  }
+  .pos-header-date {
+    display: none !important;
+  }
+  .pos-header-store {
+    display: none !important;
+  }
+  .pos-cart-panel {
+    width: 290px !important;
+  }
+  .pos-header button.btn-pos {
+    padding: 0.35rem 0.55rem !important;
+    font-size: 0.76rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .pos-header {
+    padding: 0 0.65rem !important;
+    gap: 0.5rem !important;
+  }
+  .pos-header-center-info {
+    gap: 0.5rem !important;
+  }
+  .pos-header-right-actions {
+    gap: 0.4rem !important;
+  }
+  .pos-cart-panel {
+    width: 280px !important;
+  }
+}
+
+/* Narrow mobile screens (e.g. 390x844): Vertical stack with zero horizontal overflow */
+@media (max-width: 640px) {
+  .pos-layout-wrapper {
+    overflow-y: auto !important;
+  }
+
+  .pos-header {
+    height: auto !important;
+    min-height: 52px !important;
+    padding: 0.45rem 0.65rem !important;
+    flex-wrap: wrap !important;
+    row-gap: 0.45rem !important;
+  }
+
+  .pos-header-logo-group {
+    order: 1;
+  }
+
+  .pos-header-center-info {
+    order: 2;
+    flex: 1 !important;
+    justify-content: flex-end !important;
+    gap: 0.5rem !important;
+  }
+
+  .pos-header-right-actions {
+    order: 3;
+    width: 100% !important;
+    justify-content: space-between !important;
+    padding-top: 0.4rem !important;
+    border-top: 1px solid var(--pos-border);
+    gap: 0.35rem !important;
+  }
+
+  .pos-header-clock {
+    display: none !important;
+  }
+
+  .pos-header button.btn-pos {
+    flex: 1 !important;
+    padding: 0.45rem 0.35rem !important;
+    font-size: 0.74rem !important;
+    justify-content: center !important;
+  }
+
+  /* Main content stacks vertically */
+  .pos-main-container {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+    flex: none !important;
+  }
+
+  .pos-catalog-panel {
+    flex: none !important;
+    width: 100% !important;
+    overflow: visible !important;
+    min-height: auto !important;
+  }
+
+  .pos-product-grid-container {
+    overflow-y: visible !important;
+    padding: 0.85rem 0.65rem !important;
+  }
+
+  .pos-cart-panel {
+    width: 100% !important;
+    flex: none !important;
+    border-left: none !important;
+    border-top: 2px solid var(--pos-border) !important;
+    overflow: visible !important;
+  }
+
+  .pos-cart-panel-inner {
+    border-left: none !important;
+    height: auto !important;
+  }
+}
+
+/* Product Catalog Responsive Grid */
+.pos-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  align-content: start;
+}
+
+@media (max-width: 1024px) {
+  .pos-product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .pos-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.6rem !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .pos-product-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Modals Responsive Behavior */
+@media (max-width: 640px) {
+  .payment-modal-card,
+  .sales-history-modal-card,
+  .shift-close-modal-card {
+    border-radius: 16px !important;
+    max-height: 94vh !important;
+    width: 100% !important;
+  }
+
+  .payment-summary-box {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+    padding: 1rem 1.25rem !important;
+  }
+
+  .payment-summary-divider {
+    width: 100% !important;
+    height: 1px !important;
+    margin: 0.25rem 0 !important;
+  }
+
+  .payment-methods-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.65rem !important;
+  }
+
+  .sales-history-header {
+    flex-wrap: wrap !important;
+    gap: 0.75rem !important;
+  }
+
+  .sales-history-table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+
+
+
