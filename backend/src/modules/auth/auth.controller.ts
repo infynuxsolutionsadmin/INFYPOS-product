@@ -4,10 +4,16 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RegisterTenantDto } from './dto/register-tenant.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Post('register')
+  async register(@Body() dto: RegisterTenantDto) {
+    return this.authService.registerTenant(dto);
+  }
 
   @Post('login')
   async login(@Body() dto: LoginDto) {

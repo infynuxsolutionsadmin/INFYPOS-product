@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Loader2, AlertCircle, Printer, CheckCircle } from 'lucide-react';
+import { X, FileText, Loader2, AlertCircle, Printer, CheckCircle, LogOut } from 'lucide-react';
 import { getXReport, closeShift, getZReport } from '../../api/shifts.api';
 import { useShiftStore } from '../../stores/shiftStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNavigate } from 'react-router-dom';
+import logoImg from '../../assets/transparent_logo.png';
 
 interface ShiftCloseModalProps {
   onClose: () => void;
@@ -14,6 +15,9 @@ const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({ onClose }) => {
   const currentShift = useShiftStore((s) => s.currentShift);
   const clearShift = useShiftStore((s) => s.clearShift);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const pairedStoreName = useAuthStore((s) => s.pairedStoreName);
+  const authUser = useAuthStore((s) => s.user);
+  const storeName = pairedStoreName || authUser?.storeName || 'Store';
 
   const [step, setStep] = useState<'X_REPORT' | 'CASH_UP' | 'Z_REPORT'>('X_REPORT');
 
@@ -77,20 +81,192 @@ const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({ onClose }) => {
     }
   };
 
-  const handlePrintAndLogout = () => {
-    window.print();
-    setTimeout(() => {
-      clearAuth();
-      navigate('/login', { replace: true });
-    }, 500);
-  };
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [hasPrinted, setHasPrinted] = useState(false);
 
   const fmt = (n: number | string) => `£${Number(n).toFixed(2)}`;
+
+  const generateZReportHtml = (report: any) => {
+    const paymentRows = Object.entries(report.paymentTotals || {})
+      .map(
+        ([method, amount]) => `
+        <div class="row">
+          <span style="text-transform: capitalize;">${method.toLowerCase()}:</span>
+          <span style="font-weight: 700;">${fmt(amount as any)}</span>
+        </div>`
+      )
+      .join('');
+
+    const varianceColor = Number(report.cashDifference) < 0 ? '#dc2626' : Number(report.cashDifference) > 0 ? '#16a34a' : '#000000';
+    const varianceLabel = Number(report.cashDifference) < 0 ? 'SHORTAGE' : Number(report.cashDifference) > 0 ? 'OVERAGE' : 'BALANCED';
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Shift Z-Report #${report.zReportNumber || ''}</title>
+  <style>
+    @page {
+      size: 80mm auto;
+      margin: 4mm 4mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 11px;
+      line-height: 1.35;
+      color: #000;
+      background: #fff;
+      width: 100%;
+      max-width: 76mm;
+      margin: 0 auto;
+      padding: 4px;
+    }
+    .header { text-align: center; margin-bottom: 8px; }
+    .header img { width: 36px; height: 36px; object-fit: contain; margin: 0 auto 4px; display: block; }
+    .header h1 { font-size: 15px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .header p { font-size: 10px; color: #333; margin: 1px 0; }
+    .badge {
+      display: inline-block;
+      border: 1.5px solid #000;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      margin: 4px 0;
+      letter-spacing: 0.5px;
+    }
+    .divider { border: none; border-top: 1px dashed #777; margin: 6px 0; }
+    .double-divider { border: none; border-top: 2px solid #000; margin: 6px 0; }
+    .row { display: flex; justify-content: space-between; margin: 2px 0; font-size: 11px; }
+    .row.bold { font-weight: 700; color: #000; }
+    .row.large { font-size: 12px; font-weight: 800; }
+    .section-title { font-weight: 800; font-size: 11px; text-transform: uppercase; margin: 6px 0 2px; }
+    .footer { text-align: center; margin-top: 14px; font-size: 9px; color: #444; }
+    .signature-area { margin-top: 18px; padding-top: 8px; border-top: 1px dashed #777; }
+    .signature-line { margin-top: 22px; border-top: 1px solid #000; display: flex; justify-content: space-between; font-size: 9px; padding-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="${logoImg}" alt="Logo" onerror="this.style.display='none'" />
+    <h1>${storeName}</h1>
+    <div class="badge">SHIFT Z-REPORT</div>
+    <p><strong>Z-Report #${report.zReportNumber || ''}</strong></p>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="row"><span>Store ID:</span><span style="font-weight:700;">${report.storeId ? report.storeId.slice(0, 8).toUpperCase() : 'N/A'}</span></div>
+  <div class="row"><span>Cashier:</span><span style="font-weight:600;">${report.cashierName || 'Cashier'}</span></div>
+  <div class="row"><span>Opened:</span><span>${report.openedAt ? new Date(report.openedAt).toLocaleString() : 'N/A'}</span></div>
+  <div class="row"><span>Closed:</span><span>${report.closedAt ? new Date(report.closedAt).toLocaleString() : 'N/A'}</span></div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">Sales Summary</div>
+  <div class="row"><span>Starting Float:</span><span style="font-weight:700;">${fmt(report.startingFloat)}</span></div>
+  <div class="row"><span>Gross Sales:</span><span style="font-weight:700;">${fmt(report.grossSales)}</span></div>
+  <div class="row" style="color:#b91c1c;"><span>Total Discounts:</span><span style="font-weight:700;">-${fmt(report.totalDiscounts || 0)}</span></div>
+  <div class="row" style="color:#b91c1c;"><span>Total Returns:</span><span style="font-weight:700;">-${fmt(report.totalReturns || 0)}</span></div>
+  <div class="row large" style="margin-top: 4px; padding-top: 4px; border-top: 1px solid #ddd;">
+    <span>Net Sales:</span>
+    <span style="font-weight:800;">${fmt(report.netSales)}</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">Payment Breakdown</div>
+  ${paymentRows || '<div class="row"><span>None</span><span>£0.00</span></div>'}
+
+  <div class="double-divider"></div>
+
+  <div class="section-title">Cash Reconciliation</div>
+  <div class="row"><span>Expected Cash:</span><span style="font-weight:700;">${fmt(report.expectedCash)}</span></div>
+  <div class="row"><span>Declared Cash:</span><span style="font-weight:700;">${fmt(report.declaredCash)}</span></div>
+  <div class="row large" style="margin-top: 4px; padding-top: 4px; border-top: 1px solid #000; color: ${varianceColor};">
+    <span>Variance (${varianceLabel}):</span>
+    <span style="font-weight:900;">${fmt(report.cashDifference)}</span>
+  </div>
+
+  <div class="signature-area">
+    <div class="signature-line">
+      <span>Cashier Signature</span>
+      <span>Manager Signature</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>*** END OF Z-REPORT ***</p>
+    <p>Printed: ${new Date().toLocaleString()}</p>
+  </div>
+</body>
+</html>`;
+  };
+
+  const handlePrintZReport = async () => {
+    if (!zReport) return;
+    setIsPrinting(true);
+
+    try {
+      const zReportHtml = generateZReportHtml(zReport);
+
+      // 1. Electron Desktop Native Silent Print
+      const electron = (window as any).electron;
+      if (electron?.printer?.printHtml) {
+        await electron.printer.printHtml(zReportHtml, { silent: false });
+        setHasPrinted(true);
+        return;
+      }
+
+      // 2. Web Browser Standard: Invisible Background Iframe
+      let iframe = document.getElementById('pos-silent-zreport-frame') as HTMLIFrameElement;
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'pos-silent-zreport-frame';
+        iframe.style.position = 'fixed';
+        iframe.style.top = '-9999px';
+        iframe.style.left = '-9999px';
+        iframe.style.width = '0px';
+        iframe.style.height = '0px';
+        iframe.style.border = 'none';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+      }
+
+      const doc = iframe.contentWindow?.document || iframe.contentDocument;
+      if (!doc) throw new Error('Cannot access print document');
+
+      doc.open();
+      doc.write(zReportHtml);
+      doc.close();
+
+      await new Promise((r) => setTimeout(r, 250));
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setHasPrinted(true);
+    } catch (err) {
+      console.error('Z-Report print error:', err);
+      window.print();
+      setHasPrinted(true);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const handleLogout = () => {
+    clearAuth();
+    navigate('/login', { replace: true });
+  };
 
   if (!currentShift && step !== 'Z_REPORT') return null;
 
   return (
     <div
+      className="shift-close-modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -660,28 +836,74 @@ const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({ onClose }) => {
             </>
           )}
           {step === 'Z_REPORT' && (
-            <button
-              onClick={handlePrintAndLogout}
-              style={{
-                flex: 1,
-                padding: '12px 20px',
-                borderRadius: '14px',
-                border: 'none',
-                backgroundColor: '#6366f1',
-                color: '#ffffff',
-                fontSize: '0.95rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
-              }}
-            >
-              <Printer size={18} />
-              Print Z-Report & Logout
-            </button>
+            <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+              <button
+                type="button"
+                onClick={handlePrintZReport}
+                disabled={isPrinting}
+                style={{
+                  flex: 2,
+                  padding: '12px 20px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  backgroundColor: '#6366f1',
+                  color: '#ffffff',
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  cursor: isPrinting ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {isPrinting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Printing...
+                  </>
+                ) : (
+                  <>
+                    <Printer size={18} />
+                    {hasPrinted ? 'Re-Print Z-Report' : 'Print Z-Report'}
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={{
+                  flex: 1,
+                  padding: '12px 18px',
+                  borderRadius: '14px',
+                  border: '1.5px solid #edf2f7',
+                  backgroundColor: '#ffffff',
+                  color: '#334155',
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff';
+                  e.currentTarget.style.borderColor = '#edf2f7';
+                }}
+              >
+                <LogOut size={16} />
+                Log Out
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -689,9 +911,48 @@ const ShiftCloseModal: React.FC<ShiftCloseModalProps> = ({ onClose }) => {
       <style>
         {`
           @media print {
-            body * { visibility: hidden; }
-            #printable-report, #printable-report * { visibility: visible; }
-            #printable-report { position: absolute; left: 0; top: 0; width: 100%; padding: 0; color: #000; }
+            html, body {
+              overflow: visible !important;
+              height: auto !important;
+              background: #fff !important;
+            }
+            body * {
+              visibility: hidden !important;
+            }
+            .shift-close-modal-overlay {
+              position: static !important;
+              padding: 0 !important;
+              background: transparent !important;
+              backdrop-filter: none !important;
+              display: block !important;
+            }
+            .shift-close-modal-card {
+              position: static !important;
+              max-height: none !important;
+              height: auto !important;
+              overflow: visible !important;
+              box-shadow: none !important;
+              border: none !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              border-radius: 0 !important;
+            }
+            #printable-report, #printable-report * {
+              visibility: visible !important;
+            }
+            #printable-report {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              max-height: none !important;
+              height: auto !important;
+              overflow: visible !important;
+              padding: 10mm !important;
+              color: #000 !important;
+              background: #fff !important;
+            }
           }
         `}
       </style>

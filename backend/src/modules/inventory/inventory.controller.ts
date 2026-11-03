@@ -43,6 +43,31 @@ export class InventoryController {
   }
 
   @Permissions('inventory.read')
+  @Get('export')
+  async getExportData(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('storeId') storeId?: string,
+  ) {
+    return this.inventoryService.getExportData(tenantId, storeId);
+  }
+
+  @Permissions('inventory.update')
+  @Post('bulk-import')
+  async bulkImport(
+    @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('userId') currentUserId: string,
+    @Body() dto: { items: any[]; mode?: 'ADD' | 'SET'; defaultStoreId?: string },
+  ) {
+    return this.inventoryService.bulkImport(
+      tenantId,
+      currentUserId,
+      dto.items || [],
+      dto.mode || 'ADD',
+      dto.defaultStoreId,
+    );
+  }
+
+  @Permissions('inventory.read')
   @Get(':id')
   async findOne(
     @CurrentUser('tenantId') tenantId: string,

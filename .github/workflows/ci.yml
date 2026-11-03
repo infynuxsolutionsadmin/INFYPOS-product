@@ -1,0 +1,89 @@
+name: INFYPOS Continuous Integration
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-test-and-build:
+    name: Backend CI (NestJS & Prisma)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'backend/package-lock.json'
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Run Backend Regression & Security Test Suite
+        working-directory: backend
+        run: npm test
+
+      - name: Compile Backend Production Bundle
+        working-directory: backend
+        run: npm run build
+
+  admin-dashboard-build:
+    name: Admin Dashboard CI (Vite & React)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'INFEPOS_FRONTEND/admin-dashboard/package-lock.json'
+
+      - name: Install Admin Dashboard Dependencies
+        working-directory: INFEPOS_FRONTEND/admin-dashboard
+        run: npm ci
+
+      - name: Compile Admin Dashboard Production Distribution
+        working-directory: INFEPOS_FRONTEND/admin-dashboard
+        run: npm run build
+
+  pos-terminal-build:
+    name: POS Terminal CI (Vite & Electron)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'INFEPOS_FRONTEND/pos-terminal/package-lock.json'
+
+      - name: Install POS Terminal Dependencies
+        working-directory: INFEPOS_FRONTEND/pos-terminal
+        run: npm ci
+
+      - name: Compile POS Terminal Client & Electron Main Process
+        working-directory: INFEPOS_FRONTEND/pos-terminal
+        run: npm run build

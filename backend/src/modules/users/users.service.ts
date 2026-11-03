@@ -88,7 +88,7 @@ export class UsersService {
         phone: dto.phone,
         passwordHash,
         pinCodeHash,
-        pinCode: plainPinCode,
+        pinCode: null,
         roleId: dto.roleId,
         storeId: dto.storeId,
         status: UserStatus.ACTIVE,
@@ -238,7 +238,6 @@ export class UsersService {
         email: true,
         phone: true,
         status: true,
-        pinCode: true,
         pinCodeHash: true,
         role: {
           select: {
@@ -261,9 +260,10 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+    const { pinCodeHash, ...userClean } = user;
     return {
-      ...user,
-      hasPin: Boolean(user.pinCode || user.pinCodeHash),
+      ...userClean,
+      hasPin: Boolean(pinCodeHash),
     };
   }
 
@@ -345,7 +345,7 @@ export class UsersService {
       }
 
       updates.pinCodeHash = await this.passwordService.hash(dto.pinCode);
-      updates.pinCode = dto.pinCode;
+      updates.pinCode = null;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -461,7 +461,7 @@ export class UsersService {
     await this.prisma.user.update({
       where: { id },
       data: {
-        pinCode: plainPinCode,
+        pinCode: null,
         pinCodeHash,
       },
     });

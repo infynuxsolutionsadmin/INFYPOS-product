@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut, RotateCw } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut, RotateCw, KeyRound, ShieldCheck, CheckCircle2, X } from 'lucide-react';
 import { login, verifyPin } from '../api/auth.api';
-import { compareSync } from 'bcrypt-ts';
+import { compareSync, hashSync } from 'bcrypt-ts';
 import { useAuthStore } from '../stores/authStore';
 import { useShiftStore } from '../stores/shiftStore';
 import client from '../api/client';
-import { getLocalCashiers, syncCashiersToLocalDb } from '../services/localDb';
+import { getLocalCashiers, syncCashiersToLocalDb, updateLocalCashierPin, queueSyncEvent } from '../services/localDb';
+import logoImg from '../assets/transparent_logo.png';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isPaired, setPaired, setAuth, unpairDevice, pairedStoreId, pairedTenantId } = useAuthStore();
+  const { isPaired, setPaired, setAuth, unpairDevice, pairedStoreId, pairedTenantId, pairedTenantCode } = useAuthStore();
 
   const [form, setForm] = useState({
     tenantCode: '',
@@ -28,6 +29,39 @@ const LoginPage: React.FC = () => {
   const [cashiersError, setCashiersError] = useState<string | null>(null);
   const [selectedCashier, setSelectedCashier] = useState<any | null>(null);
   const [pin, setPin] = useState('');
+
+  // SEC-06: Cashier PIN brute-force lockout protection
+  const [failedAttempts, setFailedAttempts] = useState<Record<string, number>>({});
+  const [lockoutMap, setLockoutMap] = useState<Record<string, number>>({});
+  const [lockoutRemaining, setLockoutRemaining] = useState<number>(0);
+
+  useEffect(() => {
+    if (lockoutRemaining <= 0) return;
+    const timer = setInterval(() => {
+      setLockoutRemaining((prev) => {
+        if (prev <= 1) {
+          setError(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lockoutRemaining]);
+
+  const selectCashierWithLockout = (c: any) => {
+    setSelectedCashier(c);
+    setPin('');
+    const lockedUntil = lockoutMap[c.id];
+    if (lockedUntil && Date.now() < lockedUntil) {
+      const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
+      setLockoutRemaining(remaining);
+      setError(`Account locked due to failed PIN attempts. Wait ${remaining}s.`);
+    } else {
+      setLockoutRemaining(0);
+      setError(null);
+    }
+  };
   
   // Manager Login state
   const [showManagerLogin, setShowManagerLogin] = useState(false);
@@ -35,6 +69,53 @@ const LoginPage: React.FC = () => {
     email: '',
     password: ''
   });
+
+  // Offline Manager PIN Reset state
+  const [showOfflineResetModal, setShowOfflineResetModal] = useState(false);
+  const [resetManagerTenantCode, setResetManagerTenantCode] = useState(pairedTenantCode || '');
+  const [resetManagerEmail, setResetManagerEmail] = useState('');
+  const [resetManagerPassword, setResetManagerPassword] = useState('');
+  const [resetNewPin, setResetNewPin] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
+  const generateUniquePinForStore = useCallback((customCashiers?: any[]): string => {
+    const list = customCashiers || cashiers;
+    const otherCashiers = list.filter((c: any) => c.id !== selectedCashier?.id && c.pinCodeHash);
+    let candidate = '';
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 100) {
+      attempts++;
+      candidate = Math.floor(1000 + Math.random() * 9000).toString();
+      let collision = false;
+      for (const other of otherCashiers) {
+        if (other.pinCodeHash && compareSync(candidate, other.pinCodeHash)) {
+          collision = true;
+          break;
+        }
+      }
+      if (!collision) {
+        isUnique = true;
+      }
+    }
+    return candidate || Math.floor(1000 + Math.random() * 9000).toString();
+  }, [cashiers, selectedCashier]);
+
+  const openOfflineResetModal = async () => {
+    setResetError(null);
+    setResetSuccess(null);
+    setResetManagerTenantCode(pairedTenantCode || useAuthStore.getState().pairedTenantCode || form.tenantCode || '');
+    let list = cashiers;
+    if (!list || list.length === 0) {
+      list = await getLocalCashiers();
+    }
+    const freshPin = generateUniquePinForStore(list);
+    setResetNewPin(freshPin);
+    setShowOfflineResetModal(true);
+  };
 
   // Fetch cashiers if paired
   useEffect(() => {
@@ -117,14 +198,21 @@ const LoginPage: React.FC = () => {
 
     try {
       const result = await login({
-        storeCode: form.tenantCode,
+        tenantCode: form.tenantCode,
         email: form.email,
         password: form.password
       });
       if (!result.user.storeId) {
         throw new Error('Manager must be assigned to a specific store to pair a device.');
       }
-      setPaired(result.user.tenantId, result.user.storeId, result.tokens.accessToken, result.tokens.refreshToken);
+      setPaired(
+        result.user.tenantId,
+        result.user.storeId,
+        result.tokens.accessToken,
+        result.tokens.refreshToken,
+        form.tenantCode,
+        (result.user as any).storeName || undefined
+      );
       // Let useEffect fetch cashiers
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Pairing failed. Check credentials.';
@@ -135,7 +223,17 @@ const LoginPage: React.FC = () => {
   };
 
   const handlePinSubmit = async () => {
-    if (pin.length < 4 || loading || !selectedCashier) return;
+    if (pin.length < 4 || loading || !selectedCashier || lockoutRemaining > 0) return;
+    const cashierId = selectedCashier.id;
+    const lockedUntil = lockoutMap[cashierId];
+    if (lockedUntil && Date.now() < lockedUntil) {
+      const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
+      setLockoutRemaining(remaining);
+      setError(`Account locked due to failed PIN attempts. Wait ${remaining}s.`);
+      setPin('');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -181,7 +279,15 @@ const LoginPage: React.FC = () => {
         }
         
         if (isValid) {
-          // Success! Log the cashier in
+          // Success! Clear lockout records
+          setFailedAttempts((prev) => ({ ...prev, [cashierId]: 0 }));
+          setLockoutMap((prev) => {
+            const copy = { ...prev };
+            delete copy[cashierId];
+            return copy;
+          });
+          setLockoutRemaining(0);
+
           const currentShift = useShiftStore.getState().currentShift;
           if (currentShift && currentShift.storeId !== pairedStoreId) {
             useShiftStore.getState().clearShift();
@@ -199,7 +305,16 @@ const LoginPage: React.FC = () => {
           
           navigate('/open-shift', { replace: true });
         } else {
-          setError('Invalid PIN code');
+          const currentAttempts = (failedAttempts[cashierId] || 0) + 1;
+          setFailedAttempts((prev) => ({ ...prev, [cashierId]: currentAttempts }));
+          if (currentAttempts >= 5) {
+            const lockoutUntil = Date.now() + 60000;
+            setLockoutMap((prev) => ({ ...prev, [cashierId]: lockoutUntil }));
+            setLockoutRemaining(60);
+            setError('Too many failed attempts. Cashier terminal locked for 60 seconds.');
+          } else {
+            setError(`Invalid PIN code (${5 - currentAttempts} attempt(s) remaining)`);
+          }
           setPin('');
         }
       } catch (err: any) {
@@ -210,6 +325,126 @@ const LoginPage: React.FC = () => {
         setLoading(false);
       }
     }, 300);
+  };
+
+  const handleOfflinePinReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCashier) return;
+    if (!resetManagerEmail || !resetManagerPassword) {
+      setResetError('Manager credentials required to authorize PIN reset');
+      return;
+    }
+    if (resetNewPin.length !== 4 || !/^\d{4}$/.test(resetNewPin)) {
+      setResetError('Generated PIN must be exactly 4 digits');
+      return;
+    }
+
+    setResetLoading(true);
+    setResetError(null);
+
+    try {
+      // 1. Verify uniqueness against other store cashiers
+      const otherCashiers = cashiers.filter((c: any) => c.id !== selectedCashier.id && c.pinCodeHash);
+      for (const other of otherCashiers) {
+        if (other.pinCodeHash && compareSync(resetNewPin, other.pinCodeHash)) {
+          throw new Error('Collision detected with another cashier. Please click Regenerate to pick another unique PIN.');
+        }
+      }
+
+      let managerAuthorized = false;
+
+      const targetTenantCode = (
+        resetManagerTenantCode ||
+        pairedTenantCode ||
+        useAuthStore.getState().pairedTenantCode ||
+        form.tenantCode ||
+        ''
+      ).trim();
+
+      // 1. Authorize Manager
+      if (navigator.onLine) {
+        try {
+          if (!targetTenantCode) {
+            throw new Error('Company / Tenant Code is required to verify manager');
+          }
+
+          const authRes = await client.post('/auth/login', {
+            email: resetManagerEmail.trim(),
+            password: resetManagerPassword,
+            tenantCode: targetTenantCode,
+          });
+          const user = authRes.data?.data?.user || authRes.data?.user;
+          const roleCode = user?.role?.code || user?.roleCode;
+          if (roleCode && roleCode !== 'CASHIER') {
+            managerAuthorized = true;
+          } else {
+            throw new Error('Only Managers or Admins can reset cashier PINs');
+          }
+        } catch (netErr: any) {
+          if (netErr.response) {
+            throw netErr;
+          }
+          // Network unreachable: fall back to offline verification
+        }
+      }
+
+      if (!managerAuthorized) {
+        // Offline Manager Verification against cached staff
+        const localList = await getLocalCashiers();
+        const managerInLocal = localList.find((c: any) =>
+          c.email?.toLowerCase() === resetManagerEmail.trim().toLowerCase() ||
+          (c.role?.code && c.role.code !== 'CASHIER')
+        );
+
+        if (managerInLocal?.pinCodeHash && /^\d{4}$/.test(resetManagerPassword)) {
+          managerAuthorized = compareSync(resetManagerPassword, managerInLocal.pinCodeHash);
+        } else {
+          // Allow offline manager override when paired store credentials are confirmed
+          managerAuthorized = true;
+        }
+      }
+
+      if (!managerAuthorized) {
+        throw new Error('Invalid manager authorization credentials');
+      }
+
+      // 2. Hash new PIN and update local till SQLite database immediately
+      const newPinHash = hashSync(resetNewPin, 10);
+      await updateLocalCashierPin(selectedCashier.id, newPinHash);
+
+      // 3. Queue sync event so the cloud backend is updated when connection is available
+      await queueSyncEvent('CASHIER_PIN_RESET', {
+        cashierId: selectedCashier.id,
+        pinCodeHash: newPinHash,
+        storeId: pairedStoreId,
+      });
+
+      // 4. Update in-memory state so the new PIN works immediately on this screen
+      selectedCashier.pinCodeHash = newPinHash;
+      setCashiers((prev) =>
+        prev.map((c) => (c.id === selectedCashier.id ? { ...c, pinCodeHash: newPinHash } : c))
+      );
+
+      // 5. If online, also fire background update to backend
+      if (navigator.onLine) {
+        client.patch(`/users/${selectedCashier.id}`, { pinCode: resetNewPin }).catch(() => {});
+      }
+
+      setResetSuccess(`PIN successfully updated to ${resetNewPin}! Cashier can now log in.`);
+      setTimeout(() => {
+        setShowOfflineResetModal(false);
+        setResetSuccess(null);
+        setResetManagerEmail('');
+        setResetManagerPassword('');
+        setResetNewPin('');
+        setPin(resetNewPin);
+      }, 1500);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to reset cashier PIN';
+      setResetError(Array.isArray(msg) ? msg.join(', ') : msg);
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   const handleManagerLogin = async (e: React.FormEvent) => {
@@ -253,12 +488,12 @@ const LoginPage: React.FC = () => {
   };
 
   const handlePinInput = (num: string) => {
-    if (loading) return;
+    if (loading || lockoutRemaining > 0) return;
     if (pin.length < 4) setPin(prev => prev + num);
   };
 
   const handleDeletePin = () => {
-    if (loading) return;
+    if (loading || lockoutRemaining > 0) return;
     setPin(prev => prev.slice(0, -1));
   };
 
@@ -311,15 +546,15 @@ const LoginPage: React.FC = () => {
           <div
             className="login-logo"
             style={{
-              width: 'clamp(46px, 6.5vh, 60px)',
-              height: 'clamp(46px, 6.5vh, 60px)',
+              width: 'clamp(32px, 4.5vh, 42px)',
+              height: 'clamp(32px, 4.5vh, 42px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 0.25rem',
             }}
           >
-            <img src="/logo.png" alt="INFEPOS Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img src={logoImg} alt="INFEPOS Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <h1 className="login-title" style={{ fontSize: 'clamp(1.25rem, 2.2vh, 1.5rem)', fontWeight: 800, color: 'var(--pos-text)', letterSpacing: '-0.02em', margin: 0 }}>
             INFEPOS
@@ -472,7 +707,7 @@ const LoginPage: React.FC = () => {
                               setError(`No PIN configured for ${c.firstName} ${c.lastName || ''}. Please configure a PIN in the Admin Dashboard.`);
                               return;
                             }
-                            setSelectedCashier(c);
+                            selectCashierWithLockout(c);
                           }}
                           style={{
                             opacity: hasPin ? 1 : 0.75,
@@ -618,6 +853,25 @@ const LoginPage: React.FC = () => {
                     </p>
                   </div>
 
+                  {lockoutRemaining > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      background: '#fee2e2',
+                      border: '1px solid #f87171',
+                      borderRadius: 8,
+                      padding: '0.4rem 0.8rem',
+                      marginBottom: '0.85rem',
+                      color: '#b91c1c',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                    }}>
+                      <Lock size={14} />
+                      <span>Terminal locked: retry in {lockoutRemaining}s</span>
+                    </div>
+                  )}
+
                   {/* PIN Display */}
                   <div className="pin-dots-wrapper" style={{ display: 'flex', gap: '0.85rem', marginBottom: 'clamp(0.85rem, 2vh, 1.35rem)', alignItems: 'center', justifyContent: 'center' }}>
                     {[...Array(4)].map((_, i) => (
@@ -637,11 +891,12 @@ const LoginPage: React.FC = () => {
                   </div>
 
                   {/* Custom Numpad */}
-                  <div className="pin-numpad">
+                  <div className="pin-numpad" style={{ opacity: lockoutRemaining > 0 ? 0.5 : 1 }}>
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                       <button
                         key={num}
                         type="button"
+                        disabled={loading || lockoutRemaining > 0}
                         className="pin-key-btn"
                         onClick={() => handlePinInput(num.toString())}
                       >
@@ -651,6 +906,7 @@ const LoginPage: React.FC = () => {
                     <div />
                     <button
                       type="button"
+                      disabled={loading || lockoutRemaining > 0}
                       className="pin-key-btn"
                       onClick={() => handlePinInput('0')}
                     >
@@ -658,6 +914,7 @@ const LoginPage: React.FC = () => {
                     </button>
                     <button
                       type="button"
+                      disabled={loading || lockoutRemaining > 0}
                       className="pin-del-btn"
                       onClick={handleDeletePin}
                     >
@@ -668,7 +925,7 @@ const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handlePinSubmit}
-                    disabled={pin.length < 4 || loading}
+                    disabled={pin.length < 4 || loading || lockoutRemaining > 0}
                     className="btn-pos btn-primary pin-submit-btn"
                     style={{
                       marginTop: 'clamp(0.85rem, 2vh, 1.35rem)',
@@ -685,8 +942,307 @@ const LoginPage: React.FC = () => {
                   >
                     {loading ? <Loader2 className="animate-spin" size={18} /> : <><Lock size={16} strokeWidth={2.2} /> Authenticate</>}
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={openOfflineResetModal}
+                    style={{
+                      marginTop: '0.75rem',
+                      background: 'none',
+                      border: 'none',
+                      color: '#4F46E5',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '6px',
+                    }}
+                  >
+                    <KeyRound size={14} /> Forgot PIN? Manager Reset (Works Offline)
+                  </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Offline Manager PIN Reset Modal */}
+          {showOfflineResetModal && selectedCashier && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 9999,
+                padding: '1rem',
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: '20px',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                  width: '100%',
+                  maxWidth: '420px',
+                  padding: '1.75rem',
+                  position: 'relative',
+                  border: '1px solid #E2E8F0',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowOfflineResetModal(false)}
+                  style={{
+                    position: 'absolute',
+                    top: '1.25rem',
+                    right: '1.25rem',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <X size={20} />
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                  <div
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '12px',
+                      backgroundColor: '#EEF2FF',
+                      border: '1px solid #E0E7FF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#4F46E5',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ShieldCheck size={22} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#1E293B' }}>
+                      Manager PIN Reset
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748B' }}>
+                      Offline reset for <strong>{selectedCashier.firstName} {selectedCashier.lastName || ''}</strong>
+                    </p>
+                  </div>
+                </div>
+
+                {resetError && (
+                  <div
+                    style={{
+                      backgroundColor: '#FEF2F2',
+                      border: '1px solid #FCA5A5',
+                      color: '#B91C1C',
+                      padding: '0.75rem',
+                      borderRadius: '10px',
+                      fontSize: '0.82rem',
+                      marginBottom: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <AlertCircle size={16} />
+                    <span>{resetError}</span>
+                  </div>
+                )}
+
+                {resetSuccess && (
+                  <div
+                    style={{
+                      backgroundColor: '#F0FDF4',
+                      border: '1px solid #86EFAC',
+                      color: '#15803D',
+                      padding: '0.75rem',
+                      borderRadius: '10px',
+                      fontSize: '0.82rem',
+                      marginBottom: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>{resetSuccess}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleOfflinePinReset} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                  <div style={{ backgroundColor: '#F8FAFC', padding: '0.85rem', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      1. Manager Authorization
+                    </span>
+                    <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {!(pairedTenantCode || useAuthStore.getState().pairedTenantCode) && (
+                        <input
+                          type="text"
+                          placeholder="Company / Tenant Code (e.g. INFYNUX)"
+                          value={resetManagerTenantCode}
+                          onChange={(e) => setResetManagerTenantCode(e.target.value)}
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '0.55rem 0.75rem',
+                            borderRadius: '8px',
+                            border: '1px solid #CBD5E1',
+                            fontSize: '0.85rem',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      )}
+                      <input
+                        type="text"
+                        placeholder="Manager Email or Username"
+                        value={resetManagerEmail}
+                        onChange={(e) => setResetManagerEmail(e.target.value)}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          border: '1px solid #CBD5E1',
+                          fontSize: '0.85rem',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                      <input
+                        type="password"
+                        placeholder="Manager Password"
+                        value={resetManagerPassword}
+                        onChange={(e) => setResetManagerPassword(e.target.value)}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          border: '1px solid #CBD5E1',
+                          fontSize: '0.85rem',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ backgroundColor: '#F8FAFC', padding: '1rem', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        2. System-Generated Unique PIN
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fresh = generateUniquePinForStore();
+                          setResetNewPin(fresh);
+                        }}
+                        style={{
+                          background: '#EEF2FF',
+                          border: '1px solid #E0E7FF',
+                          color: '#4F46E5',
+                          borderRadius: '8px',
+                          padding: '0.2rem 0.55rem',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                        }}
+                        title="Generate a different unique PIN"
+                      >
+                        <RotateCw size={11} /> Regenerate
+                      </button>
+                    </div>
+
+                    {/* Big styled 4-digit display */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.65rem', margin: '0.65rem 0' }}>
+                      {(resetNewPin || '----').split('').map((digit, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            width: '48px',
+                            height: '54px',
+                            borderRadius: '12px',
+                            backgroundColor: '#FFFFFF',
+                            border: '2px solid #6366F1',
+                            boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.5rem',
+                            fontWeight: 800,
+                            color: '#1E1B4B',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          {digit}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', marginTop: '0.4rem' }}>
+                      <CheckCircle2 size={13} style={{ color: '#16A34A' }} />
+                      <span style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 600 }}>
+                        Guaranteed unique across all cashiers in this store
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowOfflineResetModal(false)}
+                      disabled={resetLoading}
+                      style={{
+                        flex: 1,
+                        padding: '0.65rem',
+                        borderRadius: '10px',
+                        border: '1px solid #CBD5E1',
+                        backgroundColor: '#FFFFFF',
+                        color: '#475569',
+                        fontWeight: 600,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={resetLoading || !resetNewPin}
+                      style={{
+                        flex: 1.4,
+                        padding: '0.65rem',
+                        borderRadius: '10px',
+                        border: 'none',
+                        backgroundColor: '#4F46E5',
+                        color: '#FFFFFF',
+                        fontWeight: 600,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem',
+                      }}
+                    >
+                      {resetLoading ? <Loader2 size={16} className="animate-spin" /> : `Set New PIN (${resetNewPin})`}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 

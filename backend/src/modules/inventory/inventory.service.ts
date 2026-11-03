@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InventoryStatus } from '@prisma/client';
+import { InventoryStatus, MovementType, ReferenceType } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateInventoryDto } from './dto/create-inventory.dto';
 import { FindInventoryQueryDto } from './dto/find-inventory-query.dto';
@@ -218,6 +218,363 @@ export class InventoryService {
     });
 
     return this.findOne(tenantId, id);
+  }
+
+  async getExportData(tenantId: string, storeId?: string) {
+    const where: any = { tenantId, status: InventoryStatus.ACTIVE };
+    if (storeId) {
+      where.storeId = storeId;
+    }
+
+    const items = await this.prisma.inventory.findMany({
+      where,
+      orderBy: [
+        { store: { name: 'asc' } },
+        { product: { name: 'asc' } },
+      ],
+      include: {
+        store: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            sku: true,
+            barcode: true,
+            name: true,
+            category: true,
+            unit: true,
+            costPrice: true,
+            sellingPrice: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    return items.map((inv) => ({
+      inventoryId: inv.id,
+      storeId: inv.storeId,
+      storeCode: inv.store.code,
+      storeName: inv.store.name,
+      productId: inv.productId,
+      sku: inv.product.sku,
+      barcode: inv.product.barcode || '',
+      productName: inv.product.name,
+      category: inv.product.category || 'General',
+      unit: inv.product.unit || 'pcs',
+      costPrice: Number(inv.product.costPrice),
+      sellingPrice: Number(inv.product.sellingPrice),
+      currentStock: Number(inv.quantityOnHand),
+      quantityToAdd: 0,
+      editExistingStock: '',
+      minimumStock: Number(inv.minimumStock),
+      maximumStock: Number(inv.maximumStock),
+      reorderLevel: Number(inv.reorderLevel),
+      status: inv.status,
+    }));
+  }
+
+  async bulkImport(
+    tenantId: string,
+    currentUserId: string,
+    items: any[],
+    mode: 'ADD' | 'SET' = 'ADD',
+    defaultStoreId?: string,
+  ) {
+    let updatedCount = 0;
+    let createdCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    let performerId = currentUserId;
+    if (!performerId) {
+      const fallbackUser = await this.prisma.user.findFirst({
+        where: { tenantId },
+        select: { id: true },
+      });
+      performerId = fallbackUser?.id || '';
+    }
+
+    // 1. Pre-fetch all active stores for tenant
+    const stores = await this.prisma.store.findMany({
+      where: { tenantId, status: 'ACTIVE' },
+      select: { id: true, code: true, name: true },
+    });
+
+    const storeById = new Map<string, typeof stores[0]>();
+    const storeByCode = new Map<string, typeof stores[0]>();
+    const storeByName = new Map<string, typeof stores[0]>();
+
+    for (const s of stores) {
+      storeById.set(s.id.toLowerCase(), s);
+      storeByCode.set(s.code.toUpperCase(), s);
+      storeByName.set(s.name.toUpperCase(), s);
+    }
+
+    const defaultStore = defaultStoreId
+      ? storeById.get(defaultStoreId.toLowerCase())
+      : stores.length === 1
+      ? stores[0]
+      : undefined;
+
+    // 2. Pre-fetch all products for tenant
+    const products = await this.prisma.product.findMany({
+      where: { tenantId },
+      select: { id: true, sku: true, barcode: true, name: true, status: true },
+    });
+
+    const productById = new Map<string, typeof products[0]>();
+    const productBySku = new Map<string, typeof products[0]>();
+    const productByBarcode = new Map<string, typeof products[0]>();
+
+    for (const p of products) {
+      productById.set(p.id.toLowerCase(), p);
+      productBySku.set(p.sku.toUpperCase(), p);
+      if (p.barcode) {
+        productByBarcode.set(p.barcode.toUpperCase(), p);
+      }
+    }
+
+    // 3. Pre-fetch existing inventories for tenant
+    const existingInventories = await this.prisma.inventory.findMany({
+      where: { tenantId },
+      select: {
+        id: true,
+        storeId: true,
+        productId: true,
+        quantityOnHand: true,
+        minimumStock: true,
+        maximumStock: true,
+        reorderLevel: true,
+        status: true,
+      },
+    });
+
+    const inventoryMap = new Map<string, typeof existingInventories[0]>();
+    for (const inv of existingInventories) {
+      inventoryMap.set(`${inv.storeId.toLowerCase()}_${inv.productId.toLowerCase()}`, inv);
+    }
+
+    // Process each row
+    for (let index = 0; index < items.length; index++) {
+      const row = items[index];
+      const rowNum = index + 1;
+
+      // Identify store
+      let targetStore = defaultStore;
+      const rawStoreId = row.storeId || row.store_id || row.storeid;
+      const rawStoreCode = row.storeCode || row.store_code || row.storecode;
+      const rawStoreName = row.storeName || row.store_name || row.storename || row.store || row.shop || row.branch;
+
+      if (rawStoreId && storeById.has(String(rawStoreId).toLowerCase())) {
+        targetStore = storeById.get(String(rawStoreId).toLowerCase());
+      } else if (rawStoreCode && storeByCode.has(String(rawStoreCode).trim().toUpperCase())) {
+        targetStore = storeByCode.get(String(rawStoreCode).trim().toUpperCase());
+      } else if (rawStoreName) {
+        const trimmedName = String(rawStoreName).trim().toUpperCase();
+        if (storeByName.has(trimmedName)) {
+          targetStore = storeByName.get(trimmedName);
+        } else if (storeByCode.has(trimmedName)) {
+          targetStore = storeByCode.get(trimmedName);
+        }
+      }
+
+      if (!targetStore) {
+        errors.push(`Row ${rowNum}: Store not found (Store: "${rawStoreCode || rawStoreName || rawStoreId || 'None specified'}").`);
+        skippedCount++;
+        continue;
+      }
+
+      // Identify product
+      let targetProduct: typeof products[0] | undefined;
+      const rawProductId = row.productId || row.product_id || row.productid;
+      const rawSku = row.sku || row.productSku || row.product_sku || row.code;
+      const rawBarcode = row.barcode || row.upc || row.ean;
+
+      if (rawProductId && productById.has(String(rawProductId).toLowerCase())) {
+        targetProduct = productById.get(String(rawProductId).toLowerCase());
+      } else if (rawSku && productBySku.has(String(rawSku).trim().toUpperCase())) {
+        targetProduct = productBySku.get(String(rawSku).trim().toUpperCase());
+      } else if (rawBarcode && productByBarcode.has(String(rawBarcode).trim().toUpperCase())) {
+        targetProduct = productByBarcode.get(String(rawBarcode).trim().toUpperCase());
+      }
+
+      if (!targetProduct) {
+        errors.push(`Row ${rowNum}: Product not found (ID: "${rawProductId || ''}", SKU: "${rawSku || ''}", Barcode: "${rawBarcode || ''}").`);
+        skippedCount++;
+        continue;
+      }
+
+      // Parse quantities
+      const parseNum = (val: any) => {
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          const n = parseFloat(String(val));
+          if (!isNaN(n)) return n;
+        }
+        return undefined;
+      };
+
+      const qtyToAdd = parseNum(row.quantityToAdd ?? row.quantity_to_add ?? row.addQuantity ?? row.add_quantity ?? row.addStock ?? row.add_stock);
+      const newStockVal = parseNum(
+        row.editExistingStock ??
+        row.edit_existing_stock ??
+        row.editStock ??
+        row.edit_stock ??
+        row.setStock ??
+        row.set_stock ??
+        row.newStock ??
+        row.new_stock
+      );
+      const minStockVal = parseNum(row.minimumStock ?? row.minimum_stock ?? row.minStock ?? row.min_stock);
+      const maxStockVal = parseNum(row.maximumStock ?? row.maximum_stock ?? row.maxStock ?? row.max_stock);
+      const reorderVal = parseNum(row.reorderLevel ?? row.reorder_level ?? row.reorder);
+
+      const invKey = `${targetStore.id.toLowerCase()}_${targetProduct.id.toLowerCase()}`;
+      const existing = inventoryMap.get(invKey);
+
+      try {
+        if (existing) {
+          // Update existing inventory
+          const currentQty = Number(existing.quantityOnHand);
+          let finalQty = currentQty;
+          if (newStockVal !== undefined) {
+            // User explicitly set EditExistingStock (e.g. 75)
+            finalQty = newStockVal + (qtyToAdd && qtyToAdd > 0 ? qtyToAdd : 0);
+          } else if (qtyToAdd !== undefined) {
+            if (mode === 'SET') {
+              finalQty = qtyToAdd;
+            } else {
+              finalQty = currentQty + qtyToAdd;
+            }
+          }
+
+          if (finalQty < 0) {
+            errors.push(`Row ${rowNum} (${targetProduct.name}): Resulting stock cannot be negative (${finalQty}).`);
+            skippedCount++;
+            continue;
+          }
+
+          const deltaQty = finalQty - currentQty;
+
+          await this.prisma.$transaction(async (tx) => {
+            const updatedInv = await tx.inventory.update({
+              where: { id: existing.id },
+              data: {
+                quantityOnHand: finalQty,
+                minimumStock: minStockVal !== undefined ? minStockVal : existing.minimumStock,
+                maximumStock: maxStockVal !== undefined ? maxStockVal : existing.maximumStock,
+                reorderLevel: reorderVal !== undefined ? reorderVal : existing.reorderLevel,
+                status: InventoryStatus.ACTIVE,
+              },
+            });
+
+            // Record stock movement if quantity changed
+            if (deltaQty !== 0) {
+              await tx.stockMovement.create({
+                data: {
+                  tenantId,
+                  storeId: targetStore.id,
+                  productId: targetProduct.id,
+                  inventoryId: existing.id,
+                  referenceType: ReferenceType.ADJUSTMENT,
+                  referenceId: `BULK-IMPORT-${Date.now()}`,
+                  movementType: MovementType.ADJUSTMENT,
+                  quantity: deltaQty,
+                  balanceBefore: currentQty,
+                  balanceAfter: finalQty,
+                  remarks: `Bulk stock import (${deltaQty > 0 ? '+' : ''}${deltaQty} units into ${targetStore.name})`,
+                  performedBy: performerId,
+                },
+              });
+            }
+
+            // Update cache
+            inventoryMap.set(invKey, {
+              ...existing,
+              quantityOnHand: updatedInv.quantityOnHand,
+              status: InventoryStatus.ACTIVE,
+            });
+          });
+
+          updatedCount++;
+        } else {
+          // Product exists in catalog, but no inventory in this store yet -> Add to store inventory!
+          let initialQty = 0;
+          if (newStockVal !== undefined) {
+            initialQty = Math.max(0, newStockVal);
+          } else if (qtyToAdd !== undefined) {
+            initialQty = Math.max(0, qtyToAdd);
+          }
+
+          const minS = minStockVal !== undefined ? minStockVal : 5;
+          const maxS = maxStockVal !== undefined ? maxStockVal : 1000;
+          const reorderS = reorderVal !== undefined ? reorderVal : 10;
+
+          await this.prisma.$transaction(async (tx) => {
+            const newInv = await tx.inventory.create({
+              data: {
+                tenantId,
+                storeId: targetStore.id,
+                productId: targetProduct.id,
+                quantityOnHand: initialQty,
+                minimumStock: minS,
+                maximumStock: maxS,
+                reorderLevel: reorderS,
+                status: InventoryStatus.ACTIVE,
+              },
+            });
+
+            if (initialQty > 0) {
+              await tx.stockMovement.create({
+                data: {
+                  tenantId,
+                  storeId: targetStore.id,
+                  productId: targetProduct.id,
+                  inventoryId: newInv.id,
+                  referenceType: ReferenceType.ADJUSTMENT,
+                  referenceId: `BULK-IMPORT-${Date.now()}`,
+                  movementType: MovementType.ADJUSTMENT,
+                  quantity: initialQty,
+                  balanceBefore: 0,
+                  balanceAfter: initialQty,
+                  remarks: `Bulk stock import initial store assignment (${targetStore.name})`,
+                  performedBy: performerId,
+                },
+              });
+            }
+
+            inventoryMap.set(invKey, {
+              id: newInv.id,
+              storeId: targetStore.id,
+              productId: targetProduct.id,
+              quantityOnHand: newInv.quantityOnHand,
+              minimumStock: newInv.minimumStock,
+              maximumStock: newInv.maximumStock,
+              reorderLevel: newInv.reorderLevel,
+              status: InventoryStatus.ACTIVE,
+            });
+          });
+
+          createdCount++;
+        }
+      } catch (err: any) {
+        errors.push(`Row ${rowNum} (${targetProduct.name}): ${err.message}`);
+        skippedCount++;
+      }
+    }
+
+    return {
+      updatedCount,
+      createdCount,
+      skippedCount,
+      totalProcessed: items.length,
+      errors: errors.slice(0, 50),
+    };
   }
 
   private getIncludeFields() {

@@ -45,8 +45,8 @@ const StaticPage: React.FC<StaticPageProps> = ({ title }) => {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <header className="bg-white border-b border-slate-200 py-4 px-6 md:px-12 flex items-center justify-between shadow-sm sticky top-0 z-50">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-          <div className="w-10 h-10 flex items-center justify-center">
-            <img src="/a_clean_high_resolution_graphic_logo_on_a_transpa.png" alt="INFEPOS Logo" className="w-full h-full object-contain" />
+          <div className="w-7 h-7 flex items-center justify-center">
+            <img src="/transparent_logo.png" alt="INFEPOS Logo" className="w-full h-full object-contain" />
           </div>
           <InfeposLogoText textSize="text-xl" isHeroTheme={false} />
         </div>

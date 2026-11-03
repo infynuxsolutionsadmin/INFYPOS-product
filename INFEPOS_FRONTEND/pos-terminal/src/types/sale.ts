@@ -27,6 +27,7 @@ export interface Sale {
   id: string;
   tenantId: string;
   storeId: string;
+  storeName?: string | null;
   userId: string;
   customerId: string | null;
   customerName: string | null;

@@ -85,14 +85,17 @@ export const useCartStore = create<CartState>()((set, get) => ({
     const subtotal = items.reduce((sum, i) => sum + i.lineTotal, 0);
     const totalVat = items.reduce((sum, i) => {
       const vatRate = Number(i.product.vatRate) / 100;
-      return sum + i.lineTotal * vatRate;
+      const lineTax = Math.round(i.lineTotal * vatRate * 100) / 100;
+      return sum + lineTax;
     }, 0);
-    const grandTotal = subtotal + totalVat;
+    const roundedSubtotal = Math.round(subtotal * 100) / 100;
+    const roundedVat = Math.round(totalVat * 100) / 100;
+    const grandTotal = Math.round((roundedSubtotal + roundedVat) * 100) / 100;
     return {
       itemCount,
-      subtotal: parseFloat(subtotal.toFixed(2)),
-      totalVat: parseFloat(totalVat.toFixed(2)),
-      grandTotal: parseFloat(grandTotal.toFixed(2)),
+      subtotal: roundedSubtotal,
+      totalVat: roundedVat,
+      grandTotal: grandTotal,
     };
   },
 }));

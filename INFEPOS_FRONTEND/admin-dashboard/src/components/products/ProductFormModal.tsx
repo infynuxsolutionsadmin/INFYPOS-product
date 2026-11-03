@@ -28,11 +28,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     unit: 'pcs',
     costPrice: 0,
     sellingPrice: 0,
-    vatRate: 0,
+    vatRate: 20,
     imageUrl: '',
     trackInventory: true,
     status: 'ACTIVE' as ProductStatus,
-    initialStock: 100,
+    initialStock: 0,
   });
 
   const [loading, setLoading] = useState(false);
@@ -66,11 +66,11 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         unit: 'pcs',
         costPrice: 0,
         sellingPrice: 0,
-        vatRate: 0,
+        vatRate: 20,
         imageUrl: '',
         trackInventory: true,
         status: 'ACTIVE' as ProductStatus,
-        initialStock: 100,
+        initialStock: 0,
       });
     }
     setError(null);
@@ -96,8 +96,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     e.preventDefault();
     setError(null);
     
-    if (formData.sellingPrice < formData.costPrice) {
-      setError('Selling price cannot be less than cost price');
+    if (formData.sellingPrice < 0 || formData.costPrice < 0) {
+      setError('Prices cannot be negative');
       return;
     }
 
@@ -196,9 +196,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">VAT Rate (%)</label>
                   <select name="vatRate" value={formData.vatRate} onChange={handleChange} className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm">
-                    <option value={0}>0%</option>
-                    <option value={5}>5%</option>
-                    <option value={20}>20%</option>
+                    <option value={20}>20% (Standard)</option>
+                    <option value={5}>5% (Reduced)</option>
+                    <option value={0}>0% (Zero)</option>
                   </select>
                 </div>
                 <div>
@@ -212,7 +212,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 {!isEditing && (
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stock in Hand</label>
-                    <input type="number" min="0" name="initialStock" value={formData.initialStock ?? 100} onChange={handleChange} className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm" placeholder="100" />
+                    <input type="number" min="0" name="initialStock" value={formData.initialStock ?? 0} onChange={handleChange} className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm" placeholder="0" />
                   </div>
                 )}
               </div>

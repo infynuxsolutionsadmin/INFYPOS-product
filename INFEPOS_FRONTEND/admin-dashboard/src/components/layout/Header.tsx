@@ -23,13 +23,13 @@ const Header: React.FC = () => {
     <header className="sticky top-0 z-40 bg-[#F3F5F9] px-4 sm:px-6 lg:px-8 pt-6 pb-2">
       <div className="flex flex-col xl:flex-row items-center justify-between gap-4">
         {/* Logo Area */}
-        <div className="flex items-center space-x-2">
-          <div className="w-12 h-12 flex items-center justify-center">
-            <img src="/a_clean_high_resolution_graphic_logo_on_a_transpa.png" alt="INFEPOS Logo" className="w-full h-full object-contain" />
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center">
+            <img src="/transparent_logo.png" alt="INFEPOS Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 leading-tight">INFEPOS</h1>
-            <p className="text-xs text-gray-500">Admin Dashboard</p>
+            <h1 className="text-2xl font-bold text-gray-900 leading-tight">INFEPOS</h1>
+            <p className="text-xs text-gray-500 font-medium">Admin Dashboard</p>
           </div>
         </div>
 

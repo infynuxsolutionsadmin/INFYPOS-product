@@ -1,14 +1,16 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UserStatus } from '@prisma/client';
+import { TenantStatus, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RegisterTenantDto } from './dto/register-tenant.dto';
 import { PasswordService } from './services/password.service';
 
 import * as crypto from 'crypto';
@@ -139,6 +141,7 @@ export class AuthService {
         roleId: user.roleId,
         roleCode: user.role.code,
         storeId: user.storeId,
+        storeName: user.store?.name || null,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -177,10 +180,9 @@ export class AuthService {
       // 2. Token reuse / concurrency detection
       if (matchedToken.revokedAt) {
         const revokedDurationMs = Date.now() - matchedToken.revokedAt.getTime();
-        // Concurrency window (5000ms): Permits in-flight concurrent requests to fail gracefully
-        // without triggering false-positive family revocation.
-        // Security constraint: NO new token is ever issued to an already-revoked token.
-        const CONCURRENCY_WINDOW_MS = 5000;
+        // Concurrency window (15000ms): Permits in-flight concurrent requests or network delays
+        // during rotation to recover gracefully without failing or triggering family revocation.
+        const CONCURRENCY_WINDOW_MS = 15000;
 
         if (revokedDurationMs > CONCURRENCY_WINDOW_MS) {
           // Genuine stolen/replayed token reuse: Invalidate ALL active sessions for this user
@@ -192,7 +194,52 @@ export class AuthService {
             'Refresh token reuse detected. All active sessions have been invalidated. Please sign in again.',
           );
         } else {
-          // Concurrent request during in-flight rotation: Reject without revoking active sessions
+          // Concurrent request during in-flight rotation:
+          // Check if an active token was already issued for this user in this window
+          const latestActiveToken = await tx.refreshToken.findFirst({
+            where: { userId, revokedAt: null },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          if (latestActiveToken && latestActiveToken.expiresAt > new Date()) {
+            const activeUser = await tx.user.findUnique({
+              where: { id: userId },
+              include: { role: true, tenant: true },
+            });
+
+            if (
+              activeUser &&
+              activeUser.status === UserStatus.ACTIVE &&
+              activeUser.tenant.status === 'ACTIVE'
+            ) {
+              const activePayload = {
+                userId: activeUser.id,
+                tenantId: activeUser.tenantId,
+                roleId: activeUser.roleId,
+                roleCode: activeUser.role.code,
+                storeId: activeUser.storeId,
+                email: activeUser.email,
+              };
+
+              const newAccessToken = await this.jwtService.signAsync(activePayload, {
+                secret: this.configService.get<string>('jwt.secret'),
+                expiresIn: this.configService.get<string>('jwt.expiresIn') as any,
+              });
+
+              return {
+                accessToken: newAccessToken,
+                user: {
+                  id: activeUser.id,
+                  tenantId: activeUser.tenantId,
+                  roleId: activeUser.roleId,
+                  roleCode: activeUser.role.code,
+                  storeId: activeUser.storeId,
+                  email: activeUser.email,
+                },
+              };
+            }
+          }
+
           throw new UnauthorizedException(
             'Refresh token was consumed by a concurrent request. Please use the updated token.',
           );
@@ -212,6 +259,50 @@ export class AuthService {
 
       if (updateResult.count === 0) {
         // Another concurrent request consumed it at this exact millisecond
+        const latestActiveToken = await tx.refreshToken.findFirst({
+          where: { userId, revokedAt: null },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (latestActiveToken && latestActiveToken.expiresAt > new Date()) {
+          const activeUser = await tx.user.findUnique({
+            where: { id: userId },
+            include: { role: true, tenant: true },
+          });
+
+          if (
+            activeUser &&
+            activeUser.status === UserStatus.ACTIVE &&
+            activeUser.tenant.status === 'ACTIVE'
+          ) {
+            const activePayload = {
+              userId: activeUser.id,
+              tenantId: activeUser.tenantId,
+              roleId: activeUser.roleId,
+              roleCode: activeUser.role.code,
+              storeId: activeUser.storeId,
+              email: activeUser.email,
+            };
+
+            const newAccessToken = await this.jwtService.signAsync(activePayload, {
+              secret: this.configService.get<string>('jwt.secret'),
+              expiresIn: this.configService.get<string>('jwt.expiresIn') as any,
+            });
+
+            return {
+              accessToken: newAccessToken,
+              user: {
+                id: activeUser.id,
+                tenantId: activeUser.tenantId,
+                roleId: activeUser.roleId,
+                roleCode: activeUser.role.code,
+                storeId: activeUser.storeId,
+                email: activeUser.email,
+              },
+            };
+          }
+        }
+
         throw new UnauthorizedException(
           'Refresh token was consumed by a concurrent request. Please use the updated token.',
         );
@@ -284,6 +375,140 @@ export class AuthService {
       });
     }
     return { message: 'Logged out successfully' };
+  }
+
+  async registerTenant(dto: RegisterTenantDto) {
+    const formattedCode = dto.tenantCode.trim().toUpperCase();
+
+    // 1. Check if tenant code exists
+    const existingTenant = await this.prisma.tenant.findFirst({
+      where: { code: { equals: formattedCode, mode: 'insensitive' } },
+    });
+    if (existingTenant) {
+      throw new ConflictException(`Store / Tenant code "${formattedCode}" is already taken.`);
+    }
+
+    // 2. Check if email exists
+    const existingUser = await this.prisma.user.findFirst({
+      where: { email: { equals: dto.email.trim(), mode: 'insensitive' } },
+    });
+    if (existingUser) {
+      throw new ConflictException(`Email "${dto.email}" is already registered.`);
+    }
+
+    // 3. Hash password
+    const passwordHash = await this.passwordService.hash(dto.password);
+
+    // 4. Create Tenant, Default Store, Owner Role, and User in a transaction
+    return this.prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({
+        data: {
+          name: dto.storeName.trim(),
+          code: formattedCode,
+          email: dto.email.trim(),
+          status: TenantStatus.ACTIVE,
+        },
+      });
+
+      const defaultStore = await tx.store.create({
+        data: {
+          tenantId: tenant.id,
+          code: 'MAIN',
+          name: `${dto.storeName.trim()} - Main`,
+          status: 'ACTIVE',
+        },
+      });
+
+      const ownerRole = await tx.role.create({
+        data: {
+          tenantId: tenant.id,
+          name: 'Owner',
+          code: 'OWNER',
+          description: 'Store Owner with all administrative permissions',
+        },
+      });
+
+      await tx.role.createMany({
+        data: [
+          { tenantId: tenant.id, name: 'Store Manager', code: 'STORE_MANAGER', description: 'Manages a specific store' },
+          { tenantId: tenant.id, name: 'Cashier', code: 'CASHIER', description: 'Point of sale operator' },
+        ],
+      });
+
+      const user = await tx.user.create({
+        data: {
+          tenantId: tenant.id,
+          storeId: defaultStore.id,
+          firstName: dto.ownerFirstName.trim(),
+          lastName: dto.ownerLastName.trim(),
+          email: dto.email.trim(),
+          passwordHash,
+          roleId: ownerRole.id,
+          status: UserStatus.ACTIVE,
+        },
+        include: {
+          role: true,
+          tenant: true,
+          store: true,
+        },
+      });
+
+      // Issue tokens
+      const payload = {
+        userId: user.id,
+        tenantId: user.tenantId,
+        roleId: user.roleId,
+        roleCode: user.role.code,
+        storeId: user.storeId,
+        email: user.email,
+      };
+
+      const accessToken = await this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('jwt.secret'),
+        expiresIn: this.configService.get<string>('jwt.expiresIn') as any,
+      });
+
+      const refreshExpiresInStr = this.configService.get<string>('jwt.refreshExpiresIn') || '7d';
+      const refreshToken = await this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('jwt.refreshSecret'),
+        expiresIn: refreshExpiresInStr as any,
+      });
+
+      const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+      const expiresAt = this.calculateExpirationDate(refreshExpiresInStr);
+
+      await tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt,
+        },
+      });
+
+      return {
+        tenant: {
+          id: tenant.id,
+          name: tenant.name,
+          code: tenant.code,
+          plan: dto.plan || 'STARTER',
+          billingCycle: dto.billingCycle || 'MONTHLY',
+          status: tenant.status,
+        },
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          roleId: user.roleId,
+          roleCode: user.role.code,
+          storeId: user.storeId,
+        },
+        tokens: {
+          accessToken,
+          refreshToken,
+        },
+      };
+    });
   }
 
   async getRolePermissions(roleCode: string, tenantId: string): Promise<string[]> {

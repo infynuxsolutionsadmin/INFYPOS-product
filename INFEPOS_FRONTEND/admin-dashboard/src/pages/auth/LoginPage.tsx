@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { login } from '../../api/auth.api';
 import LoginBrandingPanel from './components/LoginBrandingPanel';
 import LoginFormPanel from './components/LoginFormPanel';
+import SubscriptionSignupModal from './components/SubscriptionSignupModal';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -12,6 +13,7 @@ const LoginPage: React.FC = () => {
   const [tenantCode, setTenantCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
 
@@ -67,10 +69,16 @@ const LoginPage: React.FC = () => {
             error={error}
             loading={loading}
             onSubmit={handleSubmit}
+            onOpenSubscribe={() => setIsSubscribeModalOpen(true)}
             className="h-full"
           />
         </div>
       </div>
+
+      <SubscriptionSignupModal
+        isOpen={isSubscribeModalOpen}
+        onClose={() => setIsSubscribeModalOpen(false)}
+      />
     </div>
   );
 };

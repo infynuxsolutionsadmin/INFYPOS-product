@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Download, FileSpreadsheet, CheckCircle2, AlertTriangle, RefreshCw, Store as StoreIcon } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { bulkImportProducts, type BulkImportResult } from '../../api/products.api';
 import { getStores } from '../../api/stores.api';
 import type { Store } from '../../types/stores';
@@ -37,12 +38,16 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   const downloadSampleTemplate = () => {
-    const csvContent = `Name,SKU,Barcode,SellingPrice,CostPrice,VatRate,Category,Unit,StockInHand,MinStock,MaxStock,Description,StoreCode
-Organic Whole Milk 1L,MILK-101,5012345678901,1.50,0.90,0,Dairy,L,150,10,500,1 Liter Fresh Organic Milk,apple
-Wholewheat Bread 800g,BREAD-202,5012345678902,1.20,0.60,0,Bakery,Loaf,80,5,200,Fresh Baked Wheat Bread,apple
-Sparkling Water 500ml,WTR-303,5012345678903,0.85,0.30,20,Beverages,Bottles,300,20,1000,Carbonated Mineral Water,apple
-Dark Chocolate Bar 100g,CHOC-404,5012345678904,2.50,1.20,20,Confectionery,Bar,200,15,600,70% Cocoa Artisan Chocolate,apple
-Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,5,150,Cold-pressed Italian Olive Oil,apple`;
+    const sampleStoreCode = stores.length > 0 ? stores[0].code : 'MAIN';
+    const sampleStoreName = stores.length > 0 ? stores[0].name : 'Main Store';
+    const sampleStoreId = stores.length > 0 ? stores[0].id : '';
+
+    const csvContent = `Name,SKU,Barcode,SellingPrice,CostPrice,VatRate,Category,Unit,StoreCode,StoreName,StoreId,StockInHand,MinStock,MaxStock,ReorderLevel,Description
+Organic Whole Milk 1L,MILK-101,5012345678901,1.50,0.90,0,Dairy,L,${sampleStoreCode},${sampleStoreName},${sampleStoreId},150,10,500,20,1 Liter Fresh Organic Milk
+Wholewheat Bread 800g,BREAD-202,5012345678902,1.20,0.60,0,Bakery,Loaf,${sampleStoreCode},${sampleStoreName},${sampleStoreId},80,5,200,10,Fresh Baked Wheat Bread
+Sparkling Water 500ml,WTR-303,5012345678903,0.85,0.30,20,Beverages,Bottles,${sampleStoreCode},${sampleStoreName},${sampleStoreId},300,20,1000,50,Carbonated Mineral Water
+Dark Chocolate Bar 100g,CHOC-404,5012345678904,2.50,1.20,20,Confectionery,Bar,${sampleStoreCode},${sampleStoreName},${sampleStoreId},200,15,600,30,70% Cocoa Artisan Chocolate
+Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,${sampleStoreCode},${sampleStoreName},${sampleStoreId},50,5,150,15,Cold-pressed Italian Olive Oil`;
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -58,29 +63,43 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
     setFile(selectedFile);
-    parseCsv(selectedFile);
+    parseFile(selectedFile);
   };
 
-  const parseCsv = (fileToParse: File) => {
+  const parseFile = (fileToParse: File) => {
     setParseError(null);
     setImportResult(null);
 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const text = event.target?.result as string;
-        if (!text) {
+        const buffer = event.target?.result as ArrayBuffer;
+        if (!buffer || buffer.byteLength === 0) {
           setParseError('The uploaded file is empty.');
           return;
         }
 
-        const lines = text.split(/\r\n|\n/).filter((line) => line.trim() !== '');
-        if (lines.length < 2) {
-          setParseError('CSV must contain a header row and at least one data row.');
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        if (!sheetName) {
+          setParseError('No worksheet found in file.');
           return;
         }
 
-        const headers = lines[0].split(',').map((h) => h.trim().replace(/^["']|["']$/g, '').toLowerCase());
+        const worksheet = workbook.Sheets[sheetName];
+        const rawGrid = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: '' });
+
+        if (!rawGrid || rawGrid.length < 2) {
+          setParseError('Spreadsheet must contain a header row and at least one data row.');
+          return;
+        }
+
+        const headers = (rawGrid[0] || []).map((h) =>
+          String(h || '')
+            .trim()
+            .replace(/^["']|["']$/g, '')
+            .toLowerCase()
+        );
 
         // Map column aliases
         const findIndex = (keys: string[]) => headers.findIndex((h) => keys.includes(h));
@@ -100,74 +119,72 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,
         const minStockIdx = findIndex(['minstock', 'min_stock', 'minimumstock', 'minimum_stock', 'min_qty']);
         const maxStockIdx = findIndex(['maxstock', 'max_stock', 'maximumstock', 'maximum_stock', 'max_qty']);
         const reorderLevelIdx = findIndex(['reorderlevel', 'reorder_level', 'reorder', 'reorder_point']);
-        const storeCodeIdx = findIndex(['storecode', 'store_code', 'store', 'shop', 'branch', 'store_name']);
+        const storeCodeIdx = findIndex(['storecode', 'store_code', 'store', 'shop', 'branch']);
+        const storeNameIdx = findIndex(['storename', 'store_name']);
+        const storeIdIdx = findIndex(['storeid', 'store_id']);
 
         if (nameIdx === -1) {
-          setParseError('Could not find a "Name" column in CSV header. Required columns: Name, SellingPrice.');
+          setParseError('Could not find a "Name" column in spreadsheet header. Required columns: Name, SellingPrice.');
           return;
         }
 
         const products: any[] = [];
 
-        for (let i = 1; i < lines.length; i++) {
-          // Parse values respecting quotes
-          const rawRow = lines[i];
-          const values: string[] = [];
-          let inQuotes = false;
-          let currentValue = '';
+        for (let i = 1; i < rawGrid.length; i++) {
+          const values = rawGrid[i] || [];
+          if (!values || values.length === 0) continue;
 
-          for (let charIdx = 0; charIdx < rawRow.length; charIdx++) {
-            const char = rawRow[charIdx];
-            if (char === '"' || char === "'") {
-              inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-              values.push(currentValue.trim().replace(/^["']|["']$/g, ''));
-              currentValue = '';
-            } else {
-              currentValue += char;
+          const name = nameIdx !== -1 ? String(values[nameIdx] || '').trim() : '';
+          if (!name) continue;
+
+          const parseNum = (val: any) => {
+            if (val !== undefined && val !== null && String(val).trim() !== '') {
+              const num = parseFloat(String(val));
+              if (!isNaN(num) && num >= 0) return num;
             }
-          }
-          values.push(currentValue.trim().replace(/^["']|["']$/g, ''));
+            return undefined;
+          };
 
-          const name = values[nameIdx] || '';
-          if (!name) continue; // Skip empty name rows
-
-          const rawInitialStock = initialStockIdx !== -1 ? parseInt(values[initialStockIdx]) : NaN;
-          const rawMinStock = minStockIdx !== -1 ? parseInt(values[minStockIdx]) : NaN;
-          const rawMaxStock = maxStockIdx !== -1 ? parseInt(values[maxStockIdx]) : NaN;
-          const rawReorder = reorderLevelIdx !== -1 ? parseInt(values[reorderLevelIdx]) : NaN;
-          const storeCode = storeCodeIdx !== -1 ? values[storeCodeIdx] || '' : '';
+          const rawVatRate = vatRateIdx !== -1 ? parseNum(values[vatRateIdx]) : undefined;
+          const rawInitialStock = initialStockIdx !== -1 ? parseNum(values[initialStockIdx]) : undefined;
+          const rawMinStock = minStockIdx !== -1 ? parseNum(values[minStockIdx]) : undefined;
+          const rawMaxStock = maxStockIdx !== -1 ? parseNum(values[maxStockIdx]) : undefined;
+          const rawReorder = reorderLevelIdx !== -1 ? parseNum(values[reorderLevelIdx]) : undefined;
+          const storeCode = storeCodeIdx !== -1 ? String(values[storeCodeIdx] || '').trim() : '';
+          const storeName = storeNameIdx !== -1 ? String(values[storeNameIdx] || '').trim() : '';
+          const storeId = storeIdIdx !== -1 ? String(values[storeIdIdx] || '').trim() : '';
+          const resolvedStore = storeCode || storeName || storeId;
 
           products.push({
             name,
-            sku: skuIdx !== -1 ? values[skuIdx] || '' : '',
-            barcode: barcodeIdx !== -1 ? values[barcodeIdx] || '' : '',
-            sellingPrice: sellingPriceIdx !== -1 ? parseFloat(values[sellingPriceIdx]) || 0 : 0,
-            costPrice: costPriceIdx !== -1 ? parseFloat(values[costPriceIdx]) || 0 : 0,
-            vatRate: vatRateIdx !== -1 ? parseFloat(values[vatRateIdx]) || 20 : 20,
-            category: categoryIdx !== -1 ? values[categoryIdx] || 'General' : 'General',
-            unit: unitIdx !== -1 ? values[unitIdx] || 'pcs' : 'pcs',
-            description: descIdx !== -1 ? values[descIdx] || '' : '',
-            initialStock: !isNaN(rawInitialStock) && rawInitialStock >= 0 ? rawInitialStock : 100,
-            minimumStock: !isNaN(rawMinStock) && rawMinStock >= 0 ? rawMinStock : 5,
-            maximumStock: !isNaN(rawMaxStock) && rawMaxStock >= 0 ? rawMaxStock : 1000,
-            reorderLevel: !isNaN(rawReorder) && rawReorder >= 0 ? rawReorder : 10,
-            storeCode,
+            sku: skuIdx !== -1 ? String(values[skuIdx] || '').trim() : '',
+            barcode: barcodeIdx !== -1 ? String(values[barcodeIdx] || '').trim() : '',
+            sellingPrice: sellingPriceIdx !== -1 ? parseFloat(String(values[sellingPriceIdx])) || 0 : 0,
+            costPrice: costPriceIdx !== -1 ? parseFloat(String(values[costPriceIdx])) || 0 : 0,
+            vatRate: rawVatRate !== undefined ? rawVatRate : 20,
+            category: categoryIdx !== -1 ? String(values[categoryIdx] || 'General').trim() : 'General',
+            unit: unitIdx !== -1 ? String(values[unitIdx] || 'pcs').trim() : 'pcs',
+            description: descIdx !== -1 ? String(values[descIdx] || '').trim() : '',
+            initialStock: rawInitialStock !== undefined ? rawInitialStock : 100,
+            minimumStock: rawMinStock !== undefined ? rawMinStock : 5,
+            maximumStock: rawMaxStock !== undefined ? rawMaxStock : 1000,
+            reorderLevel: rawReorder !== undefined ? rawReorder : 10,
+            storeCode: resolvedStore,
           });
         }
 
         if (products.length === 0) {
-          setParseError('No valid product rows found in the CSV file.');
+          setParseError('No valid product rows found in the file.');
           return;
         }
 
         setParsedData(products);
       } catch (err: any) {
-        setParseError('Failed to parse CSV file: ' + err.message);
+        setParseError('Failed to parse file: ' + err.message);
       }
     };
 
-    reader.readAsText(fileToParse);
+    reader.readAsArrayBuffer(fileToParse);
   };
 
   const handleImportSubmit = async () => {
@@ -338,25 +355,39 @@ Extra Virgin Olive Oil 500ml,OIL-505,5012345678905,5.99,3.50,0,Pantry,Bottle,50,
                     ? `Initial stock from the CSV will be assigned specifically to this store. Other stores start with 0 stock.`
                     : 'Choose which store receives this initial stock, or choose "Catalog Only". We will never blindly dump stock across all stores.'}
                 </p>
+                {stores.length > 0 && (
+                  <div className="pt-1.5 flex flex-wrap gap-1.5 items-center">
+                    <span className="text-[10px] font-bold text-gray-500">Available Stores:</span>
+                    {stores.map((s) => (
+                      <span
+                        key={s.id}
+                        className="inline-flex items-center gap-1 text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded-md font-mono text-indigo-700 shadow-2xs"
+                        title={`Store ID: ${s.id}`}
+                      >
+                        <strong>{s.code}</strong> ({s.name})
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             {/* File Upload Drop Zone */}
             {!importResult && (
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Select or Drag CSV File</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Select or Drag Excel (.xlsx) or CSV File</label>
                 <div className="border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-indigo-50/30 hover:bg-indigo-50/70 rounded-2xl p-8 text-center transition-all cursor-pointer relative">
                   <input
                     type="file"
-                    accept=".csv,.txt"
+                    accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                     onChange={handleFileChange}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <Upload className="h-10 w-10 text-indigo-500 mx-auto mb-3" />
                   <p className="text-sm font-bold text-gray-800">
-                    {file ? file.name : 'Click to upload or drag and drop CSV file'}
+                    {file ? file.name : 'Click to upload or drag and drop Excel (.xlsx) or CSV file'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">Supports UTF-8 formatted CSV files (.csv)</p>
+                  <p className="text-xs text-gray-400 mt-1">Supports Excel (.xlsx, .xls) and UTF-8 CSV files</p>
                 </div>
               </div>
             )}

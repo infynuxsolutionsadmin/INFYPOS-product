@@ -9,6 +9,7 @@ export interface AuthUser {
   id: string;
   tenantId: string;
   storeId: string | null;
+  storeName?: string | null;
   roleId: string;
   firstName: string;
   lastName: string | null;

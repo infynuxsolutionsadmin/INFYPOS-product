@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { User, Store, LogOut, History, FileText, Wifi, WifiOff, RefreshCcw, AlertCircle } from 'lucide-react';
+import { User, Store, LogOut, History, FileText, Wifi, WifiOff, RefreshCcw, AlertCircle, ShieldAlert } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useShiftStore } from '../../stores/shiftStore';
 import { useNavigate } from 'react-router-dom';
 import SalesHistoryModal from './SalesHistoryModal';
 import ShiftCloseModal from './ShiftCloseModal';
 import FailedSyncModal from './FailedSyncModal';
+import ManagerReauthModal from './ManagerReauthModal';
 import { useSyncManager } from '../../offline/useSyncManager';
+import logoImg from '../../assets/transparent_logo.png';
 
 const POSHeader: React.FC = () => {
   const user = useAuthStore((s) => s.user);
@@ -15,12 +17,13 @@ const POSHeader: React.FC = () => {
   const clearShift = useShiftStore((s) => s.clearShift);
   const navigate = useNavigate();
 
-  const { isOnline, isSyncing, pendingCount, failedCount, syncError, processSyncQueue, checkConnectivity } = useSyncManager();
+  const { isOnline, isSyncing, pendingCount, failedCount, syncError, isAuthExpired, processSyncQueue, checkConnectivity } = useSyncManager();
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCloseShiftOpen, setIsCloseShiftOpen] = useState(false);
   const [isFailedSyncOpen, setIsFailedSyncOpen] = useState(false);
+  const [isReauthOpen, setIsReauthOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -69,16 +72,15 @@ const POSHeader: React.FC = () => {
       <div className="pos-header-logo-group" style={{ display: 'flex', alignItems: 'center', gap: '0', flexShrink: 0 }}>
         <div
           style={{
-            width: 96,
-            height: 96,
+            width: 26,
+            height: 26,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginLeft: '-0.5rem',
-            marginRight: '-1.2rem'
+            marginRight: '0.45rem'
           }}
         >
-          <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scale(1.5)' }} />
+          <img src={logoImg} alt="INFEPOS Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         <div>
           <p style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.1, letterSpacing: '-0.02em' }}>INFEPOS</p>
@@ -161,7 +163,54 @@ const POSHeader: React.FC = () => {
             </span>
           )}
 
-          {pendingCount > 0 && (
+          {isAuthExpired && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                background: 'rgba(234, 179, 8, 0.15)',
+                border: '1px solid #eab308',
+                color: '#eab308',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                marginLeft: '6px',
+              }}
+              title="Cloud sync session expired. Click to enter Manager credentials and reconnect."
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsReauthOpen(true);
+              }}
+            >
+              <ShieldAlert size={13} color="#eab308" />
+              <span>Auth Required</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsReauthOpen(true);
+                }}
+                style={{
+                  fontSize: '0.65rem',
+                  background: '#eab308',
+                  color: '#000',
+                  padding: '1px 6px',
+                  borderRadius: '3px',
+                  border: 'none',
+                  marginLeft: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                Re-authorize
+              </button>
+            </div>
+          )}
+
+          {pendingCount > 0 && !isAuthExpired && (
             <>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--pos-warning)' }}>
                 {isOnline ? `${pendingCount} Pending` : `(${pendingCount} Pending)`}
@@ -169,6 +218,10 @@ const POSHeader: React.FC = () => {
               <button 
                 onClick={async (e) => {
                   e.stopPropagation();
+                  if (isAuthExpired) {
+                    setIsReauthOpen(true);
+                    return;
+                  }
                   if (isOnline) {
                     processSyncQueue();
                   } else {
@@ -276,6 +329,16 @@ const POSHeader: React.FC = () => {
 
       {isFailedSyncOpen && (
         <FailedSyncModal onClose={() => setIsFailedSyncOpen(false)} />
+      )}
+
+      {isReauthOpen && (
+        <ManagerReauthModal
+          onClose={() => setIsReauthOpen(false)}
+          onSuccess={() => {
+            setIsReauthOpen(false);
+            processSyncQueue();
+          }}
+        />
       )}
     </header>
   );

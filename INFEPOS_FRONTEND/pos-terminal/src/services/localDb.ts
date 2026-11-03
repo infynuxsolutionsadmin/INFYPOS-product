@@ -141,7 +141,7 @@ export const syncProductsToLocalDb = async (products: any[], storeId?: string) =
         p.id,
         p.name || '',
         p.sellingPrice || p.price || 0,
-        p.vatRate || 20,
+        p.vatRate !== undefined && p.vatRate !== null ? Number(p.vatRate) : 20,
         p.sku || '',
         p.barcode || '',
         p.category?.name || p.category || p.categoryId || 'General',
@@ -219,3 +219,16 @@ export const getLocalCashiers = async (): Promise<any[]> => {
   }
   return queryLocalDb(`SELECT * FROM cashiers`);
 };
+
+export const updateLocalCashierPin = async (cashierId: string, newPinHash: string) => {
+  if (!isDesktopApp()) {
+    try {
+      const cached = JSON.parse(localStorage.getItem('pos-cashiers-cache') || '[]');
+      const updated = cached.map((c: any) => c.id === cashierId ? { ...c, pinCodeHash: newPinHash } : c);
+      localStorage.setItem('pos-cashiers-cache', JSON.stringify(updated));
+    } catch {}
+    return;
+  }
+  await queryLocalDb(`UPDATE cashiers SET pinCodeHash = ? WHERE id = ?`, newPinHash, cashierId);
+};
+

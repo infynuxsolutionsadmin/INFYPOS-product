@@ -5,6 +5,7 @@ import { openShift, getActiveShift } from '../api/shifts.api';
 import type { Shift } from '../types/shift';
 import { useShiftStore } from '../stores/shiftStore';
 import { useAuthStore } from '../stores/authStore';
+import logoImg from '../assets/transparent_logo.png';
 
 const OpenShiftPage: React.FC = () => {
   const navigate = useNavigate();
@@ -174,6 +175,20 @@ const OpenShiftPage: React.FC = () => {
             >
               <Clock size={26} color="#4338ca" strokeWidth={2.2} />
             </div> */}
+
+            {/* Brand Logo */}
+            <div
+              style={{
+                width: 'clamp(36px, 5vh, 46px)',
+                height: 'clamp(36px, 5vh, 46px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 'clamp(0.5rem, 1.2vh, 0.75rem)',
+              }}
+            >
+              <img src={logoImg} alt="INFEPOS Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
 
             {/* Date and Time Pill */}
             <div
@@ -435,6 +450,18 @@ const OpenShiftPage: React.FC = () => {
       >
         {/* Header strip */}
         <div style={{ textAlign: 'center', marginBottom: 'clamp(1rem, 2.5vh, 2rem)', width: '100%' }}>
+          <div
+            style={{
+              width: 'clamp(36px, 5vh, 46px)',
+              height: 'clamp(36px, 5vh, 46px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto clamp(0.5rem, 1.2vh, 0.75rem)',
+            }}
+          >
+            <img src={logoImg} alt="INFEPOS Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <div
             style={{
               display: 'inline-flex',

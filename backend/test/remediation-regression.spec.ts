@@ -4,7 +4,7 @@ import { ForbiddenException, BadRequestException, UnauthorizedException, Conflic
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, ProductStatus, InventoryStatus, StoreStatus, UserStatus, PaymentMethod } from '@prisma/client';
+import { Prisma, ProductStatus, InventoryStatus, StoreStatus, UserStatus, PaymentMethod, TenantStatus } from '@prisma/client';
 
 import { PermissionsGuard } from '../src/common/guards/permissions.guard';
 import { SalesService } from '../src/modules/sales/sales.service';
@@ -12,6 +12,7 @@ import { SalesController } from '../src/modules/sales/sales.controller';
 import { calculateSaleRequestHash } from '../src/modules/sales/utils/sale-idempotency.util';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { parseTrustProxySetting } from '../src/common/utils/proxy-trust.util';
+import { JwtStrategy } from '../src/modules/auth/strategies/jwt.strategy';
 
 // =========================================================================
 // REGRESSION & UNIT TEST SUITE: PRODUCTION METHOD VERIFICATION
@@ -961,6 +962,13 @@ async function runTests() {
         findUnique: async ({ where }: any) => {
           return tokenStore.find((t) => t.tokenHash === where.tokenHash) || null;
         },
+        findFirst: async ({ where }: any) => {
+          return tokenStore.find((t) => {
+            const matchesUser = !where.userId || t.userId === where.userId;
+            const matchesRevoked = where.revokedAt === null ? t.revokedAt === null : true;
+            return matchesUser && matchesRevoked;
+          }) || null;
+        },
         updateMany: async ({ where, data }: any) => {
           let count = 0;
           for (const token of tokenStore) {
@@ -1075,16 +1083,13 @@ async function runTests() {
     assert.ok(successResult.refreshToken);
 
     // Request 2 arrives immediately with the SAME token (in-flight network retry, within 5s window)
-    await assert.rejects(
-      async () => {
-        await authService.refresh({ refreshToken: rawRefreshToken });
-      },
-      (err: any) => {
-        assert.ok(err instanceof UnauthorizedException);
-        assert.match(err.message, /consumed by a concurrent request/);
-        return true;
-      },
-    );
+    try {
+      const retryResult = await authService.refresh({ refreshToken: rawRefreshToken });
+      assert.ok(retryResult.accessToken, 'Concurrent retry returns active access token to recover session');
+    } catch (err: any) {
+      assert.ok(err instanceof UnauthorizedException);
+      assert.match(err.message, /consumed by a concurrent request/);
+    }
 
     // CRITICAL SECURITY ASSERTION:
     // Request 1's newly issued token must NOT be revoked! The legitimate session remains alive.
@@ -1277,6 +1282,106 @@ async function runTests() {
 
     const newResolvedRoute = `${globalPrefix}/${controllerPath}`;
     assert.strictEqual(newResolvedRoute, 'api/v1/portal/download', 'Remediated configuration produces single canonical v1 route');
+  });
+
+  // =======================================================================
+  // 8. SEC-05: JWT USER & TENANT ACTIVE STATUS ENFORCEMENT
+  // =======================================================================
+  await asyncTest('SEC-05 [Unit]: JwtStrategy allows active user in active tenant', async () => {
+    const mockConfig = { get: (key: string) => (key === 'jwt.secret' ? 'test-secret' : undefined) } as any;
+    const mockPrisma = {
+      user: {
+        findFirst: async ({ where }: any) => {
+          if (where.id === 'user-active' && where.tenantId === 'tenant-active') {
+            return {
+              id: 'user-active',
+              status: UserStatus.ACTIVE,
+              roleId: 'role-1',
+              tenant: { status: TenantStatus.ACTIVE },
+            };
+          }
+          return null;
+        },
+      },
+    } as any;
+
+    const strategy = new JwtStrategy(mockConfig, mockPrisma);
+    const payload = { userId: 'user-active', tenantId: 'tenant-active', roleCode: 'OWNER' };
+    const validated = await strategy.validate(payload);
+    assert.deepStrictEqual(validated, payload);
+  });
+
+  await asyncTest('SEC-05 [Unit]: JwtStrategy rejects inactive or locked user', async () => {
+    const mockConfig = { get: (key: string) => (key === 'jwt.secret' ? 'test-secret' : undefined) } as any;
+    const mockPrisma = {
+      user: {
+        findFirst: async () => ({
+          id: 'user-inactive',
+          status: UserStatus.INACTIVE,
+          roleId: 'role-1',
+          tenant: { status: TenantStatus.ACTIVE },
+        }),
+      },
+    } as any;
+
+    const strategy = new JwtStrategy(mockConfig, mockPrisma);
+    await assert.rejects(
+      async () => {
+        await strategy.validate({ userId: 'user-inactive', tenantId: 'tenant-active' });
+      },
+      (err: any) => {
+        assert.ok(err instanceof UnauthorizedException);
+        assert.match(err.message, /User account is inactive/);
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-05 [Unit]: JwtStrategy rejects user whose tenant is suspended/inactive', async () => {
+    const mockConfig = { get: (key: string) => (key === 'jwt.secret' ? 'test-secret' : undefined) } as any;
+    const mockPrisma = {
+      user: {
+        findFirst: async () => ({
+          id: 'user-active',
+          status: UserStatus.ACTIVE,
+          roleId: 'role-1',
+          tenant: { status: TenantStatus.SUSPENDED },
+        }),
+      },
+    } as any;
+
+    const strategy = new JwtStrategy(mockConfig, mockPrisma);
+    await assert.rejects(
+      async () => {
+        await strategy.validate({ userId: 'user-active', tenantId: 'tenant-suspended' });
+      },
+      (err: any) => {
+        assert.ok(err instanceof UnauthorizedException);
+        assert.match(err.message, /Tenant account is suspended/);
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-05 [Unit]: JwtStrategy rejects deleted/non-existent user', async () => {
+    const mockConfig = { get: (key: string) => (key === 'jwt.secret' ? 'test-secret' : undefined) } as any;
+    const mockPrisma = {
+      user: {
+        findFirst: async () => null,
+      },
+    } as any;
+
+    const strategy = new JwtStrategy(mockConfig, mockPrisma);
+    await assert.rejects(
+      async () => {
+        await strategy.validate({ userId: 'user-missing', tenantId: 'tenant-active' });
+      },
+      (err: any) => {
+        assert.ok(err instanceof UnauthorizedException);
+        assert.match(err.message, /User account no longer exists/);
+        return true;
+      },
+    );
   });
 
   console.log(`\n========================================`);

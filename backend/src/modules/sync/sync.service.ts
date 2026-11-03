@@ -95,6 +95,14 @@ export class SyncService {
           processedPayload = await this.shiftsService.openShift(tenantId, storeId, userId, event.payload);
         } else if (event.eventType === 'SHIFT_CLOSE') {
           processedPayload = await this.shiftsService.closeShift(tenantId, storeId, userId, event.payload.shiftId, event.payload);
+        } else if (event.eventType === 'CASHIER_PIN_RESET') {
+          if (event.payload?.cashierId && event.payload?.pinCodeHash) {
+            await this.prisma.user.updateMany({
+              where: { id: event.payload.cashierId, tenantId },
+              data: { pinCodeHash: event.payload.pinCodeHash },
+            });
+            processedPayload = { updated: true };
+          }
         } else {
           throw new Error(`Unsupported event type: ${event.eventType}`);
         }

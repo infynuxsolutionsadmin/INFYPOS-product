@@ -516,7 +516,9 @@ body {
 
 @media (max-height: 580px) {
   .login-logo {
-    display: none !important;
+    width: 28px !important;
+    height: 28px !important;
+    margin-bottom: 0.15rem !important;
   }
   .pin-avatar {
     display: none !important;

@@ -2074,9 +2074,9 @@ const LandingPage: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6">
           <a href="#" className="flex items-center flex-shrink-0 group">
-            <div className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center mr-1">
+            <div className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center mr-2">
               <img
-                src={!pastHero && isDarkHero ? "/logo_large_transparent.png" : "/a_clean_high_resolution_graphic_logo_on_a_transpa.png"}
+                src={!pastHero && isDarkHero ? "/transparent_logo_white.png" : "/transparent_logo.png"}
                 alt="INFEPOS Logo"
                 className={`w-full h-full object-contain ${
                   !pastHero && isDarkHero
@@ -2085,7 +2085,7 @@ const LandingPage: React.FC = () => {
                 }`}
               />
             </div>
-            <InfeposLogoText textSize="text-lg md:text-xl" isHeroTheme={!pastHero && isDarkHero} />
+            <InfeposLogoText textSize="text-xl md:text-2xl" isHeroTheme={!pastHero && isDarkHero} />
           </a>
 
           {/* Center Floating Pill Menu with Functional Dropdowns */}
@@ -2334,19 +2334,19 @@ const LandingPage: React.FC = () => {
           </div>
 
           {/* Main logo label */}
-          <div className="flex items-center mb-8">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center mr-2.5">
+          <div className="flex items-center mb-8 gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 flex items-center justify-center">
               <img
-                src={isDarkHero ? "/logo_large_transparent.png" : "/a_clean_high_resolution_graphic_logo_on_a_transpa.png"}
+                src={isDarkHero ? "/transparent_logo_white.png" : "/transparent_logo.png"}
                 alt="INFEPOS Logo"
                 className={`w-full h-full object-contain ${
                   isDarkHero
-                    ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.45)]'
-                    : 'filter drop-shadow-sm'
+                    ? 'drop-shadow-[0_0_16px_rgba(255,255,255,0.5)]'
+                    : 'filter drop-shadow-md'
                 }`}
               />
             </div>
-            <InfeposLogoText textSize="text-2xl sm:text-3xl" isHeroTheme={isDarkHero} />
+            <InfeposLogoText textSize="text-3xl sm:text-4xl md:text-5xl lg:text-6xl" isHeroTheme={isDarkHero} />
           </div>
 
           {/* Hero headline with modern clean sans font (Clash Display / Plus Jakarta Sans) */}
@@ -2516,12 +2516,12 @@ const LandingPage: React.FC = () => {
               Everything retail. <br />
               <span className="text-[#86868b]">All in one place.</span>
             </h2>
-            <div className="text-xl md:text-2xl text-[#86868b] font-medium leading-relaxed flex items-center justify-center flex-wrap gap-1.5">
-              <div className="flex items-center">
-                <div className="w-7 h-7 flex items-center justify-center mr-1">
-                  <img src="/a_clean_high_resolution_graphic_logo_on_a_transpa.png" alt="INFEPOS Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
+            <div className="text-xl md:text-2xl text-[#86868b] font-medium leading-relaxed flex items-center justify-center flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center">
+                  <img src="/transparent_logo.png" alt="INFEPOS Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
                 </div>
-                <InfeposLogoText textSize="text-xl md:text-2xl" isHeroTheme={false} />
+                <InfeposLogoText textSize="text-2xl md:text-3xl" isHeroTheme={false} />
               </div>
               <span>unifies your in-store POS, cloud admin, and offline sync.</span>
             </div>
@@ -3073,11 +3073,11 @@ const LandingPage: React.FC = () => {
           {/* Bottom Bar: Brand Left, Legal Links Right */}
           <div className="border-t border-slate-100 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-500">
             <div className="flex items-center gap-3">
-              <div className="flex items-center">
-                <div className="w-6 h-6 flex items-center justify-center mr-1">
-                  <img src="/a_clean_high_resolution_graphic_logo_on_a_transpa.png" alt="INFEPOS Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center">
+                  <img src="/transparent_logo.png" alt="INFEPOS Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
                 </div>
-                <InfeposLogoText textSize="text-sm" isHeroTheme={false} />
+                <InfeposLogoText textSize="text-base md:text-lg" isHeroTheme={false} />
               </div>
               <span>© {new Date().getFullYear()} Infynux Solutions. All rights reserved.</span>
             </div>

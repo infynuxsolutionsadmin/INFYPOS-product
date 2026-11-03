@@ -21,7 +21,7 @@ export default registerAs(
     refreshSecret:
       process.env.JWT_REFRESH_SECRET ||
       'super_secret_jwt_refresh_key_infepos_enterprise_2026',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES || '7d',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES || '30d',
     resetPasswordSecret:
       process.env.RESET_PASSWORD_SECRET ||
       'super_secret_reset_password_key_infepos_2026',

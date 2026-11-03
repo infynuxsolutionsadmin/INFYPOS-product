@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Mail, Lock, Eye, EyeOff, LogIn, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Building2, Mail, Lock, Eye, EyeOff, LogIn, Loader2, AlertCircle, ShieldCheck, Sparkles } from 'lucide-react';
 
 interface LoginFormPanelProps {
   tenantCode: string;
@@ -13,6 +13,7 @@ interface LoginFormPanelProps {
   error: string;
   loading: boolean;
   onSubmit: (e: React.FormEvent) => void;
+  onOpenSubscribe?: () => void;
   className?: string;
 }
 
@@ -28,6 +29,7 @@ export const LoginFormPanel: React.FC<LoginFormPanelProps> = ({
   error,
   loading,
   onSubmit,
+  onOpenSubscribe,
   className = '',
 }) => {
   return (
@@ -172,6 +174,23 @@ export const LoginFormPanel: React.FC<LoginFormPanelProps> = ({
             </button>
           </div>
         </form>
+
+        {/* Subscribe / Buy Plan & Credentials Section */}
+        {onOpenSubscribe && (
+          <div className="mt-6 pt-5 border-t border-slate-100 flex flex-col items-center gap-2">
+            <p className="text-xs text-slate-500 font-medium">
+              Don't have a store account or POS credentials?
+            </p>
+            <button
+              type="button"
+              onClick={onOpenSubscribe}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow group cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+              <span>Choose Plan & Activate Credentials</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Bottom Subtle Divider with "Secure Access" badge */}

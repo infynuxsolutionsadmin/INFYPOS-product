@@ -15,7 +15,7 @@ prisma.product.findMany().then(products => {
     products.forEach(p => {
       db.run(
         `INSERT OR REPLACE INTO products (id, name, price, vatRate, sku, barcode, categoryId) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [p.id, p.name, p.sellingPrice || 0, p.vatRate || 20, p.sku || '', p.barcode || '', p.categoryId || '']
+        [p.id, p.name, p.sellingPrice || 0, p.vatRate !== undefined && p.vatRate !== null ? Number(p.vatRate) : 20, p.sku || '', p.barcode || '', p.categoryId || '']
       );
     });
     console.log('Inserted', products.length, 'products into SQLite');

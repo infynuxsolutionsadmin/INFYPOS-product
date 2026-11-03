@@ -12,6 +12,7 @@ interface BackendLoginResponse {
       tenantId: string;
       roleId: string;
       storeId: string | null;
+      storeName?: string | null;
       email: string;
       firstName: string;
       lastName: string | null;

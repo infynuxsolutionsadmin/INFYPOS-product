@@ -98,6 +98,9 @@ async function bootstrap() {
     new TransformInterceptor(),
   );
 
+  // Enable Graceful Shutdown Hooks for clean container lifecycle management
+  app.enableShutdownHooks();
+
   await app.listen(port, host);
   console.log(
     `🚀 INFEPOS Enterprise Backend is running on http://${host}:${port}/${apiPrefix}/${apiVersion}`,

@@ -10,6 +10,7 @@ export const useSyncManager = () => {
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [failedCount, setFailedCount] = useState<number>(0);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [isAuthExpired, setIsAuthExpired] = useState<boolean>(false);
   const deviceId = 'electron-pos'; // This would come from device registration in a real app
 
   const checkConnectivity = useCallback(async () => {
@@ -103,7 +104,7 @@ export const useSyncManager = () => {
   }, []);
 
   const processSyncQueue = useCallback(async () => {
-    if (!isOnline || isSyncingRef.current) return;
+    if (!isOnline || isSyncingRef.current || isAuthExpired) return;
 
     try {
       isSyncingRef.current = true;
@@ -189,20 +190,52 @@ export const useSyncManager = () => {
       
     } catch (error: any) {
       console.error('Sync failed:', error);
+      if (
+        error?.response?.status === 401 ||
+        error?.message?.includes('401') ||
+        error?.message?.includes('token')
+      ) {
+        setIsAuthExpired(true);
+      }
       setSyncError(error?.message || 'Sync failed.');
     } finally {
       isSyncingRef.current = false;
       setIsSyncing(false);
       fetchPendingCount(); // refresh counts
     }
-  }, [isOnline, fetchPendingCount]);
+  }, [isOnline, fetchPendingCount, isAuthExpired]);
 
   // Auto-sync immediately as soon as internet connection is restored or pending items exist while online
   useEffect(() => {
-    if (isOnline && pendingCount > 0 && !isSyncingRef.current) {
+    if (isOnline && pendingCount > 0 && !isSyncingRef.current && !isAuthExpired) {
       processSyncQueue();
     }
-  }, [isOnline, pendingCount, processSyncQueue]);
+  }, [isOnline, pendingCount, processSyncQueue, isAuthExpired]);
+
+  // Listen to auth failure and restoration events
+  useEffect(() => {
+    const handleSyncAuthFailed = () => {
+      setIsAuthExpired(true);
+      setSyncError('Cloud sync session expired. Manager re-authorization required.');
+    };
+
+    const handleAuthRestored = () => {
+      setIsAuthExpired(false);
+      setSyncError(null);
+      fetchPendingCount();
+      setTimeout(() => {
+        processSyncQueue();
+      }, 300);
+    };
+
+    window.addEventListener('pos:sync_auth_failed', handleSyncAuthFailed);
+    window.addEventListener('pos:auth_restored', handleAuthRestored);
+
+    return () => {
+      window.removeEventListener('pos:sync_auth_failed', handleSyncAuthFailed);
+      window.removeEventListener('pos:auth_restored', handleAuthRestored);
+    };
+  }, [fetchPendingCount, processSyncQueue]);
 
   // Poll for queue changes and try syncing if online
   useEffect(() => {
@@ -216,7 +249,7 @@ export const useSyncManager = () => {
 
     const interval = setInterval(() => {
       fetchPendingCount();
-      if (isOnline) {
+      if (isOnline && !isAuthExpired) {
         processSyncQueue();
       }
     }, 10000); // Check every 10 seconds
@@ -225,7 +258,7 @@ export const useSyncManager = () => {
       window.removeEventListener('sync-queue-updated', handleQueueUpdate);
       clearInterval(interval);
     };
-  }, [fetchPendingCount, processSyncQueue, isOnline]);
+  }, [fetchPendingCount, processSyncQueue, isOnline, isAuthExpired]);
 
   return {
     isOnline,
@@ -233,6 +266,8 @@ export const useSyncManager = () => {
     pendingCount,
     failedCount,
     syncError,
+    isAuthExpired,
+    setIsAuthExpired,
     processSyncQueue,
     checkConnectivity,
   };

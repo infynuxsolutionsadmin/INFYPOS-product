@@ -124,7 +124,7 @@ const ProductsPage: React.FC = () => {
       `"${p.barcode || ''}"`,
       p.sellingPrice || 0,
       p.costPrice || 0,
-      p.vatRate || 20,
+      p.vatRate !== undefined && p.vatRate !== null ? p.vatRate : 20,
       `"${(p.category || 'General').replace(/"/g, '""')}"`,
       `"${p.unit || 'pcs'}"`,
       p.status

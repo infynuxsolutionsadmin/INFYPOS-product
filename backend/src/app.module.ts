@@ -30,6 +30,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SyncModule } from './modules/sync/sync.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { ShiftsModule } from './modules/shifts/shifts.module';
+import { HealthModule } from './modules/health/health.module';
 
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -75,6 +76,7 @@ import { APP_GUARD } from '@nestjs/core';
     SyncModule,
     SettingsModule,
     ShiftsModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [

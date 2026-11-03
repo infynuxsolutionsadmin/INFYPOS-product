@@ -68,7 +68,7 @@ export class SalesService {
           idempotencyKey: effectiveIdempotencyKey,
         });
 
-        return this.formatSaleResponse(existingSale);
+        return this.formatSaleResponse(existingSale, null);
       }
     } else {
       this.logger.warn({
@@ -376,7 +376,7 @@ export class SalesService {
             idempotencyKey: effectiveIdempotencyKey || undefined,
           });
 
-          return this.formatSaleResponse(sale);
+          return this.formatSaleResponse(sale, store);
         });
       } catch (error: any) {
         // Handle concurrent uniqueness collision (P2002)
@@ -428,7 +428,7 @@ export class SalesService {
               targetExplicit: hasExplicitIdempotencyTarget,
             });
 
-            return this.formatSaleResponse(winningSale);
+            return this.formatSaleResponse(winningSale, null);
           } else {
             // No winning sale found with this idempotency key.
             // Collision was NOT caused by this idempotency key (or cannot be established reliably).
@@ -456,10 +456,12 @@ export class SalesService {
     }
   }
 
-  private formatSaleResponse(sale: any) {
+  private formatSaleResponse(sale: any, store: { name: string; code: string } | null) {
     return {
       id: sale.id,
       saleNumber: sale.saleNumber,
+      storeId: sale.storeId,
+      storeName: store?.name || sale.store?.name || null,
       customerId: sale.customerId,
       customerName: sale.customerName,
       customerCode: sale.customerCode,

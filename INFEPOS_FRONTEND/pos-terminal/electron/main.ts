@@ -1,5 +1,6 @@
 import './polyfill.js';
 import { app, BrowserWindow, ipcMain } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
@@ -11,7 +12,7 @@ const sqlite3 = require('sqlite3').verbose();
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = process.env.NODE_ENV === 'development' || !!process.env.VITE_DEV_SERVER_URL;
 
 let mainWindow: BrowserWindow | null = null;
 let db: sqlite3Types.Database | null = null;
@@ -108,6 +109,13 @@ app.whenReady().then(() => {
   initDb();
   createWindow();
 
+  // Background update check on startup in production
+  if (!isDev) {
+    autoUpdater.checkForUpdatesAndNotify().catch((err: any) => {
+      console.log('Initial update check error:', err?.message || err);
+    });
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -115,6 +123,44 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Auto Updater Setup & IPC Handlers
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+
+autoUpdater.on('update-available', (info) => {
+  console.log('Update available:', info?.version);
+  mainWindow?.webContents.send('updater:update-available', info);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('Update downloaded:', info?.version);
+  mainWindow?.webContents.send('updater:update-downloaded', info);
+});
+
+autoUpdater.on('error', (err) => {
+  console.log('autoUpdater error:', err?.message || err);
+});
+
+ipcMain.handle('updater:get-version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('updater:check', async () => {
+  if (isDev) {
+    return { status: 'dev_mode', message: 'Updates disabled in development mode' };
+  }
+  try {
+    const res = await autoUpdater.checkForUpdates();
+    return { status: 'checked', updateInfo: res?.updateInfo };
+  } catch (err: any) {
+    return { status: 'error', message: err?.message || 'Check failed' };
+  }
+});
+
+ipcMain.handle('updater:install', () => {
+  autoUpdater.quitAndInstall(false, true);
 });
 
 // Statement Cache for Optimization
@@ -160,5 +206,50 @@ ipcMain.handle('db:query', (_event, sql, ...params) => {
         });
       }
     });
+  });
+});
+
+// Thermal Receipt & Silent Printing IPC Handlers
+ipcMain.handle('printer:get-printers', async () => {
+  if (!mainWindow) return [];
+  try {
+    return await mainWindow.webContents.getPrintersAsync();
+  } catch (err: any) {
+    console.error('Error fetching printers:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('printer:print-html', async (_event, html: string, options: { printerName?: string; silent?: boolean } = {}) => {
+  const silent = options.silent !== false; // Default to true in POS mode for no popups
+  
+  const printWin = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+  return new Promise((resolve, reject) => {
+    printWin.webContents.print(
+      {
+        silent,
+        printBackground: true,
+        deviceName: options.printerName || '',
+        margins: { marginType: 'none' },
+      },
+      (success, failureReason) => {
+        printWin.close();
+        if (!success && failureReason !== 'cancelled') {
+          console.error('Silent print failed:', failureReason);
+          reject(new Error(failureReason));
+        } else {
+          resolve({ success });
+        }
+      }
+    );
   });
 });

@@ -8,10 +8,13 @@ interface POSAuthState {
   isAuthenticated: boolean; // Means a cashier is clocked in
   isPaired: boolean;
   pairedTenantId: string | null;
+  pairedTenantCode: string | null;
   pairedStoreId: string | null;
+  pairedStoreName: string | null;
   user: AuthUser | null;
   permissions: string[];
-  setPaired: (tenantId: string, storeId: string, accessToken: string, refreshToken: string) => void;
+  setPaired: (tenantId: string, storeId: string, accessToken: string, refreshToken: string, tenantCode?: string, storeName?: string) => void;
+  reauthorizeDevice: (accessToken: string, refreshToken: string) => void;
   setAuth: (user: AuthUser, permissions: string[], accessToken?: string, refreshToken?: string) => void;
   clearAuth: () => void;
   unpairDevice: () => void;
@@ -26,14 +29,31 @@ export const useAuthStore = create<POSAuthState>()(
       isAuthenticated: false,
       isPaired: !!localStorage.getItem('pos_access_token'),
       pairedTenantId: null,
+      pairedTenantCode: null,
       pairedStoreId: null,
+      pairedStoreName: null,
       user: null,
       permissions: [],
 
-      setPaired: (tenantId, storeId, accessToken, refreshToken) => {
+      setPaired: (tenantId, storeId, accessToken, refreshToken, tenantCode, storeName) => {
         localStorage.setItem('pos_access_token', accessToken);
         localStorage.setItem('pos_refresh_token', refreshToken);
-        set({ isPaired: true, pairedTenantId: tenantId, pairedStoreId: storeId });
+        set({
+          isPaired: true,
+          pairedTenantId: tenantId,
+          pairedStoreId: storeId,
+          pairedStoreName: storeName || null,
+          pairedTenantCode: tenantCode || null,
+        });
+      },
+
+      reauthorizeDevice: (accessToken, refreshToken) => {
+        localStorage.setItem('pos_access_token', accessToken);
+        localStorage.setItem('pos_refresh_token', refreshToken);
+        set({ isPaired: true });
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('pos:auth_restored'));
+        }
       },
 
       setAuth: (user, permissions, accessToken, refreshToken) => {
@@ -53,7 +73,16 @@ export const useAuthStore = create<POSAuthState>()(
         localStorage.removeItem('pos_access_token');
         localStorage.removeItem('pos_refresh_token');
         localStorage.removeItem('pos-auth-storage');
-        set({ isPaired: false, isAuthenticated: false, user: null, permissions: [], pairedStoreId: null, pairedTenantId: null });
+        set({
+          isPaired: false,
+          isAuthenticated: false,
+          user: null,
+          permissions: [],
+          pairedStoreId: null,
+          pairedStoreName: null,
+          pairedTenantId: null,
+          pairedTenantCode: null,
+        });
       },
 
       hasPermission: (permission: string) => {
@@ -68,7 +97,9 @@ export const useAuthStore = create<POSAuthState>()(
         isAuthenticated: state.isAuthenticated,
         isPaired: state.isPaired,
         pairedTenantId: state.pairedTenantId,
+        pairedTenantCode: state.pairedTenantCode,
         pairedStoreId: state.pairedStoreId,
+        pairedStoreName: state.pairedStoreName,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) state.setHasHydrated(true);

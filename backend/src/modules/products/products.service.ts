@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ProductStatus } from '@prisma/client';
+import { Prisma, ProductStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { FindProductsQueryDto } from './dto/find-products-query.dto';
@@ -15,8 +15,8 @@ export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(tenantId: string, currentUserId: string, dto: CreateProductDto) {
-    if (dto.sellingPrice < dto.costPrice) {
-      throw new BadRequestException('Selling price cannot be less than cost price');
+    if (dto.sellingPrice < 0 || dto.costPrice < 0) {
+      throw new BadRequestException('Prices cannot be negative');
     }
 
     const skuExists = await this.prisma.product.findUnique({
@@ -63,10 +63,10 @@ export class ProductsService {
       ...dataToSave
     } = dto;
 
-    const resolvedInitialStock = initialStock ?? quantityOnHand ?? 100;
-    const resolvedMinStock = minimumStock ?? 5;
+    const resolvedInitialStock = initialStock ?? quantityOnHand ?? 0;
+    const resolvedMinStock = minimumStock ?? 0;
     const resolvedMaxStock = maximumStock ?? 1000;
-    const resolvedReorderLevel = reorderLevel ?? 10;
+    const resolvedReorderLevel = reorderLevel ?? 0;
 
     const product = await this.prisma.product.create({
       data: {
@@ -78,20 +78,26 @@ export class ProductsService {
       select: this.getSelectFields(),
     });
 
-    // Auto-create inventory for active stores
+    // Auto-create inventory for active stores (assigning initial stock to designated/primary store only)
     const stores = await this.prisma.store.findMany({
       where: { tenantId, status: 'ACTIVE' },
       select: { id: true },
+      orderBy: { createdAt: 'asc' },
     });
 
+    const targetStoreId = (dto as any).storeId || (stores.length > 0 ? stores[0].id : null);
+
     for (const store of stores) {
-      await this.prisma.inventory.upsert({
+      const isTargetStore = store.id === targetStoreId;
+      const initialQty = isTargetStore ? resolvedInitialStock : 0;
+
+      const inventory = await this.prisma.inventory.upsert({
         where: { storeId_productId: { storeId: store.id, productId: product.id } },
         create: {
           tenantId,
           storeId: store.id,
           productId: product.id,
-          quantityOnHand: resolvedInitialStock,
+          quantityOnHand: initialQty,
           reservedQuantity: 0,
           minimumStock: resolvedMinStock,
           maximumStock: resolvedMaxStock,
@@ -100,6 +106,25 @@ export class ProductsService {
         },
         update: {},
       });
+
+      if (initialQty > 0) {
+        await this.prisma.stockMovement.create({
+          data: {
+            tenantId,
+            storeId: store.id,
+            productId: product.id,
+            inventoryId: inventory.id,
+            referenceType: 'ADJUSTMENT',
+            referenceId: `INIT-${product.sku}`,
+            movementType: 'ADJUSTMENT',
+            quantity: new Prisma.Decimal(initialQty),
+            balanceBefore: new Prisma.Decimal(0),
+            balanceAfter: new Prisma.Decimal(initialQty),
+            remarks: 'Initial stock on product creation',
+            performedBy: currentUserId,
+          },
+        });
+      }
     }
 
     return this.findOne(tenantId, product.id);
@@ -191,8 +216,8 @@ export class ProductsService {
     const costPrice = dto.costPrice !== undefined ? dto.costPrice : Number(product.costPrice);
     const sellingPrice = dto.sellingPrice !== undefined ? dto.sellingPrice : Number(product.sellingPrice);
 
-    if (sellingPrice < costPrice) {
-      throw new BadRequestException('Selling price cannot be less than cost price');
+    if (sellingPrice < 0 || costPrice < 0) {
+      throw new BadRequestException('Prices cannot be negative');
     }
 
     if (dto.sku && dto.sku !== product.sku) {
@@ -468,7 +493,15 @@ export class ProductsService {
       const minimumStock = parseStock(item.minimumStock ?? item.minStock, 5);
       const maximumStock = parseStock(item.maximumStock ?? item.maxStock, 1000);
       const reorderLevel = parseStock(item.reorderLevel ?? item.reorder, 10);
-      const storeCode = item.storeCode ? String(item.storeCode).trim() : (item.store ? String(item.store).trim() : undefined);
+      const storeCode = item.storeCode
+        ? String(item.storeCode).trim()
+        : item.storeName
+        ? String(item.storeName).trim()
+        : item.storeId
+        ? String(item.storeId).trim()
+        : item.store
+        ? String(item.store).trim()
+        : undefined;
 
       skuMapToInventory.set(sku, {
         quantityOnHand: initialStock,
@@ -549,7 +582,11 @@ export class ProductsService {
               qty = 0;
             } else if (specifiedStore) {
               // Row in CSV specifies a store code/name
-              if (store.code.toUpperCase() === specifiedStore || store.name.toUpperCase() === specifiedStore) {
+              if (
+                store.code.toUpperCase() === specifiedStore ||
+                store.name.toUpperCase() === specifiedStore ||
+                store.id.toUpperCase() === specifiedStore
+              ) {
                 qty = rawQty;
               }
             } else {

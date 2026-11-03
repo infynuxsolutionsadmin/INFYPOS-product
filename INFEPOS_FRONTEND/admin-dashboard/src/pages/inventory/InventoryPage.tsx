@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Search, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Download, Upload, RefreshCw } from 'lucide-react';
 import type { Inventory, FindInventoryQuery, InventoryStatus } from '../../types/inventory';
 import type { Store } from '../../types/stores';
-import { getInventoryList, deleteInventory } from '../../api/inventory.api';
+import { getInventoryList, deleteInventory, getInventoryExportData } from '../../api/inventory.api';
 import { getStores } from '../../api/stores.api';
 import { useAuthStore } from '../../stores/authStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import InventoryFormModal from '../../components/inventory/InventoryFormModal';
+import { InventoryImportModal } from '../../components/inventory/InventoryImportModal';
 
 const InventoryPage: React.FC = () => {
   const { hasPermission } = useAuthStore();
@@ -45,6 +46,8 @@ const InventoryPage: React.FC = () => {
   const [totalItems, setTotalItems] = useState(0);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [selectedInventory, setSelectedInventory] = useState<Inventory | null>(null);
 
   const fetchStores = useCallback(async () => {
@@ -139,6 +142,69 @@ const InventoryPage: React.FC = () => {
     }
   };
 
+  const handleExportCsv = async () => {
+    try {
+      setExportLoading(true);
+      const items = await getInventoryExportData(query.storeId || undefined);
+      if (!items || items.length === 0) {
+        alert('No inventory records found to export for current store selection.');
+        return;
+      }
+
+      const headers = [
+        'InventoryId',
+        'StoreId',
+        'StoreCode',
+        'StoreName',
+        'ProductId',
+        'SKU',
+        'Barcode',
+        'ProductName',
+        'Category',
+        'CurrentStock',
+        'QuantityToAdd',
+        'EditExistingStock',
+        'MinStock',
+        'MaxStock',
+        'ReorderLevel',
+        'Unit',
+      ];
+
+      const rows = items.map((i) => [
+        `"${i.inventoryId}"`,
+        `"${i.storeId}"`,
+        `"${i.storeCode}"`,
+        `"${(i.storeName || '').replace(/"/g, '""')}"`,
+        `"${i.productId}"`,
+        `"${i.sku}"`,
+        `"${i.barcode || ''}"`,
+        `"${(i.productName || '').replace(/"/g, '""')}"`,
+        `"${(i.category || 'General').replace(/"/g, '""')}"`,
+        i.currentStock,
+        0,
+        '', // EditExistingStock left blank by default
+        i.minimumStock,
+        i.maximumStock,
+        i.reorderLevel,
+        `"${i.unit || 'pcs'}"`,
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `infepos_inventory_export_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err: any) {
+      alert(err.message || 'Failed to export inventory');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   const getStockStatusLabel = (item: Inventory) => {
     const qty = Number(item.quantityOnHand);
     const reorder = Number(item.reorderLevel);
@@ -154,20 +220,47 @@ const InventoryPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-12">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#1a1f36]">Inventory</h1>
           <p className="mt-1 text-sm text-gray-500">Manage stock levels across all stores.</p>
         </div>
-        {canCreate && (
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center justify-center px-6 py-2.5 border border-transparent shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] text-sm font-bold rounded-full text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 focus:outline-none hover:-translate-y-0.5 transition-all"
-          >
-            <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-            Add Inventory Record
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {canRead && (
+            <button
+              onClick={handleExportCsv}
+              disabled={exportLoading}
+              className="inline-flex items-center justify-center px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm text-xs sm:text-sm font-bold rounded-xl transition-all"
+            >
+              {exportLoading ? (
+                <RefreshCw className="-ml-0.5 mr-2 h-4 w-4 animate-spin text-gray-500" />
+              ) : (
+                <Download className="-ml-0.5 mr-2 h-4 w-4 text-emerald-600" />
+              )}
+              Export Inventory
+            </button>
+          )}
+
+          {canUpdate && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center justify-center px-4 py-2.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-800 shadow-sm text-xs sm:text-sm font-bold rounded-xl transition-all"
+            >
+              <Upload className="-ml-0.5 mr-2 h-4 w-4 text-emerald-600" />
+              Import Stock
+            </button>
+          )}
+
+          {canCreate && (
+            <button
+              onClick={openCreateModal}
+              className="inline-flex items-center justify-center px-5 py-2.5 border border-transparent shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] text-xs sm:text-sm font-bold rounded-xl text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 focus:outline-none hover:-translate-y-0.5 transition-all"
+            >
+              <Plus className="-ml-0.5 mr-2 h-4 w-4" aria-hidden="true" />
+              Add Record
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-[24px] shadow-[0px_4px_24px_rgba(149,157,165,0.12)] border border-gray-100 overflow-hidden mb-6">
@@ -387,6 +480,15 @@ const InventoryPage: React.FC = () => {
         onSuccess={fetchInventory}
         inventory={selectedInventory}
       />
+
+      {isImportModalOpen && (
+        <InventoryImportModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onSuccess={fetchInventory}
+          selectedStoreId={query.storeId}
+        />
+      )}
     </div>
   );
 };
