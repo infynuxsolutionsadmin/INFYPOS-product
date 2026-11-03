@@ -10,7 +10,7 @@ interface LoginBrandingPanelProps {
 export const LoginBrandingPanel: React.FC<LoginBrandingPanelProps> = ({ className = '' }) => {
   return (
     <div
-      className={`relative bg-gradient-to-br from-[#051E45] via-[#072B62] to-[#0A3D7F] text-white p-6 sm:p-8 lg:p-11 flex flex-col justify-between overflow-hidden ${className}`}
+      className={`relative bg-gradient-to-br from-[#051E45] via-[#072B62] to-[#0A3D7F] text-white p-5 sm:p-6 lg:p-7 flex flex-col justify-between overflow-hidden ${className}`}
     >
       {/* Decorative ambient fluid curve overlay mirroring the reference aesthetic */}
       <svg
@@ -49,63 +49,63 @@ export const LoginBrandingPanel: React.FC<LoginBrandingPanelProps> = ({ classNam
         <BrandLogo />
 
         {/* Small cyan accent capsule */}
-        <div className="w-10 h-1 bg-[#38bdf8] rounded-full mt-7 mb-4 shadow-xs" />
+        <div className="w-10 h-1 bg-[#38bdf8] rounded-full mt-4 mb-2.5 shadow-xs" />
 
         {/* Hero Headings */}
-        <h2 className="text-2xl sm:text-[26px] lg:text-[28px] font-bold text-white tracking-tight leading-[1.25] font-sans">
+        <h2 className="text-xl sm:text-[22px] lg:text-2xl font-bold text-white tracking-tight leading-[1.25] font-sans">
           Powering Retail Excellence <br className="hidden sm:inline" />
           with <span className="text-[#38bdf8]">Smart Technology</span>
         </h2>
 
         {/* Hero Subtitle */}
-        <p className="mt-2.5 text-xs sm:text-[13px] text-blue-100/80 leading-relaxed max-w-sm font-normal font-sans">
+        <p className="mt-1.5 text-xs text-blue-100/80 leading-relaxed max-w-sm font-normal font-sans">
           All-in-one POS &amp; Store Management solution empowering modern retail and multi-store business operations.
         </p>
       </div>
 
       {/* Center Showcase: POS Terminal Illustration */}
-      <div className="relative z-10 my-4 sm:my-6 flex justify-center items-center">
+      <div className="relative z-10 my-2 sm:my-3 flex justify-center items-center">
         <PosIllustration />
       </div>
 
       {/* Bottom Features Row: 3 Feature highlights separated by dividers */}
-      <div className="relative z-10 pt-4 border-t border-white/10 flex items-center justify-between sm:justify-around text-left">
+      <div className="relative z-10 pt-2.5 border-t border-white/10 flex items-center justify-between sm:justify-around text-left">
         {/* Feature 1: Secure Access */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 shadow-inner">
-            <ShieldCheck className="w-4 h-4 text-blue-200" />
+          <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 shadow-inner">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-200" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-white leading-tight font-sans">Secure</span>
-            <span className="text-[10px] text-blue-200/80 leading-tight font-sans">Access</span>
+            <span className="text-[11px] font-bold text-white leading-tight font-sans">Secure</span>
+            <span className="text-[9.5px] text-blue-200/80 leading-tight font-sans">Access</span>
           </div>
         </div>
 
         {/* Divider 1 */}
-        <div className="h-7 w-[1px] bg-white/15" />
+        <div className="h-5 w-[1px] bg-white/15" />
 
         {/* Feature 2: Reliable Performance */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 shadow-inner">
-            <MonitorCheck className="w-4 h-4 text-blue-200" />
+          <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 shadow-inner">
+            <MonitorCheck className="w-3.5 h-3.5 text-blue-200" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-white leading-tight font-sans">Reliable</span>
-            <span className="text-[10px] text-blue-200/80 leading-tight font-sans">Performance</span>
+            <span className="text-[11px] font-bold text-white leading-tight font-sans">Reliable</span>
+            <span className="text-[9.5px] text-blue-200/80 leading-tight font-sans">Performance</span>
           </div>
         </div>
 
         {/* Divider 2 */}
-        <div className="h-7 w-[1px] bg-white/15" />
+        <div className="h-5 w-[1px] bg-white/15" />
 
         {/* Feature 3: Scalable for Growth */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 shadow-inner">
-            <TrendingUp className="w-4 h-4 text-blue-200" />
+          <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 shadow-inner">
+            <TrendingUp className="w-3.5 h-3.5 text-blue-200" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-white leading-tight font-sans">Scalable</span>
-            <span className="text-[10px] text-blue-200/80 leading-tight font-sans">for Growth</span>
+            <span className="text-[11px] font-bold text-white leading-tight font-sans">Scalable</span>
+            <span className="text-[9.5px] text-blue-200/80 leading-tight font-sans">for Growth</span>
           </div>
         </div>
       </div>

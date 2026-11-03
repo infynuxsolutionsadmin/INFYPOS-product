@@ -15,7 +15,7 @@ const AuthLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#EBF2FA] flex items-center justify-center p-3 sm:p-6 lg:p-8 font-sans selection:bg-blue-600 selection:text-white relative overflow-hidden">
+    <div className="h-screen w-screen bg-[#EBF2FA] flex items-center justify-center p-2 sm:p-4 lg:p-6 font-sans selection:bg-blue-600 selection:text-white relative overflow-x-hidden overflow-y-auto">
       {/* Soft ambient wave light effects matching the visual reference */}
       <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-blue-200/40 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-1/2 -right-40 -translate-y-1/2 w-[700px] h-[700px] bg-sky-200/40 rounded-full blur-3xl pointer-events-none" />

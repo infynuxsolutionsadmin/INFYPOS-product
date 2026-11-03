@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { login } from '../../api/auth.api';
 import LoginBrandingPanel from './components/LoginBrandingPanel';
@@ -7,13 +7,16 @@ import LoginFormPanel from './components/LoginFormPanel';
 import SubscriptionSignupModal from './components/SubscriptionSignupModal';
 
 const LoginPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [tenantCode, setTenantCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
+  const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(() => {
+    return searchParams.get('subscribe') === 'true' || searchParams.get('plan') !== null;
+  });
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
 
@@ -47,12 +50,12 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-[1060px] mx-auto my-auto relative z-10 transition-all duration-300">
+    <div className="w-full max-w-[960px] mx-auto my-auto relative z-10 transition-all duration-300">
       {/* Outer Card: Navy Branding on Left, White Form on Right with subtle divider */}
-      <div className="bg-white rounded-[28px] sm:rounded-[32px] overflow-hidden grid grid-cols-1 lg:grid-cols-12 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.18)] border border-slate-200/90">
+      <div className="bg-white rounded-[24px] sm:rounded-[28px] overflow-hidden grid grid-cols-1 lg:grid-cols-12 shadow-[0_20px_50px_-15px_rgba(15,23,42,0.16)] border border-slate-200/90">
         {/* Left Column: Navy-Blue Branding Panel */}
         <div className="lg:col-span-5 flex flex-col">
-          <LoginBrandingPanel className="h-full min-h-[440px] lg:min-h-[620px]" />
+          <LoginBrandingPanel className="h-full" />
         </div>
 
         {/* Right Column: White Login Form Panel with subtle vertical divider */}

@@ -21,7 +21,7 @@ export const PosIllustration: React.FC<PosIllustrationProps> = ({
           src={imageSrc}
           alt={altText}
           onError={() => setLoadError(true)}
-          className="w-full max-w-[340px] sm:max-w-[380px] object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.45)] transition-transform duration-500 hover:scale-[1.02]"
+          className="w-full max-w-[190px] sm:max-w-[230px] object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.4)] transition-transform duration-500 hover:scale-[1.02]"
         />
       ) : (
         /* Fallback modern illustration placeholder if image cannot be loaded */
