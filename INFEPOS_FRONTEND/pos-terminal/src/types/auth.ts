@@ -8,6 +8,8 @@ export interface LoginRequest {
 export interface AuthUser {
   id: string;
   tenantId: string;
+  tenantCode?: string;
+  storeCode?: string | null;
   storeId: string | null;
   storeName?: string | null;
   roleId: string;

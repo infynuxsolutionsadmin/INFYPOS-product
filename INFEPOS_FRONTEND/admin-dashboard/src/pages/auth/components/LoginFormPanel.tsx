@@ -73,7 +73,7 @@ export const LoginFormPanel: React.FC<LoginFormPanelProps> = ({
               htmlFor="tenantCode"
               className="block text-[10.5px] font-bold text-slate-500 uppercase tracking-wider mb-1 ml-0.5"
             >
-              Tenant Code
+              Store or Tenant Code
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -86,7 +86,7 @@ export const LoginFormPanel: React.FC<LoginFormPanelProps> = ({
                 required
                 value={tenantCode}
                 onChange={(e) => setTenantCode(e.target.value)}
-                placeholder="e.g. SYNC-TEST or infynux"
+                placeholder="e.g. STORE-01 or INFYNUX"
                 autoComplete="organization"
                 className="w-full bg-[#f8fafc] hover:bg-slate-100/60 focus:bg-white text-slate-800 text-xs sm:text-sm font-normal rounded-xl pl-9 pr-3.5 py-2.5 sm:py-3 border border-slate-200 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all duration-200 placeholder:text-slate-400 shadow-xs"
               />

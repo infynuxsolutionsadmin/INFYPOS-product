@@ -51,14 +51,49 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const tenant = await this.prisma.tenant.findFirst({
+    const rawCode = dto.tenantCode?.trim();
+    let tenant = await this.prisma.tenant.findFirst({
       where: {
         code: {
-          equals: dto.tenantCode,
+          equals: rawCode,
           mode: 'insensitive',
         },
       },
     });
+
+    let matchedStore: any = null;
+    if (!tenant) {
+      // Multi-store retail POS: allow logging in with Store Code instead of Tenant Code
+      // 1. Prioritize a store with this code that includes a user with this email
+      const storeWithUser = await this.prisma.store.findFirst({
+        where: {
+          code: { equals: rawCode, mode: 'insensitive' },
+          users: {
+            some: {
+              email: { equals: dto.email.trim(), mode: 'insensitive' },
+            },
+          },
+        },
+        include: { tenant: true },
+      });
+
+      if (storeWithUser) {
+        tenant = storeWithUser.tenant;
+        matchedStore = storeWithUser;
+      } else {
+        // 2. Fallback to any store matching this code
+        const anyStore = await this.prisma.store.findFirst({
+          where: {
+            code: { equals: rawCode, mode: 'insensitive' },
+          },
+          include: { tenant: true },
+        });
+        if (anyStore) {
+          tenant = anyStore.tenant;
+          matchedStore = anyStore;
+        }
+      }
+    }
 
     if (!tenant) {
       throw new UnauthorizedException('Invalid credentials');
@@ -72,7 +107,7 @@ export class AuthService {
       where: {
         tenantId_email: {
           tenantId: tenant.id,
-          email: dto.email,
+          email: dto.email.trim(),
         },
       },
       include: {
@@ -84,6 +119,17 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // If logged in via a specific store code, verify user belongs to that store or is an admin/owner
+    if (
+      matchedStore &&
+      user.storeId &&
+      user.storeId !== matchedStore.id &&
+      user.role.code !== 'OWNER' &&
+      user.role.code !== 'SYSTEM_ADMIN'
+    ) {
+      throw new UnauthorizedException('You do not have permission to access this store');
     }
 
     const isPasswordValid = await this.passwordService.compare(
@@ -99,12 +145,15 @@ export class AuthService {
       throw new ForbiddenException(`Account is ${user.status.toLowerCase()}`);
     }
 
+    const effectiveStoreId = user.storeId || matchedStore?.id || null;
+    const effectiveStoreName = user.store?.name || matchedStore?.name || null;
+
     const payload = {
       userId: user.id,
       tenantId: user.tenantId,
       roleId: user.roleId,
       roleCode: user.role.code,
-      storeId: user.storeId,
+      storeId: effectiveStoreId,
       email: user.email,
     };
 
@@ -140,8 +189,9 @@ export class AuthService {
         tenantCode: tenant.code,
         roleId: user.roleId,
         roleCode: user.role.code,
-        storeId: user.storeId,
-        storeName: user.store?.name || null,
+        storeId: effectiveStoreId,
+        storeName: effectiveStoreName,
+        storeCode: user.store?.code || matchedStore?.code || null,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,

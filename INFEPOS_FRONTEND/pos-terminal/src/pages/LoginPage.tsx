@@ -11,13 +11,19 @@ import logoImg from '../assets/transparent_logo.png';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isPaired, setPaired, setAuth, unpairDevice, pairedStoreId, pairedTenantId, pairedTenantCode } = useAuthStore();
+  const { isPaired, setPaired, setAuth, unpairDevice, pairedStoreId, pairedTenantId, pairedTenantCode, pairedStoreName } = useAuthStore();
 
   const [form, setForm] = useState({
-    tenantCode: '',
+    tenantCode: pairedTenantCode || '',
     email: '',
     password: '',
   });
+
+  useEffect(() => {
+    if (pairedTenantCode && !form.tenantCode) {
+      setForm((prev) => ({ ...prev, tenantCode: pairedTenantCode }));
+    }
+  }, [pairedTenantCode, form.tenantCode]);
   
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -210,7 +216,7 @@ const LoginPage: React.FC = () => {
         result.user.storeId,
         result.tokens.accessToken,
         result.tokens.refreshToken,
-        form.tenantCode,
+        result.user.tenantCode || form.tenantCode,
         (result.user as any).storeName || undefined
       );
       // Let useEffect fetch cashiers
@@ -453,11 +459,16 @@ const LoginPage: React.FC = () => {
       setError('Email and password required');
       return;
     }
+    const codeToUse = (form.tenantCode || pairedTenantCode || '').trim();
+    if (!codeToUse) {
+      setError('Store code is required');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const result = await login({
-        tenantCode: form.tenantCode,
+        tenantCode: codeToUse,
         email: managerForm.email,
         password: managerForm.password
       });
@@ -618,30 +629,166 @@ const LoginPage: React.FC = () => {
               
               {showManagerLogin ? (
                 <div style={{ width: '100%' }}>
-                  <button onClick={() => { setShowManagerLogin(false); setManagerForm({ email: '', password: '' }); }} style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowManagerLogin(false);
+                      setManagerForm({ email: '', password: '' });
+                      setError(null);
+                    }}
+                    style={{
+                      color: '#4f46e5',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      marginBottom: '1.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                    }}
+                  >
                     ← Back to Cashiers
                   </button>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--pos-text)', marginBottom: '1.5rem', textAlign: 'center' }}>Manager Login</h2>
-                  <form onSubmit={handleManagerLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+                  <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--pos-text)', margin: '0 0 0.35rem 0' }}>
+                      Store Manager Login
+                    </h2>
+                    <p style={{ fontSize: '0.825rem', color: 'var(--pos-text-muted)', margin: 0 }}>
+                      Authenticate with store manager credentials to manage till and shifts
+                    </p>
+                  </div>
+
+                  {/* Paired Store Badge */}
+                  {isPaired && (pairedStoreName || pairedStoreId) && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.65rem 0.85rem',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '0.5rem',
+                        marginBottom: '1.25rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: '6px',
+                            background: '#e0e7ff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          🏬
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Paired Store
+                          </div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e293b' }}>
+                            {pairedStoreName || `Store #${pairedStoreId?.slice(0, 8)}`}
+                          </div>
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          color: '#15803d',
+                          background: '#dcfce7',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '9999px',
+                        }}
+                      >
+                        ✓ Connected
+                      </span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleManagerLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--pos-text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Tenant Code</label>
-                      <input type="text" className="pos-input" value={form.tenantCode} onChange={(e) => setForm(prev => ({ ...prev, tenantCode: e.target.value }))} placeholder="Store Code" required />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--pos-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Store Code
+                        </label>
+                        {isPaired && (
+                          <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 600 }}>
+                            ● Paired
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        className="pos-input"
+                        value={form.tenantCode || pairedTenantCode || ''}
+                        onChange={(e) => setForm(prev => ({ ...prev, tenantCode: e.target.value }))}
+                        placeholder="e.g. STORE-01 or Tenant Code"
+                        required
+                      />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--pos-text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Email</label>
-                      <input type="email" className="pos-input" value={managerForm.email} onChange={(e) => setManagerForm(prev => ({ ...prev, email: e.target.value }))} placeholder="manager@store.com" required autoFocus />
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--pos-text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Manager Email
+                      </label>
+                      <input
+                        type="email"
+                        className="pos-input"
+                        value={managerForm.email}
+                        onChange={(e) => setManagerForm(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="manager@store.com"
+                        required
+                        autoFocus
+                      />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--pos-text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Password</label>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--pos-text-muted)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Password
+                      </label>
                       <div style={{ position: 'relative' }}>
-                        <input type={showPassword ? 'text' : 'password'} className="pos-input" value={managerForm.password} onChange={(e) => setManagerForm(prev => ({ ...prev, password: e.target.value }))} placeholder="••••••••" required style={{ paddingRight: '3rem' }} />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--pos-text-dim)' }} tabIndex={-1}>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          className="pos-input"
+                          value={managerForm.password}
+                          onChange={(e) => setManagerForm(prev => ({ ...prev, password: e.target.value }))}
+                          placeholder="••••••••"
+                          required
+                          style={{ paddingRight: '3rem' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          style={{
+                            position: 'absolute',
+                            right: '0.75rem',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--pos-text-dim)',
+                          }}
+                          tabIndex={-1}
+                        >
                           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
                     </div>
-                    <button type="submit" className="btn-pos btn-primary" disabled={loading} style={{ marginTop: '0.5rem', padding: '0.9rem', fontSize: '1rem' }}>
-                      {loading ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'Log In'}
+                    <button
+                      type="submit"
+                      className="btn-pos btn-primary"
+                      disabled={loading}
+                      style={{ marginTop: '0.35rem', padding: '0.85rem', fontSize: '0.95rem', fontWeight: 600 }}
+                    >
+                      {loading ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'Log In as Manager'}
                     </button>
                   </form>
                 </div>
