@@ -1,10 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SalesService } from '../sales/sales.service';
 import { SalesReturnsService } from '../sales-returns/sales-returns.service';
 import { SyncPayloadDto } from './dto/sync.dto';
-
 import { ShiftsService } from '../shifts/shifts.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class SyncService {
@@ -15,9 +15,58 @@ export class SyncService {
     private readonly salesService: SalesService,
     private readonly salesReturnsService: SalesReturnsService,
     private readonly shiftsService: ShiftsService,
+    private readonly auditService: AuditService,
   ) {}
 
   async processSync(tenantId: string, userId: string, dto: SyncPayloadDto) {
+    // 1. Mandatory Batch-Level Preflight Security Check
+    // Credential mutation (CASHIER_PIN_RESET) is strictly forbidden via generic synchronization.
+    const forbiddenResetEvent = dto.events?.find(
+      (event) => event.eventType === 'CASHIER_PIN_RESET',
+    );
+
+    if (forbiddenResetEvent) {
+      const targetUserId = forbiddenResetEvent.payload?.cashierId || undefined;
+      const eventId = forbiddenResetEvent.eventId || undefined;
+
+      this.logger.warn({
+        event: 'SECURITY_VIOLATION_UNAUTHORIZED_PIN_RESET',
+        tenantId,
+        actorId: userId,
+        targetUserId,
+        eventId,
+        message:
+          'Unauthorized attempt to reset cashier PIN via synchronization endpoint. Entire batch rejected with HTTP 403.',
+      });
+
+      // Record security audit violation without exposing plaintext PIN or hash
+      try {
+        await this.auditService.logAction(
+          userId,
+          'SECURITY_VIOLATION_UNAUTHORIZED_PIN_RESET',
+          'User',
+          targetUserId || 'UNKNOWN',
+          {
+            tenantId,
+            actorId: userId,
+            targetUserId,
+            eventId,
+            reason: 'Unauthorized PIN reset attempted via sync endpoint',
+            outcome: 'REJECTED',
+          },
+        );
+      } catch (auditError: any) {
+        this.logger.error(
+          `Failed to record audit log for unauthorized PIN reset: ${auditError?.message}`,
+        );
+      }
+
+      // Fail-closed: Reject complete request before entering event-processing loop
+      throw new ForbiddenException(
+        'Access denied: PIN credential resets cannot be performed via synchronization. Management privileges and dedicated management API required.',
+      );
+    }
+
     const results = {
       success: true,
       processed: [],
@@ -95,14 +144,6 @@ export class SyncService {
           processedPayload = await this.shiftsService.openShift(tenantId, storeId, userId, event.payload);
         } else if (event.eventType === 'SHIFT_CLOSE') {
           processedPayload = await this.shiftsService.closeShift(tenantId, storeId, userId, event.payload.shiftId, event.payload);
-        } else if (event.eventType === 'CASHIER_PIN_RESET') {
-          if (event.payload?.cashierId && event.payload?.pinCodeHash) {
-            await this.prisma.user.updateMany({
-              where: { id: event.payload.cashierId, tenantId },
-              data: { pinCodeHash: event.payload.pinCodeHash },
-            });
-            processedPayload = { updated: true };
-          }
         } else {
           throw new Error(`Unsupported event type: ${event.eventType}`);
         }

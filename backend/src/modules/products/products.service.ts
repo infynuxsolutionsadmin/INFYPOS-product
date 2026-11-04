@@ -362,28 +362,79 @@ export class ProductsService {
   }
 
   async deleteAll(tenantId: string) {
-    // 1. Delete all stock movements first (foreign key to inventory)
-    await this.prisma.stockMovement.deleteMany({ where: { tenantId } });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Verify that NO historical financial or operational records exist for this tenant's products
+        const [hasSales, hasReturns, hasStockMovements, hasPurchases, hasReceipts, hasAdjustments, hasTransfers] =
+          await Promise.all([
+            tx.saleItem.findFirst({
+              where: { product: { tenantId } },
+              select: { id: true },
+            }),
+            tx.saleReturnItem.findFirst({
+              where: { product: { tenantId } },
+              select: { id: true },
+            }),
+            tx.stockMovement.findFirst({
+              where: { tenantId },
+              select: { id: true },
+            }),
+            tx.purchaseItem.findFirst({
+              where: { product: { tenantId } },
+              select: { id: true },
+            }),
+            tx.goodsReceiptItem.findFirst({
+              where: { product: { tenantId } },
+              select: { id: true },
+            }),
+            tx.inventoryAdjustmentItem.findFirst({
+              where: { product: { tenantId } },
+              select: { id: true },
+            }),
+            tx.stockTransferItem.findFirst({
+              where: { product: { tenantId } },
+              select: { id: true },
+            }),
+          ]);
 
-    // 2. Delete all related item records referencing tenant's products
-    await this.prisma.inventoryAdjustmentItem.deleteMany({ where: { product: { tenantId } } });
-    await this.prisma.stockTransferItem.deleteMany({ where: { product: { tenantId } } });
-    await this.prisma.goodsReceiptItem.deleteMany({ where: { product: { tenantId } } });
-    await this.prisma.purchaseItem.deleteMany({ where: { product: { tenantId } } });
-    await this.prisma.saleReturnItem.deleteMany({ where: { product: { tenantId } } });
-    await this.prisma.saleItem.deleteMany({ where: { product: { tenantId } } });
+        if (
+          hasSales ||
+          hasReturns ||
+          hasStockMovements ||
+          hasPurchases ||
+          hasReceipts ||
+          hasAdjustments ||
+          hasTransfers
+        ) {
+          throw new BadRequestException(
+            'Cannot purge product catalog: historical sales or operational records exist for this tenant. Products with transaction, purchasing, movement, or return history must be Archived (Soft Deleted) instead of hard-deleted to preserve legal audit compliance.',
+          );
+        }
 
-    // 3. Delete all inventories for tenant
-    await this.prisma.inventory.deleteMany({
-      where: { tenantId },
-    });
+        // 2. Only unlinked inventory records can be deleted
+        await tx.inventory.deleteMany({
+          where: { tenantId },
+        });
 
-    // 4. Delete all products for tenant
-    const result = await this.prisma.product.deleteMany({
-      where: { tenantId },
-    });
+        // 3. Delete unlinked products (PostgreSQL ON DELETE RESTRICT guarantees no orphaned records)
+        const result = await tx.product.deleteMany({
+          where: { tenantId },
+        });
 
-    return { deletedCount: result.count };
+        return { deletedCount: result.count };
+      });
+    } catch (error: any) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      // Safeguard: handle PostgreSQL foreign-key constraint violation outside the aborted transaction
+      if (error?.code === 'P2003') {
+        throw new BadRequestException(
+          'Cannot purge product catalog: one or more products are referenced by historical operational records.',
+        );
+      }
+      throw error;
+    }
   }
 
   private getSelectFields() {

@@ -4,11 +4,11 @@ import { SyncService } from './sync.service';
 import { SalesModule } from '../sales/sales.module';
 import { SalesReturnsModule } from '../sales-returns/sales-returns.module';
 import { AuthModule } from '../auth/auth.module';
-
+import { AuditModule } from '../audit/audit.module';
 import { ShiftsModule } from '../shifts/shifts.module';
 
 @Module({
-  imports: [SalesModule, SalesReturnsModule, AuthModule, ShiftsModule],
+  imports: [SalesModule, SalesReturnsModule, AuthModule, ShiftsModule, AuditModule],
   controllers: [SyncController],
   providers: [SyncService],
 })
