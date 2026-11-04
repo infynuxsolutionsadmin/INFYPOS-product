@@ -82,39 +82,136 @@ export class ShiftsService {
       throw new BadRequestException('You must be assigned to a store to open a shift.');
     }
 
-    // Check if there is already an active shift for this store
-    const activeShift = await this.prisma.shift.findFirst({
+    // 1. Cashier check: Cashier cannot have multiple active shifts concurrently
+    const activeCashierShift = await this.prisma.shift.findFirst({
       where: {
         tenantId,
-        storeId,
-        status: ShiftStatus.OPEN,
-      },
-    });
-
-    if (activeShift) {
-      throw new ConflictException('An active shift already exists for this store');
-    }
-
-    const shift = await this.prisma.shift.create({
-      data: {
-        tenantId,
-        storeId,
         openedById: userId,
         status: ShiftStatus.OPEN,
-        startingFloat: new Decimal(dto.startingFloat),
-        openedAt: new Date(),
       },
     });
 
-    return shift;
+    if (activeCashierShift) {
+      throw new ConflictException('You already have an active open shift in this store');
+    }
+
+    // 2. Register-specific active shift check
+    if (dto.registerId) {
+      const activeRegisterShift = await this.prisma.shift.findFirst({
+        where: {
+          tenantId,
+          storeId,
+          registerId: dto.registerId,
+          status: ShiftStatus.OPEN,
+        },
+      });
+
+      if (activeRegisterShift) {
+        throw new ConflictException(`An active shift already exists for register "${dto.registerId}"`);
+      }
+    } else {
+      // Backward compatibility: If no registerId is supplied, allow only one active store-level unassigned shift
+      const activeStoreShift = await this.prisma.shift.findFirst({
+        where: {
+          tenantId,
+          storeId,
+          registerId: null,
+          status: ShiftStatus.OPEN,
+        },
+      });
+
+      if (activeStoreShift) {
+        throw new ConflictException('An active shift already exists for this store');
+      }
+    }
+
+    // Atomic transaction for shift creation with double-check to prevent race conditions
+    return this.prisma.$transaction(async (tx) => {
+      if (dto.registerId) {
+        const doubleCheck = await tx.shift.findFirst({
+          where: {
+            tenantId,
+            storeId,
+            registerId: dto.registerId,
+            status: ShiftStatus.OPEN,
+          },
+        });
+        if (doubleCheck) {
+          throw new ConflictException(`An active shift already exists for register "${dto.registerId}"`);
+        }
+      } else {
+        const doubleCheck = await tx.shift.findFirst({
+          where: {
+            tenantId,
+            storeId,
+            registerId: null,
+            status: ShiftStatus.OPEN,
+          },
+        });
+        if (doubleCheck) {
+          throw new ConflictException('An active shift already exists for this store');
+        }
+      }
+
+      const shift = await tx.shift.create({
+        data: {
+          tenantId,
+          storeId,
+          openedById: userId,
+          registerId: dto.registerId || null,
+          status: ShiftStatus.OPEN,
+          startingFloat: new Decimal(dto.startingFloat),
+          openedAt: new Date(),
+        },
+      });
+
+      return shift;
+    });
   }
 
-  async getActiveShift(tenantId: string, storeId: string) {
+  async getActiveShift(tenantId: string, storeId: string, registerId?: string, userId?: string) {
     if (!storeId) {
       throw new BadRequestException('Store ID is required.');
     }
 
-    const activeShift = await this.prisma.shift.findFirst({
+    // Priority 1: If registerId specified, fetch active shift for this register
+    if (registerId) {
+      const registerShift = await this.prisma.shift.findFirst({
+        where: {
+          tenantId,
+          storeId,
+          registerId,
+          status: ShiftStatus.OPEN,
+        },
+        include: {
+          openedBy: {
+            select: { firstName: true, lastName: true },
+          },
+        },
+      });
+      if (registerShift) return registerShift;
+    }
+
+    // Priority 2: If userId specified, check if this cashier has an open shift
+    if (userId) {
+      const cashierShift = await this.prisma.shift.findFirst({
+        where: {
+          tenantId,
+          storeId,
+          openedById: userId,
+          status: ShiftStatus.OPEN,
+        },
+        include: {
+          openedBy: {
+            select: { firstName: true, lastName: true },
+          },
+        },
+      });
+      if (cashierShift) return cashierShift;
+    }
+
+    // Priority 3: Fallback to unassigned register or any open shift in store (backward compatible)
+    return this.prisma.shift.findFirst({
       where: {
         tenantId,
         storeId,
@@ -126,8 +223,6 @@ export class ShiftsService {
         },
       },
     });
-
-    return activeShift; // Returns null if not found
   }
 
   async getXReport(tenantId: string, storeId: string, shiftId: string) {

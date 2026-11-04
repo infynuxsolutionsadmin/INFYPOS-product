@@ -38,8 +38,8 @@ export class ShiftsController {
 
   @Get('active')
   // No specific permission required beyond auth, any cashier can check if a shift is active
-  async getActiveShift(@Req() req) {
-    const shift = await this.shiftsService.getActiveShift(req.user.tenantId, req.user.storeId);
+  async getActiveShift(@Req() req, @Query('registerId') registerId?: string) {
+    const shift = await this.shiftsService.getActiveShift(req.user.tenantId, req.user.storeId, registerId, req.user.userId);
     return {
       success: true,
       statusCode: 200,
