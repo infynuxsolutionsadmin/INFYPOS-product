@@ -99,10 +99,18 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(currentDir, '../dist/index.html'));
+    // Security: Block DevTools keyboard shortcuts and disable menu in production
+    mainWindow.setMenu(null);
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (
+        (input.control && input.shift && input.key.toLowerCase() === 'i') ||
+        (input.meta && input.alt && input.key.toLowerCase() === 'i') ||
+        input.key === 'F12'
+      ) {
+        event.preventDefault();
+      }
+    });
   }
-  
-  // Force devtools open to debug blank screen
-  mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut, RotateCw, KeyRound, ShieldCheck, CheckCircle2, X } from 'lucide-react';
-import { login, verifyPin } from '../api/auth.api';
+import { login, verifyPin, refreshAccessToken } from '../api/auth.api';
 import { compareSync, hashSync } from 'bcrypt-ts';
 import { useAuthStore } from '../stores/authStore';
 import { useShiftStore } from '../stores/shiftStore';
 import client from '../api/client';
-import { getLocalCashiers, syncCashiersToLocalDb, updateLocalCashierPin, queueSyncEvent } from '../services/localDb';
+import { getLocalCashiers, syncCashiersToLocalDb, updateLocalCashierPin } from '../services/localDb';
 import logoImg from '../assets/transparent_logo.png';
 
 const LoginPage: React.FC = () => {
@@ -299,6 +299,20 @@ const LoginPage: React.FC = () => {
             useShiftStore.getState().clearShift();
           }
 
+          // Silently refresh the access token so the cashier session starts
+          // with a fresh, valid token regardless of how long the device has been
+          // idle or whether the backend was restarted since the last pairing.
+          try {
+            const storedRefresh = localStorage.getItem('pos_refresh_token');
+            if (storedRefresh) {
+              await refreshAccessToken(storedRefresh);
+            }
+          } catch {
+            // Best-effort: if refresh fails here (e.g. offline / expired),
+            // the axios interceptor will retry on the first real API call.
+            // Do not block the cashier from proceeding.
+          }
+
           setAuth({
             id: selectedCashier.id,
             firstName: selectedCashier.firstName,
@@ -358,6 +372,7 @@ const LoginPage: React.FC = () => {
       }
 
       let managerAuthorized = false;
+    let managerToken: string | null = null;
 
       const targetTenantCode = (
         resetManagerTenantCode ||
@@ -383,6 +398,7 @@ const LoginPage: React.FC = () => {
           const roleCode = user?.role?.code || user?.roleCode;
           if (roleCode && roleCode !== 'CASHIER') {
             managerAuthorized = true;
+            managerToken = authRes.data?.data?.accessToken || authRes.data?.accessToken || null;
           } else {
             throw new Error('Only Managers or Admins can reset cashier PINs');
           }
@@ -418,22 +434,23 @@ const LoginPage: React.FC = () => {
       const newPinHash = hashSync(resetNewPin, 10);
       await updateLocalCashierPin(selectedCashier.id, newPinHash);
 
-      // 3. Queue sync event so the cloud backend is updated when connection is available
-      await queueSyncEvent('CASHIER_PIN_RESET', {
-        cashierId: selectedCashier.id,
-        pinCodeHash: newPinHash,
-        storeId: pairedStoreId,
-      });
-
-      // 4. Update in-memory state so the new PIN works immediately on this screen
+      // 3. Update in-memory state so the new PIN works immediately on this screen
       selectedCashier.pinCodeHash = newPinHash;
       setCashiers((prev) =>
         prev.map((c) => (c.id === selectedCashier.id ? { ...c, pinCodeHash: newPinHash } : c))
       );
 
-      // 5. If online, also fire background update to backend
-      if (navigator.onLine) {
-        client.patch(`/users/${selectedCashier.id}`, { pinCode: resetNewPin }).catch(() => {});
+      // 4. If online and manager authorized, update cloud backend via official reset-pin endpoint
+      if (navigator.onLine && managerToken) {
+        try {
+          await client.post(
+            `/users/${selectedCashier.id}/reset-pin`,
+            { pin: resetNewPin },
+            { headers: { Authorization: `Bearer ${managerToken}` } }
+          );
+        } catch (cloudErr) {
+          console.warn('[LoginPage] Cloud PIN reset failed, local till remains updated', cloudErr);
+        }
       }
 
       setResetSuccess(`PIN successfully updated to ${resetNewPin}! Cashier can now log in.`);

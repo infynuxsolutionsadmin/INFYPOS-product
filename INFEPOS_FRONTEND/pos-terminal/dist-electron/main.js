@@ -8482,7 +8482,9 @@ function gn() {
 			nodeIntegration: !1,
 			contextIsolation: !0
 		}
-	}), pn ? (mn.loadURL(process.env.VITE_DEV_SERVER_URL || "http://localhost:5174"), mn.webContents.openDevTools()) : mn.loadFile(n.join(fn, "../dist/index.html")), mn.webContents.openDevTools();
+	}), pn ? (mn.loadURL(process.env.VITE_DEV_SERVER_URL || "http://localhost:5174"), mn.webContents.openDevTools()) : (mn.loadFile(n.join(fn, "../dist/index.html")), mn.setMenu(null), mn.webContents.on("before-input-event", (e, t) => {
+		(t.control && t.shift && t.key.toLowerCase() === "i" || t.meta && t.alt && t.key.toLowerCase() === "i" || t.key === "F12") && e.preventDefault();
+	}));
 }
 a.whenReady().then(() => {
 	hn(), gn(), pn || un.autoUpdater.checkForUpdatesAndNotify().catch((e) => {

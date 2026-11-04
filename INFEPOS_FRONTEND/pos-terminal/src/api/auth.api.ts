@@ -48,11 +48,15 @@ export const login = async (data: LoginRequest): Promise<LoginResponse> => {
 };
 
 export const refreshAccessToken = async (refreshToken: string): Promise<string> => {
-  const response = await client.post<{ data: { accessToken: string } }>('/auth/refresh', {
+  const response = await client.post<{ data: { accessToken: string; refreshToken?: string } }>('/auth/refresh', {
     refreshToken,
   });
-  const newToken = response.data.data.accessToken;
+  const { accessToken: newToken, refreshToken: newRefreshToken } = response.data.data;
   localStorage.setItem('pos_access_token', newToken);
+  // Backend rotates the refresh token on every use — persist the new one
+  if (newRefreshToken) {
+    localStorage.setItem('pos_refresh_token', newRefreshToken);
+  }
   return newToken;
 };
 

@@ -85,15 +85,18 @@ export const useSyncManager = () => {
     let count = 0;
     let fCount = 0;
     try {
+      const VALID_SYNC_TYPES = ['SALE', 'SALE_RETURN', 'SHIFT_OPEN', 'SHIFT_CLOSE'];
       if (isDesktopApp()) {
         const pendingDb = await getPendingSyncEvents();
-        count += pendingDb.length;
+        const validPending = (pendingDb || []).filter((e: any) => VALID_SYNC_TYPES.includes(e.type));
+        count += validPending.length;
         const failedDb = await getFailedSyncEvents();
-        fCount += failedDb.length;
+        const validFailed = (failedDb || []).filter((e: any) => VALID_SYNC_TYPES.includes(e.type));
+        fCount += validFailed.length;
       } else {
         const { events } = useSyncStore.getState();
-        count += events.filter((e) => e.status === 'PENDING').length;
-        fCount += events.filter((e) => e.status === 'FAILED').length;
+        count += events.filter((e) => e.status === 'PENDING' && VALID_SYNC_TYPES.includes(e.eventType)).length;
+        fCount += events.filter((e) => e.status === 'FAILED' && VALID_SYNC_TYPES.includes(e.eventType)).length;
       }
       
       setPendingCount(count);
@@ -133,14 +136,31 @@ export const useSyncManager = () => {
         }))];
       }
 
-      if (allEvents.length === 0) {
-        setPendingCount(0);
+      // Automatically purge deprecated/unsupported event types (e.g. CASHIER_PIN_RESET)
+      const validEvents: any[] = [];
+      const VALID_EVENT_TYPES = ['SALE', 'SALE_RETURN', 'SHIFT_OPEN', 'SHIFT_CLOSE'];
+      for (const ev of allEvents) {
+        if (!VALID_EVENT_TYPES.includes(ev.eventType)) {
+          console.warn(`[SyncManager] Purging deprecated sync event "${ev.eventType}" (${ev.eventId}) from queue.`);
+          if (ev.source === 'sqlite') {
+            await markSyncEventCompleted(ev.eventId);
+          } else if (ev.source === 'zustand') {
+            const { removeEvents } = useSyncStore.getState();
+            removeEvents([ev.eventId]);
+          }
+        } else {
+          validEvents.push(ev);
+        }
+      }
+
+      if (validEvents.length === 0) {
+        await fetchPendingCount();
         return;
       }
 
       const payload = {
         deviceId,
-        events: allEvents.map(({ source, ...event }) => {
+        events: validEvents.map(({ source, ...event }) => {
           if (event.eventType === 'SALE' && !event.payload.payments) {
              event.payload.payments = [{
                 paymentMethod: event.payload.paymentMethod || 'CASH',

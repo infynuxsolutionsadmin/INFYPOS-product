@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DollarSign, AlertCircle, Loader2, Clock, Info, PlayCircle, History, LogOut } from 'lucide-react';
+import { AlertCircle, Loader2, Clock, Info, PlayCircle, History, LogOut, KeyRound } from 'lucide-react';
+import ManagerReauthModal from '../components/pos/ManagerReauthModal';
 import { openShift, getActiveShift } from '../api/shifts.api';
 import type { Shift } from '../types/shift';
 import { useShiftStore } from '../stores/shiftStore';
@@ -18,6 +19,7 @@ const OpenShiftPage: React.FC = () => {
   const [checkingActive, setCheckingActive] = useState(true);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showReauthModal, setShowReauthModal] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -74,17 +76,22 @@ const OpenShiftPage: React.FC = () => {
       setShift(shift);
       navigate('/pos', { replace: true });
     } catch (err: any) {
+      const status = err?.response?.status;
       const msg =
         err?.response?.data?.message ||
         err?.response?.data?.error ||
         'Could not open shift. Please try again.';
+      const msgStr = Array.isArray(msg) ? msg.join(', ') : msg;
       // 409 = conflict — a shift is already open
-      if (err?.response?.status === 409) {
+      if (status === 409) {
         setError('A shift is already open for this store. Contact your manager.');
-      } else if (err?.response?.status === 403) {
+      } else if (status === 403) {
         setError('You do not have permission to open a shift (shifts.open).');
+      } else if (status === 401 || msgStr.toLowerCase().includes('refresh token') || msgStr.toLowerCase().includes('unauthorized')) {
+        // Session expired — sign out cleanly so they can re-authenticate
+        setError('Your session has expired. Please sign out and log in again.');
       } else {
-        setError(Array.isArray(msg) ? msg.join(', ') : msg);
+        setError(msgStr);
       }
     } finally {
       setLoading(false);
@@ -576,6 +583,30 @@ const OpenShiftPage: React.FC = () => {
                 >
                   <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
                   <span style={{ wordBreak: 'break-word' }}>{error}</span>
+                  {(error.toLowerCase().includes('session has expired') || error.toLowerCase().includes('refresh token') || error.toLowerCase().includes('unauthorized')) && (
+                    <button
+                      type="button"
+                      onClick={() => setShowReauthModal(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.45rem',
+                        width: '100%',
+                        padding: '0.55rem 0.75rem',
+                        marginTop: '0.6rem',
+                        backgroundColor: '#dc2626',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontWeight: 600,
+                        fontSize: '0.825rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <KeyRound size={15} /> Re-authorize Terminal (Manager Login)
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -604,9 +635,12 @@ const OpenShiftPage: React.FC = () => {
                       transform: 'translateY(-50%)',
                       color: 'var(--pos-text-muted)',
                       pointerEvents: 'none',
+                      fontSize: '18px',
+                      fontWeight: 600,
+                      lineHeight: 1,
                     }}
                   >
-                    <DollarSign size={18} />
+                    £
                   </div>
                   <input
                     id="starting-float"
@@ -707,6 +741,15 @@ const OpenShiftPage: React.FC = () => {
                 )}
               </button>
             </>
+          )}
+
+          {showReauthModal && (
+            <ManagerReauthModal
+              onClose={() => setShowReauthModal(false)}
+              onSuccess={() => {
+                setError(null);
+              }}
+            />
           )}
 
           <button
