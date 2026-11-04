@@ -163,7 +163,6 @@ export class UsersService {
           status: true,
           roleId: true,
           storeId: true,
-          pinCode: true,
           pinCodeHash: true,
           role: {
             select: {
@@ -186,9 +185,9 @@ export class UsersService {
     const pages = Math.ceil(total / limit);
 
     return {
-      items: items.map((u) => ({
+      items: items.map(({ pinCodeHash, ...u }) => ({
         ...u,
-        hasPin: Boolean(u.pinCode || u.pinCodeHash),
+        hasPin: Boolean(pinCodeHash),
       })),
       pagination: {
         page,
