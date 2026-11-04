@@ -1,9 +1,13 @@
+import * as path from 'path';
 import * as assert from 'assert';
 import * as crypto from 'crypto';
 import { ForbiddenException, BadRequestException, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { validate, Environment } from '../src/config/env.validation';
+import jwtConfig from '../src/config/jwt.config';
+import { DEV_TEST_DUMMY_SECRETS, MIN_SECRET_LENGTH } from '../src/config/jwt-secrets.util';
 import { Prisma, ProductStatus, InventoryStatus, StoreStatus, UserStatus, PaymentMethod, TenantStatus } from '@prisma/client';
 
 import { PermissionsGuard } from '../src/common/guards/permissions.guard';
@@ -13,6 +17,19 @@ import { calculateSaleRequestHash } from '../src/modules/sales/utils/sale-idempo
 import { AuthService } from '../src/modules/auth/auth.service';
 import { parseTrustProxySetting } from '../src/common/utils/proxy-trust.util';
 import { JwtStrategy } from '../src/modules/auth/strategies/jwt.strategy';
+import { ProductsService } from '../src/modules/products/products.service';
+import { Test } from '@nestjs/testing';
+import { SyncService } from '../src/modules/sync/sync.service';
+import { SyncController } from '../src/modules/sync/sync.controller';
+import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
+import { UsersService } from '../src/modules/users/users.service';
+import { PasswordService } from '../src/modules/auth/services/password.service';
+import { ShiftsService } from '../src/modules/shifts/shifts.service';
+import { AuditService } from '../src/modules/audit/audit.service';
+import { getNextSequenceNumber } from '../src/common/utils/sequence.util';
+import { ShiftStatus } from '@prisma/client';
+import * as fs from 'fs';
+
 
 // =========================================================================
 // REGRESSION & UNIT TEST SUITE: PRODUCTION METHOD VERIFICATION
@@ -1384,7 +1401,1395 @@ async function runTests() {
     );
   });
 
+  // =======================================================================
+  // 10. SEC-09: CATALOG PURGE INTEGRITY & HISTORICAL DATA PRESERVATION
+  // =======================================================================
+  await asyncTest('SEC-09 [Unit]: ProductsService.deleteAll() succeeds on unlinked catalog with zero transactions', async () => {
+    let inventoryDeleted = false;
+    let productsDeleted = false;
+
+    const mockPrisma: any = {
+      $transaction: async (fn: any) => {
+        const tx: any = {
+          saleItem: { findFirst: async () => null },
+          saleReturnItem: { findFirst: async () => null },
+          stockMovement: { findFirst: async () => null },
+          purchaseItem: { findFirst: async () => null },
+          goodsReceiptItem: { findFirst: async () => null },
+          inventoryAdjustmentItem: { findFirst: async () => null },
+          stockTransferItem: { findFirst: async () => null },
+          inventory: { deleteMany: async (args: any) => { inventoryDeleted = true; return { count: 5 }; } },
+          product: { deleteMany: async (args: any) => { productsDeleted = true; return { count: 5 }; } },
+        };
+        return await fn(tx);
+      },
+    };
+
+    const service = new ProductsService(mockPrisma);
+    const result = await service.deleteAll('tenant-fresh');
+    assert.strictEqual(result.deletedCount, 5);
+    assert.ok(inventoryDeleted, 'Unlinked inventories should be deleted');
+    assert.ok(productsDeleted, 'Unlinked products should be deleted');
+  });
+
+  await asyncTest('SEC-09 [Unit]: ProductsService.deleteAll() rejects deletion when SaleItem history exists', async () => {
+    let productsDeleted = false;
+    let saleItemsDeleted = false;
+
+    const mockPrisma: any = {
+      $transaction: async (fn: any) => {
+        const tx: any = {
+          saleItem: { findFirst: async () => ({ id: 'sale-item-1' }) },
+          saleReturnItem: { findFirst: async () => null },
+          stockMovement: { findFirst: async () => null },
+          purchaseItem: { findFirst: async () => null },
+          goodsReceiptItem: { findFirst: async () => null },
+          inventoryAdjustmentItem: { findFirst: async () => null },
+          stockTransferItem: { findFirst: async () => null },
+          inventory: { deleteMany: async () => { throw new Error('Should not reach inventory delete'); } },
+          product: { deleteMany: async () => { productsDeleted = true; return { count: 1 }; } },
+        };
+        return await fn(tx);
+      },
+    };
+
+    const service = new ProductsService(mockPrisma);
+    await assert.rejects(
+      async () => {
+        await service.deleteAll('tenant-with-sales');
+      },
+      (err: any) => {
+        assert.ok(err instanceof BadRequestException);
+        assert.match(err.message, /historical sales or operational records exist/);
+        return true;
+      },
+    );
+    assert.strictEqual(productsDeleted, false, 'Products must NOT be deleted when sales exist');
+    assert.strictEqual(saleItemsDeleted, false, 'SaleItems must NEVER be deleted');
+  });
+
+  await asyncTest('SEC-09 [Unit]: ProductsService.deleteAll() rejects deletion when SaleReturnItem history exists', async () => {
+    const mockPrisma: any = {
+      $transaction: async (fn: any) => {
+        const tx: any = {
+          saleItem: { findFirst: async () => null },
+          saleReturnItem: { findFirst: async () => ({ id: 'return-item-1' }) },
+          stockMovement: { findFirst: async () => null },
+          purchaseItem: { findFirst: async () => null },
+          goodsReceiptItem: { findFirst: async () => null },
+          inventoryAdjustmentItem: { findFirst: async () => null },
+          stockTransferItem: { findFirst: async () => null },
+          inventory: { deleteMany: async () => {} },
+          product: { deleteMany: async () => {} },
+        };
+        return await fn(tx);
+      },
+    };
+
+    const service = new ProductsService(mockPrisma);
+    await assert.rejects(
+      async () => {
+        await service.deleteAll('tenant-with-returns');
+      },
+      (err: any) => {
+        assert.ok(err instanceof BadRequestException);
+        assert.match(err.message, /historical sales or operational records exist/);
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-09 [Unit]: ProductsService.deleteAll() rejects deletion when Purchase / Movement history exists', async () => {
+    const mockPrisma: any = {
+      $transaction: async (fn: any) => {
+        const tx: any = {
+          saleItem: { findFirst: async () => null },
+          saleReturnItem: { findFirst: async () => null },
+          stockMovement: { findFirst: async () => ({ id: 'movement-1' }) },
+          purchaseItem: { findFirst: async () => ({ id: 'po-item-1' }) },
+          goodsReceiptItem: { findFirst: async () => null },
+          inventoryAdjustmentItem: { findFirst: async () => null },
+          stockTransferItem: { findFirst: async () => null },
+          inventory: { deleteMany: async () => {} },
+          product: { deleteMany: async () => {} },
+        };
+        return await fn(tx);
+      },
+    };
+
+    const service = new ProductsService(mockPrisma);
+    await assert.rejects(
+      async () => {
+        await service.deleteAll('tenant-with-purchases');
+      },
+      (err: any) => {
+        assert.ok(err instanceof BadRequestException);
+        assert.match(err.message, /historical sales or operational records exist/);
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-09 [Unit]: ProductsService.deleteAll() handles P2003 foreign-key violation outside aborted transaction', async () => {
+    const mockPrisma: any = {
+      $transaction: async (fn: any) => {
+        const tx: any = {
+          saleItem: { findFirst: async () => null },
+          saleReturnItem: { findFirst: async () => null },
+          stockMovement: { findFirst: async () => null },
+          purchaseItem: { findFirst: async () => null },
+          goodsReceiptItem: { findFirst: async () => null },
+          inventoryAdjustmentItem: { findFirst: async () => null },
+          stockTransferItem: { findFirst: async () => null },
+          inventory: { deleteMany: async () => {} },
+          product: {
+            deleteMany: async () => {
+              const p2003Error: any = new Error('Foreign key violation');
+              p2003Error.code = 'P2003';
+              throw p2003Error;
+            },
+          },
+        };
+        return await fn(tx);
+      },
+    };
+
+    const service = new ProductsService(mockPrisma);
+    await assert.rejects(
+      async () => {
+        await service.deleteAll('tenant-concurrent-fk');
+      },
+      (err: any) => {
+        assert.ok(err instanceof BadRequestException);
+        assert.match(err.message, /referenced by historical operational records/);
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-09 [Unit]: ProductsService.deleteAll() strictly enforces tenant isolation', async () => {
+    let checkedTenantId = '';
+    let deletedInventoryTenantId = '';
+    let deletedProductTenantId = '';
+
+    const mockPrisma: any = {
+      $transaction: async (fn: any) => {
+        const tx: any = {
+          saleItem: {
+            findFirst: async (args: any) => {
+              checkedTenantId = args.where.product.tenantId;
+              return null;
+            },
+          },
+          saleReturnItem: { findFirst: async () => null },
+          stockMovement: { findFirst: async () => null },
+          purchaseItem: { findFirst: async () => null },
+          goodsReceiptItem: { findFirst: async () => null },
+          inventoryAdjustmentItem: { findFirst: async () => null },
+          stockTransferItem: { findFirst: async () => null },
+          inventory: {
+            deleteMany: async (args: any) => {
+              deletedInventoryTenantId = args.where.tenantId;
+              return { count: 1 };
+            },
+          },
+          product: {
+            deleteMany: async (args: any) => {
+              deletedProductTenantId = args.where.tenantId;
+              return { count: 1 };
+            },
+          },
+        };
+        return await fn(tx);
+      },
+    };
+
+    const targetTenant = 'tenant-alpha-999';
+    const service = new ProductsService(mockPrisma);
+    await service.deleteAll(targetTenant);
+
+    assert.strictEqual(checkedTenantId, targetTenant);
+    assert.strictEqual(deletedInventoryTenantId, targetTenant);
+    assert.strictEqual(deletedProductTenantId, targetTenant);
+  });
+
+
+  // =======================================================================
+  // 11. SEC-02-SYNC: OFFLINE SYNC PRIVILEGE ESCALATION & PIN RESET HARDENING (REM-02)
+  // =======================================================================
+  function createMockSyncService(options: {
+    auditLogAction?: (...args: any[]) => Promise<void>;
+    salesCreate?: (...args: any[]) => Promise<any>;
+    salesReturnsCreate?: (...args: any[]) => Promise<any>;
+    shiftsOpenShift?: (...args: any[]) => Promise<any>;
+    shiftsCloseShift?: (...args: any[]) => Promise<any>;
+    userUpdateMany?: (...args: any[]) => Promise<any>;
+    syncEventFindUnique?: (...args: any[]) => Promise<any>;
+    syncEventCreate?: (...args: any[]) => Promise<any>;
+    syncEventUpdate?: (...args: any[]) => Promise<any>;
+    syncEventUpdateMany?: (...args: any[]) => Promise<any>;
+  } = {}) {
+    const mockPrisma: any = {
+      user: {
+        updateMany: options.userUpdateMany || (async () => ({ count: 1 })),
+        update: async () => ({ id: 'updated' }),
+      },
+      syncEvent: {
+        findUnique: options.syncEventFindUnique || (async () => null),
+        create: options.syncEventCreate || (async (args: any) => args.data),
+        update: options.syncEventUpdate || (async () => ({})),
+        updateMany: options.syncEventUpdateMany || (async () => ({ count: 1 })),
+      },
+    };
+
+    const mockSalesService: any = {
+      create: options.salesCreate || (async () => ({ id: 'sale-created' })),
+    };
+
+    const mockSalesReturnsService: any = {
+      create: options.salesReturnsCreate || (async () => ({ id: 'return-created' })),
+    };
+
+    const mockShiftsService: any = {
+      openShift: options.shiftsOpenShift || (async () => ({ id: 'shift-opened' })),
+      closeShift: options.shiftsCloseShift || (async () => ({ id: 'shift-closed' })),
+    };
+
+    const mockAuditService: any = {
+      logAction: options.auditLogAction || (async () => {}),
+    };
+
+    const service = new SyncService(
+      mockPrisma,
+      mockSalesService,
+      mockSalesReturnsService,
+      mockShiftsService,
+      mockAuditService,
+    );
+
+    return { service, mockPrisma, mockSalesService, mockSalesReturnsService, mockShiftsService, mockAuditService };
+  }
+
+  await asyncTest('SEC-02-SYNC [Unit]: Cashier attempting a STORE_MANAGER PIN reset through sync throws ForbiddenException (HTTP 403)', async () => {
+    const { service } = createMockSyncService();
+    await assert.rejects(
+      async () => {
+        await service.processSync('tenant-1', 'cashier-user-1', {
+          deviceId: 'dev-1',
+          events: [
+            {
+              eventId: 'evt-1',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', cashierId: 'manager-user-uuid', pinCodeHash: 'hacked-hash' },
+            },
+          ],
+        });
+      },
+      (err: any) => {
+        assert.ok(err instanceof ForbiddenException);
+        assert.match(err.message, /Access denied: PIN credential resets cannot be performed via synchronization/);
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Cashier attempting an OWNER PIN reset through sync throws ForbiddenException (HTTP 403)', async () => {
+    const { service } = createMockSyncService();
+    await assert.rejects(
+      async () => {
+        await service.processSync('tenant-1', 'cashier-user-1', {
+          deviceId: 'dev-1',
+          events: [
+            {
+              eventId: 'evt-2',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', cashierId: 'owner-user-uuid', pinCodeHash: 'hacked-hash' },
+            },
+          ],
+        });
+      },
+      (err: any) => {
+        assert.ok(err instanceof ForbiddenException);
+        assert.match(err.message, /Access denied: PIN credential resets cannot be performed via synchronization/);
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Cashier attempting another CASHIER PIN reset through sync throws ForbiddenException (HTTP 403)', async () => {
+    const { service } = createMockSyncService();
+    await assert.rejects(
+      async () => {
+        await service.processSync('tenant-1', 'cashier-user-1', {
+          deviceId: 'dev-1',
+          events: [
+            {
+              eventId: 'evt-3',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', cashierId: 'other-cashier-uuid', pinCodeHash: 'hacked-hash' },
+            },
+          ],
+        });
+      },
+      (err: any) => {
+        assert.ok(err instanceof ForbiddenException);
+        assert.match(err.message, /Access denied: PIN credential resets cannot be performed via synchronization/);
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Malformed PIN-reset event throws ForbiddenException (HTTP 403) without unhandled exceptions', async () => {
+    const { service } = createMockSyncService();
+    await assert.rejects(
+      async () => {
+        await service.processSync('tenant-1', 'cashier-user-1', {
+          deviceId: 'dev-1',
+          events: [
+            {
+              eventId: 'evt-malformed-1',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: null,
+            },
+          ],
+        });
+      },
+      (err: any) => {
+        assert.ok(err instanceof ForbiddenException);
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Cross-tenant target PIN reset attempt throws ForbiddenException (HTTP 403)', async () => {
+    let userUpdated = false;
+    const { service } = createMockSyncService({
+      userUpdateMany: async () => { userUpdated = true; return { count: 1 }; },
+    });
+
+    await assert.rejects(
+      async () => {
+        await service.processSync('tenant-attacker', 'cashier-attacker', {
+          deviceId: 'dev-1',
+          events: [
+            {
+              eventId: 'evt-cross-1',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-victim', cashierId: 'victim-uuid', pinCodeHash: 'hacked-hash' },
+            },
+          ],
+        });
+      },
+      (err: any) => {
+        assert.ok(err instanceof ForbiddenException);
+        return true;
+      },
+    );
+    assert.strictEqual(userUpdated, false, 'User in cross-tenant must never be updated');
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Target user original PIN hash remains strictly unchanged after rejected attempt', async () => {
+    let updateCalled = false;
+    let updateManyCalled = false;
+
+    const { service, mockPrisma } = createMockSyncService();
+    mockPrisma.user.update = async () => { updateCalled = true; };
+    mockPrisma.user.updateMany = async () => { updateManyCalled = true; };
+
+    await assert.rejects(
+      async () => {
+        await service.processSync('tenant-1', 'cashier-1', {
+          deviceId: 'dev-1',
+          events: [
+            {
+              eventId: 'evt-target-check',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', cashierId: 'manager-1', pinCodeHash: 'evil-hash' },
+            },
+          ],
+        });
+      },
+    );
+
+    assert.strictEqual(updateCalled, false, 'prisma.user.update must not be called');
+    assert.strictEqual(updateManyCalled, false, 'prisma.user.updateMany must not be called');
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Security audit record captures authenticated actor, target, tenant, event ID and outcome REJECTED', async () => {
+    let capturedAudit: any = null;
+    const { service } = createMockSyncService({
+      auditLogAction: async (adminId, action, entity, entityId, details) => {
+        capturedAudit = { adminId, action, entity, entityId, details };
+      },
+    });
+
+    await assert.rejects(
+      async () => {
+        await service.processSync('tenant-secure-777', 'authenticated-cashier-id', {
+          deviceId: 'dev-1',
+          events: [
+            {
+              eventId: 'evt-audit-verify-1',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', cashierId: 'target-manager-id', pinCodeHash: 'evil-hash' },
+            },
+          ],
+        });
+      },
+    );
+
+    assert.ok(capturedAudit, 'Audit log must be created');
+    assert.strictEqual(capturedAudit.adminId, 'authenticated-cashier-id', 'Actor ID must match authenticated context');
+    assert.strictEqual(capturedAudit.action, 'SECURITY_VIOLATION_UNAUTHORIZED_PIN_RESET');
+    assert.strictEqual(capturedAudit.entity, 'User');
+    assert.strictEqual(capturedAudit.entityId, 'target-manager-id');
+    assert.strictEqual(capturedAudit.details.tenantId, 'tenant-secure-777');
+    assert.strictEqual(capturedAudit.details.eventId, 'evt-audit-verify-1');
+    assert.strictEqual(capturedAudit.details.targetUserId, 'target-manager-id');
+    assert.strictEqual(capturedAudit.details.outcome, 'REJECTED');
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Security audit details contain NO plaintext PIN, PIN hash, or credentials', async () => {
+    let auditDetails: any = null;
+    const secretPlainPin = '9876';
+    const secretHash = '$2b$12$eX4mpL3H4sH';
+
+    const { service } = createMockSyncService({
+      auditLogAction: async (_adminId, _action, _entity, _entityId, details) => {
+        auditDetails = details;
+      },
+    });
+
+    await assert.rejects(
+      async () => {
+        await service.processSync('tenant-audit-safe', 'cashier-1', {
+          deviceId: 'dev-1',
+          events: [
+            {
+              eventId: 'evt-credential-leak-check',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', cashierId: 'mgr-1', pin: secretPlainPin, pinCodeHash: secretHash },
+            },
+          ],
+        });
+      },
+    );
+
+    assert.ok(auditDetails);
+    const jsonString = JSON.stringify(auditDetails);
+    assert.strictEqual(jsonString.includes(secretPlainPin), false, 'Plaintext PIN must NOT be in audit details');
+    assert.strictEqual(jsonString.includes(secretHash), false, 'PIN hash must NOT be in audit details');
+    assert.strictEqual(auditDetails.pin, undefined);
+    assert.strictEqual(auditDetails.pinCodeHash, undefined);
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Audit logging failure does not prevent request rejection (fail-closed HTTP 403)', async () => {
+    const { service } = createMockSyncService({
+      auditLogAction: async () => {
+        throw new Error('Database connection failed while writing to audit_logs');
+      },
+    });
+
+    await assert.rejects(
+      async () => {
+        await service.processSync('tenant-1', 'cashier-1', {
+          deviceId: 'dev-1',
+          events: [
+            {
+              eventId: 'evt-audit-fail',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', cashierId: 'target-1' },
+            },
+          ],
+        });
+      },
+      (err: any) => {
+        assert.ok(err instanceof ForbiddenException, 'Must still throw ForbiddenException even if audit logging fails');
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Legitimate SALE synchronization remains functional', async () => {
+    let saleCreated = false;
+    const { service } = createMockSyncService({
+      salesCreate: async (tenantId, userId, payload, isSync) => {
+        saleCreated = true;
+        assert.strictEqual(tenantId, 'tenant-sale');
+        assert.strictEqual(userId, 'cashier-sale');
+        assert.strictEqual(isSync, true);
+        return { id: 'sale-uuid-1', saleNumber: 'INV-100' };
+      },
+    });
+
+    const result = await service.processSync('tenant-sale', 'cashier-sale', {
+      deviceId: 'dev-1',
+      events: [
+        {
+          eventId: 'evt-legit-sale-1',
+          eventType: 'SALE',
+          occurredAt: new Date().toISOString(),
+          payload: { storeId: 'store-1', grandTotal: 50 },
+        },
+      ],
+    });
+
+    assert.strictEqual(saleCreated, true, 'SalesService.create must be called');
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.processed.length, 1);
+    assert.strictEqual(result.processed[0].eventId, 'evt-legit-sale-1');
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Legitimate SALE_RETURN synchronization remains functional', async () => {
+    let returnCreated = false;
+    const { service } = createMockSyncService({
+      salesReturnsCreate: async (tenantId, userId, payload, isSync) => {
+        returnCreated = true;
+        assert.strictEqual(tenantId, 'tenant-ret');
+        assert.strictEqual(isSync, true);
+        return { id: 'return-uuid-1' };
+      },
+    });
+
+    const result = await service.processSync('tenant-ret', 'cashier-ret', {
+      deviceId: 'dev-1',
+      events: [
+        {
+          eventId: 'evt-legit-return-1',
+          eventType: 'SALE_RETURN',
+          occurredAt: new Date().toISOString(),
+          payload: { storeId: 'store-1', originalSaleId: 'sale-1' },
+        },
+      ],
+    });
+
+    assert.strictEqual(returnCreated, true, 'SalesReturnsService.create must be called');
+    assert.strictEqual(result.processed.length, 1);
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Legitimate SHIFT_OPEN and SHIFT_CLOSE synchronization remain functional', async () => {
+    let shiftOpened = false;
+    let shiftClosed = false;
+
+    const { service } = createMockSyncService({
+      shiftsOpenShift: async () => { shiftOpened = true; return { id: 'shift-1' }; },
+      shiftsCloseShift: async () => { shiftClosed = true; return { id: 'shift-1' }; },
+    });
+
+    const result = await service.processSync('tenant-shift', 'cashier-shift', {
+      deviceId: 'dev-1',
+      events: [
+        {
+          eventId: 'evt-shift-open-1',
+          eventType: 'SHIFT_OPEN',
+          occurredAt: new Date().toISOString(),
+          payload: { storeId: 'store-1', openingFloat: 100 },
+        },
+        {
+          eventId: 'evt-shift-close-1',
+          eventType: 'SHIFT_CLOSE',
+          occurredAt: new Date().toISOString(),
+          payload: { storeId: 'store-1', shiftId: 'shift-1', closingCash: 250 },
+        },
+      ],
+    });
+
+    assert.strictEqual(shiftOpened, true);
+    assert.strictEqual(shiftClosed, true);
+    assert.strictEqual(result.processed.length, 2);
+  });
+
+  await asyncTest('SEC-02-ONLINE [Unit]: Existing authorized online manager PIN reset for a CASHIER succeeds via POST /users/:id/reset-pin', async () => {
+    let updatedPinHash = '';
+    const mockPrisma: any = {
+      user: {
+        findFirst: async () => ({
+          id: 'cashier-target-1',
+          tenantId: 'tenant-1',
+          storeId: 'store-1',
+          role: { code: 'CASHIER' },
+        }),
+        findMany: async () => [],
+        update: async (args: any) => {
+          updatedPinHash = args.data.pinCodeHash;
+          return { id: 'cashier-target-1' };
+        },
+      },
+    };
+
+    const mockPasswordService: any = {
+      hash: async (pin: string) => `hashed-${pin}`,
+      compare: async () => false,
+    };
+
+    const usersService = new UsersService(mockPrisma, mockPasswordService as any);
+    const result = await usersService.resetPin('tenant-1', 'cashier-target-1', '5555');
+
+    assert.strictEqual(result.message, 'PIN successfully reset');
+    assert.strictEqual(result.generatedPin, '5555');
+    assert.strictEqual(updatedPinHash, 'hashed-5555');
+  });
+
+  await asyncTest('SEC-02-ONLINE [Unit]: Online manager reset targeting an OWNER or STORE_MANAGER remains rejected (HTTP 400)', async () => {
+    const mockPrisma: any = {
+      user: {
+        findFirst: async () => ({
+          id: 'manager-target-1',
+          tenantId: 'tenant-1',
+          storeId: 'store-1',
+          role: { code: 'STORE_MANAGER' },
+        }),
+      },
+    };
+
+    const usersService = new UsersService(mockPrisma, {} as any);
+    await assert.rejects(
+      async () => {
+        await usersService.resetPin('tenant-1', 'manager-target-1', '5555');
+      },
+      (err: any) => {
+        assert.ok(err instanceof BadRequestException);
+        assert.strictEqual(err.message, 'PIN code can only be set for cashiers');
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-02-ONLINE [Unit]: Cashier token with only sales.create cannot access online reset endpoint (HTTP 403 Forbidden)', async () => {
+    const reflector = new Reflector();
+    const mockAuthService: any = {
+      getRolePermissions: async () => ['sales.create', 'shifts.open'],
+    };
+
+    const guard = new PermissionsGuard(reflector, mockAuthService);
+    const context: any = {
+      getHandler: () => {},
+      getClass: () => {},
+      switchToHttp: () => ({
+        getRequest: () => ({
+          user: { userId: 'cashier-1', roleCode: 'CASHIER', tenantId: 'tenant-1' },
+        }),
+      }),
+    };
+
+    reflector.getAllAndOverride = () => ['users.update'];
+
+    await assert.rejects(
+      async () => {
+        await guard.canActivate(context);
+      },
+      (err: any) => {
+        assert.ok(err instanceof ForbiddenException);
+        assert.strictEqual(err.message, 'Insufficient permissions');
+        return true;
+      },
+    );
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Replay of rejected sync event never mutates user PIN', async () => {
+    let updateAttempted = false;
+    const { service, mockPrisma } = createMockSyncService({
+      syncEventFindUnique: async () => ({ status: 'FAILED' }),
+    });
+    mockPrisma.user.updateMany = async () => { updateAttempted = true; return { count: 1 }; };
+
+    await assert.rejects(async () => {
+      await service.processSync('tenant-1', 'cashier-1', {
+        deviceId: 'dev-1',
+        events: [
+          {
+            eventId: 'evt-replayed-1',
+            eventType: 'CASHIER_PIN_RESET',
+            occurredAt: new Date().toISOString(),
+            payload: { storeId: 'store-1', cashierId: 'mgr-1', pinCodeHash: 'replayed-hash' },
+          },
+        ],
+      });
+    });
+
+    assert.strictEqual(updateAttempted, false, 'Replayed event must never mutate user records');
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Mixed batch containing a forbidden PIN-reset event and legitimate SALE events returns HTTP 403 before any sale is processed', async () => {
+    let salesCreatedCount = 0;
+    let auditLogged = false;
+
+    const { service } = createMockSyncService({
+      salesCreate: async () => { salesCreatedCount++; return { id: 'sale-1' }; },
+      auditLogAction: async () => { auditLogged = true; },
+    });
+
+    await assert.rejects(
+      async () => {
+        await service.processSync('tenant-mixed', 'cashier-attacker', {
+          deviceId: 'dev-1',
+          events: [
+            {
+              eventId: 'legit-sale-1',
+              eventType: 'SALE',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', grandTotal: 25 },
+            },
+            {
+              eventId: 'exploit-pin-reset-1',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', cashierId: 'manager-victim-id', pinCodeHash: 'evil-hash' },
+            },
+            {
+              eventId: 'legit-sale-2',
+              eventType: 'SALE',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', grandTotal: 50 },
+            },
+          ],
+        });
+      },
+      (err: any) => {
+        assert.ok(err instanceof ForbiddenException);
+        return true;
+      },
+    );
+
+    assert.strictEqual(salesCreatedCount, 0, 'Zero sales must be created when batch is poisoned with forbidden event');
+    assert.strictEqual(auditLogged, true, 'Audit log must be triggered for poisoned batch');
+  });
+
+  await asyncTest('SEC-02-SYNC [Unit]: Normal batch containing only legitimate event types retains its existing response structure and behavior', async () => {
+    const { service } = createMockSyncService();
+    const result = await service.processSync('tenant-normal', 'cashier-normal', {
+      deviceId: 'dev-1',
+      events: [
+        {
+          eventId: 'sale-event-1',
+          eventType: 'SALE',
+          occurredAt: new Date().toISOString(),
+          payload: { storeId: 'store-1', grandTotal: 10 },
+        },
+        {
+          eventId: 'shift-event-1',
+          eventType: 'SHIFT_OPEN',
+          occurredAt: new Date().toISOString(),
+          payload: { storeId: 'store-1', openingFloat: 50 },
+        },
+      ],
+    });
+
+    assert.strictEqual(result.success, true);
+    assert.ok(Array.isArray(result.processed));
+    assert.ok(Array.isArray(result.alreadyProcessed));
+    assert.ok(Array.isArray(result.failed));
+    assert.strictEqual(result.processed.length, 2);
+    assert.strictEqual(result.failed.length, 0);
+  });
+
+  await asyncTest('SEC-02-HTTP [E2E HTTP]: Actual NestJS HTTP server rejects sync request containing CASHIER_PIN_RESET with true wire-level HTTP 403', async () => {
+    const { service } = createMockSyncService();
+
+    const moduleRef = await Test.createTestingModule({
+      controllers: [SyncController],
+      providers: [
+        { provide: SyncService, useValue: service },
+        { provide: AuthService, useValue: { getRolePermissions: async () => ['sales.create'] } },
+      ],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: (context: any) => {
+          const req = context.switchToHttp().getRequest();
+          req.user = { userId: 'cashier-live-http', tenantId: 'tenant-live-http', roleCode: 'CASHIER' };
+          return true;
+        },
+      })
+      .overrideGuard(PermissionsGuard)
+      .useValue({
+        canActivate: (context: any) => {
+          const req = context.switchToHttp().getRequest();
+          req.userPermissions = ['sales.create'];
+          return true;
+        },
+      })
+      .compile();
+
+    const app = moduleRef.createNestApplication();
+    await app.listen(0);
+    const url = await app.getUrl();
+
+    try {
+      const response = await fetch(`${url}/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: 'device-wire-test',
+          events: [
+            {
+              eventId: 'evt-wire-exploit-1',
+              eventType: 'CASHIER_PIN_RESET',
+              occurredAt: new Date().toISOString(),
+              payload: { storeId: 'store-1', cashierId: 'manager-target-uuid', pinCodeHash: 'evil-hash' },
+            },
+          ],
+        }),
+      });
+
+      assert.strictEqual(response.status, 403, 'Actual HTTP wire response status must be 403 Forbidden');
+      const json: any = await response.json();
+      assert.strictEqual(json.statusCode, 403);
+      assert.strictEqual(json.error, 'Forbidden');
+    } finally {
+      await app.close();
+    }
+  });
+
+
+  // =========================================================================
+  // SECTION 12: SEC-03-CONFIG — JWT SECRET CONFIGURATION & ISOLATION TESTS
+  // =========================================================================
+
+  const validProdSecrets = {
+    NODE_ENV: 'production',
+    JWT_ACCESS_SECRET: 'prod_access_secret_32_characters_long_aaa111',
+    JWT_REFRESH_SECRET: 'prod_refresh_secret_32_characters_long_bbb222',
+    RESET_PASSWORD_SECRET: 'prod_reset_secret_32_characters_long_ccc333',
+  };
+
+  test('SEC-03-CONFIG [Unit]: Missing NODE_ENV rejects startup with fatal error', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, NODE_ENV: undefined as any }),
+      /NODE_ENV is required and must be one of: development, test, staging, production/,
+      'Missing NODE_ENV must throw fatal error',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Unrecognized NODE_ENV rejects startup with fatal error', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, NODE_ENV: 'local_machine' }),
+      /Invalid NODE_ENV "local_machine"/,
+      'Unrecognized NODE_ENV must throw fatal error',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Missing JWT_ACCESS_SECRET in production throws fatal validation error', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_ACCESS_SECRET: undefined }),
+      /JWT_ACCESS_SECRET is required in production environment/,
+      'Missing JWT_ACCESS_SECRET in production must throw fatal error',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Missing JWT_REFRESH_SECRET in production throws fatal validation error', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_REFRESH_SECRET: undefined }),
+      /JWT_REFRESH_SECRET is required in production environment/,
+      'Missing JWT_REFRESH_SECRET in production must throw fatal error',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Missing RESET_PASSWORD_SECRET in production throws fatal validation error', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, RESET_PASSWORD_SECRET: undefined }),
+      /RESET_PASSWORD_SECRET is required in production environment/,
+      'Missing RESET_PASSWORD_SECRET in production must throw fatal error',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Empty or whitespace-only secret in production throws fatal validation error', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_ACCESS_SECRET: '   ' }),
+      /JWT_ACCESS_SECRET cannot be empty or whitespace in production environment/,
+      'Whitespace-only secret must throw fatal error',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Secret with leading or trailing whitespace is rejected without silent trimming', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_ACCESS_SECRET: ' ' + validProdSecrets.JWT_ACCESS_SECRET }),
+      /JWT_ACCESS_SECRET must not contain leading or trailing whitespace in production environment/,
+      'Leading/trailing whitespace in production secret must be rejected without silent trimming',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Secret shorter than 32 characters throws fatal validation error', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_ACCESS_SECRET: 'short_secret_25_chars_long' }),
+      /JWT_ACCESS_SECRET must be at least 32 characters long in production environment/,
+      'Secrets shorter than 32 characters must be rejected',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Prohibited legacy default secret patterns are rejected in production', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_ACCESS_SECRET: 'super_secret_jwt_access_key_infepos_enterprise_2026' }),
+      /matches prohibited insecure pattern/,
+      'Legacy default secret pattern must be rejected',
+    );
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_REFRESH_SECRET: 'your_super_secret_refresh_key_32_characters_long' }),
+      /matches prohibited insecure pattern/,
+      'Placeholder secret pattern must be rejected',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Unresolved container placeholders are rejected in production', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_ACCESS_SECRET: '${JWT_ACCESS_SECRET}' }),
+      /matches prohibited insecure pattern/,
+      'Unresolved docker compose variable placeholder must be rejected',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Development and test dummy secrets are explicitly rejected in production', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_ACCESS_SECRET: DEV_TEST_DUMMY_SECRETS.access }),
+      /cannot use development\/test dummy secret in production environment/,
+      'Dev dummy access secret must be rejected in production',
+    );
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_REFRESH_SECRET: DEV_TEST_DUMMY_SECRETS.refresh }),
+      /cannot use development\/test dummy secret in production environment/,
+      'Dev dummy refresh secret must be rejected in production',
+    );
+    assert.throws(
+      () => validate({ ...validProdSecrets, RESET_PASSWORD_SECRET: DEV_TEST_DUMMY_SECRETS.reset }),
+      /cannot use development\/test dummy secret in production environment/,
+      'Dev dummy reset secret must be rejected in production',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Secret collision between access and refresh secrets is rejected', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, JWT_REFRESH_SECRET: validProdSecrets.JWT_ACCESS_SECRET }),
+      /JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be distinct secrets/,
+      'Access and refresh secret collision must be rejected',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Secret collision between access and password-reset secrets is rejected', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, RESET_PASSWORD_SECRET: validProdSecrets.JWT_ACCESS_SECRET }),
+      /JWT_ACCESS_SECRET and RESET_PASSWORD_SECRET must be distinct secrets/,
+      'Access and password-reset secret collision must be rejected',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Secret collision between refresh and password-reset secrets is rejected', () => {
+    assert.throws(
+      () => validate({ ...validProdSecrets, RESET_PASSWORD_SECRET: validProdSecrets.JWT_REFRESH_SECRET }),
+      /JWT_REFRESH_SECRET and RESET_PASSWORD_SECRET must be distinct secrets/,
+      'Refresh and password-reset secret collision must be rejected',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Valid distinct 32+ character secrets succeed in production', () => {
+    const validated = validate(validProdSecrets);
+    assert.strictEqual(validated.JWT_ACCESS_SECRET, validProdSecrets.JWT_ACCESS_SECRET);
+    assert.strictEqual(validated.JWT_REFRESH_SECRET, validProdSecrets.JWT_REFRESH_SECRET);
+    assert.strictEqual(validated.RESET_PASSWORD_SECRET, validProdSecrets.RESET_PASSWORD_SECRET);
+    assert.strictEqual(validated.NODE_ENV, Environment.Production);
+  });
+
+  test('SEC-03-CONFIG [Unit]: Staging environment enforces identical strict secret validation', () => {
+    const validStagingSecrets = { ...validProdSecrets, NODE_ENV: 'staging' };
+    const validatedStaging = validate(validStagingSecrets);
+    assert.strictEqual(validatedStaging.NODE_ENV, Environment.Staging);
+    assert.throws(
+      () => validate({ ...validStagingSecrets, JWT_ACCESS_SECRET: undefined }),
+      /JWT_ACCESS_SECRET is required in staging environment/,
+      'Missing secret in staging must be rejected',
+    );
+    assert.throws(
+      () => validate({ ...validStagingSecrets, JWT_ACCESS_SECRET: DEV_TEST_DUMMY_SECRETS.access }),
+      /cannot use development\/test dummy secret in staging environment/,
+      'Dev dummy secret in staging must be rejected',
+    );
+    assert.throws(
+      () => validate({ ...validStagingSecrets, JWT_REFRESH_SECRET: validStagingSecrets.JWT_ACCESS_SECRET }),
+      /JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be distinct secrets/,
+      'Secret collision in staging must be rejected',
+    );
+  });
+
+  test('SEC-03-CONFIG [Unit]: Development and test environments use permitted dummy defaults with logged warning without mutating process.env', () => {
+    const initialProcessAccess = process.env.JWT_ACCESS_SECRET;
+    const initialProcessRefresh = process.env.JWT_REFRESH_SECRET;
+    const initialProcessReset = process.env.RESET_PASSWORD_SECRET;
+
+    const originalWarn = console.warn;
+    let warnCaptured = false;
+    console.warn = (msg: string) => {
+      if (typeof msg === 'string' && msg.includes('Running with development-only dummy JWT secrets')) {
+        warnCaptured = true;
+      }
+    };
+
+    try {
+      const devConfig = validate({ NODE_ENV: 'development' });
+      assert.strictEqual(devConfig.JWT_ACCESS_SECRET, DEV_TEST_DUMMY_SECRETS.access);
+      assert.strictEqual(devConfig.JWT_REFRESH_SECRET, DEV_TEST_DUMMY_SECRETS.refresh);
+      assert.strictEqual(devConfig.RESET_PASSWORD_SECRET, DEV_TEST_DUMMY_SECRETS.reset);
+      assert.strictEqual(warnCaptured, true, 'Security notice warning must be logged in development fallback');
+
+      // Verify test environment
+      const testConfig = validate({ NODE_ENV: 'test' });
+      assert.strictEqual(testConfig.JWT_ACCESS_SECRET, DEV_TEST_DUMMY_SECRETS.access);
+      assert.strictEqual(testConfig.JWT_REFRESH_SECRET, DEV_TEST_DUMMY_SECRETS.refresh);
+      assert.strictEqual(testConfig.RESET_PASSWORD_SECRET, DEV_TEST_DUMMY_SECRETS.reset);
+
+      // Verify process.env was NEVER mutated by validate()
+      assert.strictEqual(process.env.JWT_ACCESS_SECRET, initialProcessAccess, 'process.env.JWT_ACCESS_SECRET must not be mutated');
+      assert.strictEqual(process.env.JWT_REFRESH_SECRET, initialProcessRefresh, 'process.env.JWT_REFRESH_SECRET must not be mutated');
+      assert.strictEqual(process.env.RESET_PASSWORD_SECRET, initialProcessReset, 'process.env.RESET_PASSWORD_SECRET must not be mutated');
+
+      // Verify custom secrets in development are preserved without assigning dummy defaults
+      const customDev = validate({
+        NODE_ENV: 'development',
+        JWT_ACCESS_SECRET: 'custom_dev_access_key_32_characters_12345',
+      });
+      assert.strictEqual(customDev.JWT_ACCESS_SECRET, 'custom_dev_access_key_32_characters_12345');
+      assert.strictEqual(customDev.JWT_REFRESH_SECRET, DEV_TEST_DUMMY_SECRETS.refresh);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  await asyncTest('SEC-03-CONFIG [Integration]: NestJS ConfigModule initialization verifies jwt factory consistency and environment-switching test isolation', async () => {
+    const originalEnv = { ...process.env };
+    try {
+      // 1. Production initialization
+      process.env.NODE_ENV = 'production';
+      process.env.JWT_ACCESS_SECRET = 'prod_module_test_access_key_32_characters_111';
+      process.env.JWT_REFRESH_SECRET = 'prod_module_test_refresh_key_32_characters_222';
+      process.env.RESET_PASSWORD_SECRET = 'prod_module_test_reset_key_32_characters_333';
+
+      const prodModuleRef = await Test.createTestingModule({
+        imports: [
+          ConfigModule.forRoot({
+            validate,
+            load: [jwtConfig],
+            ignoreEnvFile: true,
+          }),
+        ],
+      }).compile();
+
+      const prodConfigService = prodModuleRef.get<ConfigService>(ConfigService);
+      const prodJwtSecret = prodConfigService.get<string>('jwt.secret');
+      const prodJwtRefresh = prodConfigService.get<string>('jwt.refreshSecret');
+      const prodJwtReset = prodConfigService.get<string>('jwt.resetPasswordSecret');
+
+      assert.strictEqual(prodJwtSecret, process.env.JWT_ACCESS_SECRET, 'JWT factory secret must match validated env in production');
+      assert.strictEqual(prodJwtRefresh, process.env.JWT_REFRESH_SECRET, 'JWT factory refreshSecret must match validated env in production');
+      assert.strictEqual(prodJwtReset, process.env.RESET_PASSWORD_SECRET, 'JWT factory resetPasswordSecret must match validated env in production');
+      assert.strictEqual(prodConfigService.get<string>('JWT_ACCESS_SECRET'), prodJwtSecret, 'Direct env getter and nested jwt config must agree in production');
+      await prodModuleRef.close();
+
+      // 2. Environment-switching isolation (switch to development with omitted secrets)
+      process.env.NODE_ENV = 'development';
+      delete process.env.JWT_ACCESS_SECRET;
+      delete process.env.JWT_REFRESH_SECRET;
+      delete process.env.RESET_PASSWORD_SECRET;
+
+      const devModuleRef = await Test.createTestingModule({
+        imports: [
+          ConfigModule.forRoot({
+            validate,
+            load: [jwtConfig],
+            ignoreEnvFile: true,
+          }),
+        ],
+      }).compile();
+
+      const devConfigService = devModuleRef.get<ConfigService>(ConfigService);
+      const devJwtSecret = devConfigService.get<string>('jwt.secret');
+      const devJwtRefresh = devConfigService.get<string>('jwt.refreshSecret');
+      const devJwtReset = devConfigService.get<string>('jwt.resetPasswordSecret');
+
+      // Verify no secret leakage from previous production test
+      assert.notStrictEqual(devJwtSecret, 'prod_module_test_access_key_32_characters_111', 'Must not leak production secrets');
+      assert.strictEqual(devJwtSecret, DEV_TEST_DUMMY_SECRETS.access, 'JWT factory must use development dummy access secret when omitted');
+      assert.strictEqual(devJwtRefresh, DEV_TEST_DUMMY_SECRETS.refresh, 'JWT factory must use development dummy refresh secret when omitted');
+      assert.strictEqual(devJwtReset, DEV_TEST_DUMMY_SECRETS.reset, 'JWT factory must use development dummy reset secret when omitted');
+      assert.strictEqual(devConfigService.get<string>('JWT_ACCESS_SECRET'), devJwtSecret, 'Direct env getter and nested jwt config must agree in development');
+      await devModuleRef.close();
+    } finally {
+      process.env = originalEnv;
+    }
+  });
+
   console.log(`\n========================================`);
+
+  // =======================================================================
+  // BATCH REMEDIATION TESTS: ISSUE 4-8 & OPS 1-3
+  // =======================================================================
+
+  // --- ISSUE 5: Multi-Till Shifts ---
+  await asyncTest('ISSUE-05 [Unit]: Multi-till shift allows two distinct registers to have active shifts concurrently', async () => {
+    const shifts: any[] = [];
+    const mockPrisma: any = {
+      shift: {
+        findFirst: async ({ where }: any) => {
+          return shifts.find(s => 
+            s.tenantId === where.tenantId &&
+            s.storeId === where.storeId &&
+            s.status === where.status &&
+            (where.registerId !== undefined ? s.registerId === where.registerId : true) &&
+            (where.openedById !== undefined ? s.openedById === where.openedById : true)
+          ) || null;
+        },
+        create: async ({ data }: any) => {
+          const shift = { id: 'shift-' + (shifts.length + 1), ...data };
+          shifts.push(shift);
+          return shift;
+        },
+      },
+      $transaction: async (cb: any) => cb(mockPrisma),
+    };
+    const mockAudit: any = { logAction: async () => {} };
+    const shiftsService = new ShiftsService(mockPrisma, mockAudit);
+
+    const shiftA = await shiftsService.openShift('tenant-1', 'store-1', 'cashier-1', {
+      startingFloat: 100,
+      registerId: 'REG-01',
+    });
+    assert.strictEqual(shiftA.registerId, 'REG-01', 'Register A shift must be recorded with registerId REG-01');
+
+    const shiftB = await shiftsService.openShift('tenant-1', 'store-1', 'cashier-2', {
+      startingFloat: 150,
+      registerId: 'REG-02',
+    });
+    assert.strictEqual(shiftB.registerId, 'REG-02', 'Register B shift must be recorded with registerId REG-02 in same store');
+    assert.strictEqual(shifts.length, 2, 'Both tills must have active open shifts in the store');
+  });
+
+  await asyncTest('ISSUE-05 [Unit]: Multi-till shift rejects opening second shift on the same register', async () => {
+    const shifts: any[] = [
+      { id: 'shift-1', tenantId: 'tenant-1', storeId: 'store-1', registerId: 'REG-01', openedById: 'cashier-1', status: ShiftStatus.OPEN }
+    ];
+    const mockPrisma: any = {
+      shift: {
+        findFirst: async ({ where }: any) => {
+          return shifts.find(s => 
+            s.tenantId === where.tenantId &&
+            s.storeId === where.storeId &&
+            s.status === where.status &&
+            (where.registerId !== undefined ? s.registerId === where.registerId : true) &&
+            (where.openedById !== undefined ? s.openedById === where.openedById : true)
+          ) || null;
+        },
+      },
+      $transaction: async (cb: any) => cb(mockPrisma),
+    };
+    const shiftsService = new ShiftsService(mockPrisma, {} as any);
+
+    await assert.rejects(
+      async () => {
+        await shiftsService.openShift('tenant-1', 'store-1', 'cashier-2', {
+          startingFloat: 200,
+          registerId: 'REG-01',
+        });
+      },
+      (err: any) => {
+        assert.ok(err instanceof ConflictException, 'Must reject with ConflictException');
+        assert.match(err.message, /already exists for register "REG-01"/i);
+        return true;
+      }
+    );
+  });
+
+  await asyncTest('ISSUE-05 [Unit]: Cashier cannot open two active shifts simultaneously', async () => {
+    const shifts: any[] = [
+      { id: 'shift-1', tenantId: 'tenant-1', storeId: 'store-1', registerId: 'REG-01', openedById: 'cashier-1', status: ShiftStatus.OPEN }
+    ];
+    const mockPrisma: any = {
+      shift: {
+        findFirst: async ({ where }: any) => {
+          return shifts.find(s => 
+            s.tenantId === where.tenantId &&
+            (where.openedById !== undefined ? s.openedById === where.openedById : true) &&
+            s.status === where.status
+          ) || null;
+        },
+      },
+      $transaction: async (cb: any) => cb(mockPrisma),
+    };
+    const shiftsService = new ShiftsService(mockPrisma, {} as any);
+
+    await assert.rejects(
+      async () => {
+        await shiftsService.openShift('tenant-1', 'store-1', 'cashier-1', {
+          startingFloat: 200,
+          registerId: 'REG-02',
+        });
+      },
+      (err: any) => {
+        assert.ok(err instanceof ConflictException, 'Must reject with ConflictException');
+        assert.match(err.message, /already have an active open shift/i);
+        return true;
+      }
+    );
+  });
+
+  // --- ISSUE 7: PIN Credential Stripping ---
+  await asyncTest('ISSUE-07 [Unit]: UsersService.findAll strips plaintext PIN and PIN hash, exposing only hasPin boolean', async () => {
+    const mockUsers = [
+      {
+        id: 'user-1',
+        firstName: 'Alice',
+        lastName: 'Cashier',
+        email: 'alice@store.com',
+        phone: '12345',
+        status: UserStatus.ACTIVE,
+        roleId: 'role-1',
+        storeId: 'store-1',
+        pinCodeHash: '$2b$10$hashedpincodeexample',
+        role: { id: 'role-1', name: 'Cashier', code: 'CASHIER' },
+        store: { id: 'store-1', name: 'Downtown Store', code: 'DT-01' },
+      },
+      {
+        id: 'user-2',
+        firstName: 'Bob',
+        lastName: 'Cashier',
+        email: 'bob@store.com',
+        phone: '67890',
+        status: UserStatus.ACTIVE,
+        roleId: 'role-1',
+        storeId: 'store-1',
+        pinCodeHash: null,
+        role: { id: 'role-1', name: 'Cashier', code: 'CASHIER' },
+        store: { id: 'store-1', name: 'Downtown Store', code: 'DT-01' },
+      },
+    ];
+
+    const mockPrisma: any = {
+      user: {
+        count: async () => mockUsers.length,
+        findMany: async () => mockUsers,
+      },
+      $transaction: async (promises: any) => Promise.all(promises),
+    };
+
+    const usersService = new UsersService(mockPrisma, {} as any);
+    const result = await usersService.findAll('tenant-1', { page: 1, limit: 10 });
+
+    assert.strictEqual(result.items.length, 2);
+    // User 1 has pin
+    assert.strictEqual(result.items[0].hasPin, true, 'User 1 must have hasPin: true');
+    assert.strictEqual((result.items[0] as any).pinCode, undefined, 'Plaintext pinCode must NEVER be returned');
+    assert.strictEqual((result.items[0] as any).pinCodeHash, undefined, 'pinCodeHash must NEVER be returned in findAll items');
+
+    // User 2 has no pin
+    assert.strictEqual(result.items[1].hasPin, false, 'User 2 must have hasPin: false');
+    assert.strictEqual((result.items[1] as any).pinCode, undefined, 'Plaintext pinCode must NEVER be returned');
+    assert.strictEqual((result.items[1] as any).pinCodeHash, undefined, 'pinCodeHash must NEVER be returned');
+  });
+
+  // --- ISSUE 8: Concurrency-Safe Sequence Generation ---
+  await asyncTest('ISSUE-08 [Integration]: Database-backed sequence generator produces strictly monotonic numbers without collisions', async () => {
+    const { PrismaClient } = require('@prisma/client');
+    const livePrisma = new PrismaClient({
+      datasources: { db: { url: 'postgresql://postgres:postgres@localhost:5432/infypos?schema=public' } }
+    });
+
+    try {
+      const tenantId = '00000000-0000-0000-0000-000000000001';
+      const entityType = 'REGRESSION_TEST_SEQ';
+      const prefix = 'PO';
+
+      // Execute 10 parallel sequence generations
+      const promises = [];
+      for (let i = 0; i < 10; i++) {
+        promises.push(getNextSequenceNumber(livePrisma, tenantId, entityType, prefix, 6));
+      }
+      const results = await Promise.all(promises);
+
+      // Verify all are strictly formatted and unique
+      const uniqueSet = new Set(results);
+      assert.strictEqual(results.length, 10);
+      assert.strictEqual(uniqueSet.size, 10, 'All 10 parallel sequence numbers must be 100% unique');
+
+      for (const seq of results) {
+        assert.match(seq, /^PO-\d{8}-\d{6}$/, 'Must conform to standard PO-YYYYMMDD-000001 format');
+      }
+
+      // Cleanup test sequence
+      await livePrisma.$executeRawUnsafe(`DELETE FROM "document_sequences" WHERE "entity_type" = '${entityType}'`);
+    } finally {
+      await livePrisma.$disconnect();
+    }
+  });
+
+  // --- OPS 3: Tenant-Scoped Audit Logging ---
+  await asyncTest('OPS-03 [Unit]: AuditService derives tenant ownership and isolates logs by tenant', async () => {
+    const logs: any[] = [];
+    const mockPrisma: any = {
+      user: {
+        findUnique: async ({ where }: any) => {
+          if (where.id === 'admin-tenant-1') return { id: 'admin-tenant-1', tenantId: 'tenant-1' };
+          if (where.id === 'admin-tenant-2') return { id: 'admin-tenant-2', tenantId: 'tenant-2' };
+          return null;
+        },
+      },
+      auditLog: {
+        create: async ({ data }: any) => {
+          logs.push(data);
+          return data;
+        },
+        count: async ({ where }: any) => logs.filter(l => l.tenantId === where.tenantId).length,
+        findMany: async ({ where }: any) => logs.filter(l => l.tenantId === where.tenantId),
+      },
+    };
+
+    const auditService = new AuditService(mockPrisma);
+
+    // Log action without passing tenantId explicitly (backend must derive it from user)
+    await auditService.logAction('admin-tenant-1', 'UPDATE_PRODUCT', 'Product', 'prod-1', { price: 20 });
+    assert.strictEqual(logs.length, 1);
+    assert.strictEqual(logs[0].tenantId, 'tenant-1', 'Tenant ID must be derived from user on backend');
+
+    // Log action for second tenant
+    await auditService.logAction('admin-tenant-2', 'CREATE_USER', 'User', 'usr-2', { email: 'usr2@t2.com' });
+    assert.strictEqual(logs.length, 2);
+    assert.strictEqual(logs[1].tenantId, 'tenant-2');
+
+    // Tenant 1 queries audit logs -> only tenant 1 logs returned (tenant isolation)
+    const t1Logs = await auditService.findAllForTenant('tenant-1');
+    assert.strictEqual(t1Logs.items.length, 1);
+    assert.strictEqual(t1Logs.items[0].tenantId, 'tenant-1', 'Cross-tenant logs must never leak');
+  });
+
+  // --- OPS 1: Admin Dashboard Base URL ---
+  await asyncTest('OPS-01 [Unit]: Admin dashboard API client defaults to /api/v1 prefix', async () => {
+    const clientPath = path.resolve(__dirname, '../../INFEPOS_FRONTEND/admin-dashboard/src/api/client.ts');
+    const clientFile = fs.readFileSync(clientPath, 'utf8');
+    assert.ok(
+      clientFile.includes("baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1'"),
+      'Admin dashboard axios client baseURL must point to /api/v1'
+    );
+  });
+
+  // --- ISSUE 6: Electron Production DevTools Hardening ---
+  await asyncTest('ISSUE-06 [Unit]: Electron main.ts does not open DevTools in production and blocks debug shortcuts', async () => {
+    const mainPath = path.resolve(__dirname, '../../INFEPOS_FRONTEND/pos-terminal/electron/main.ts');
+    const mainFile = fs.readFileSync(mainPath, 'utf8');
+    assert.ok(
+      !mainFile.includes('// Force devtools open to debug blank screen'),
+      'Forced production DevTools must be removed'
+    );
+    assert.ok(
+      mainFile.includes("input.key === 'F12'") && mainFile.includes("mainWindow.setMenu(null)"),
+      'Production mode must disable menu and prevent DevTools shortcuts (F12, Ctrl+Shift+I)'
+    );
+  });
+
+
   console.log(`Results: ${passed}/${total} tests passed (${Math.round((passed / total) * 100)}%)`);
   console.log(`========================================\n`);
 
