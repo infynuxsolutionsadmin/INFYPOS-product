@@ -16,25 +16,14 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateStockTransferDto } from './dto/create-stock-transfer.dto';
 import { FindStockTransfersQueryDto } from './dto/find-stock-transfers-query.dto';
 import { UpdateStockTransferDto, ReceiveStockTransferDto } from './dto/update-stock-transfer.dto';
+import { getNextSequenceNumber } from '../../common/utils/sequence.util';
 
 @Injectable()
 export class StockTransfersService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async generateTransferNumber(tenantId: string): Promise<string> {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const count = await this.prisma.stockTransfer.count({
-      where: {
-        tenantId,
-        createdAt: { gte: startOfDay },
-      },
-    });
-
-    const sequence = (count + 1).toString().padStart(6, '0');
-    return `TRF-${dateStr}-${sequence}`;
+    return getNextSequenceNumber(this.prisma, tenantId, 'STOCK_TRANSFER', 'TRF', 6);
   }
 
   async create(tenantId: string, userId: string, dto: CreateStockTransferDto) {

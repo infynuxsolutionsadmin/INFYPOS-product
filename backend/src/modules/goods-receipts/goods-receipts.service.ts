@@ -17,25 +17,14 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { CreateGoodsReceiptDto } from './dto/create-goods-receipt.dto';
 import { FindGoodsReceiptsQueryDto } from './dto/find-goods-receipts-query.dto';
+import { getNextSequenceNumber } from '../../common/utils/sequence.util';
 
 @Injectable()
 export class GoodsReceiptsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async generateReceiptNumber(tenantId: string): Promise<string> {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const count = await this.prisma.goodsReceipt.count({
-      where: {
-        tenantId,
-        createdAt: { gte: startOfDay },
-      },
-    });
-
-    const sequence = (count + 1).toString().padStart(6, '0');
-    return `GRN-${dateStr}-${sequence}`;
+    return getNextSequenceNumber(this.prisma, tenantId, 'GOODS_RECEIPT', 'GRN', 6);
   }
 
   async create(tenantId: string, userId: string, dto: CreateGoodsReceiptDto) {

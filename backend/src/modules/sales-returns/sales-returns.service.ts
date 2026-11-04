@@ -8,25 +8,14 @@ import { Prisma, ReturnStatus, MovementType, ReferenceType, ReturnType, Inventor
 import { PrismaService } from '../../database/prisma.service';
 import { CreateSaleReturnDto } from './dto/create-sale-return.dto';
 import { FindSaleReturnsQueryDto } from './dto/find-sale-returns-query.dto';
+import { getNextSequenceNumber } from '../../common/utils/sequence.util';
 
 @Injectable()
 export class SalesReturnsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async generateReturnNumber(tenantId: string): Promise<string> {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const count = await this.prisma.saleReturn.count({
-      where: {
-        tenantId,
-        createdAt: { gte: startOfDay },
-      },
-    });
-
-    const sequence = (count + 1).toString().padStart(6, '0');
-    return `RET-${dateStr}-${sequence}`;
+    return getNextSequenceNumber(this.prisma, tenantId, 'SALE_RETURN', 'RET', 6);
   }
 
   async create(tenantId: string, userId: string, dto: CreateSaleReturnDto, isSync: boolean = false) {

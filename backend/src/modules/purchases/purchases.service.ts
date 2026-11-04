@@ -8,29 +8,14 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { FindPurchasesQueryDto } from './dto/find-purchases-query.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
+import { getNextSequenceNumber } from '../../common/utils/sequence.util';
 
 @Injectable()
 export class PurchasesService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async generatePurchaseNumber(tenantId: string): Promise<string> {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    
-    // Count today's purchases for this tenant
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    
-    const count = await this.prisma.purchase.count({
-      where: {
-        tenantId,
-        createdAt: {
-          gte: startOfDay,
-        },
-      },
-    });
-
-    const sequence = (count + 1).toString().padStart(6, '0');
-    return `PO-${dateStr}-${sequence}`;
+    return getNextSequenceNumber(this.prisma, tenantId, 'PURCHASE', 'PO', 6);
   }
 
   async create(tenantId: string, userId: string, dto: CreatePurchaseDto) {

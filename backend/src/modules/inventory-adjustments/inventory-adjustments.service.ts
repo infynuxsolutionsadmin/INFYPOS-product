@@ -16,25 +16,14 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateInventoryAdjustmentDto } from './dto/create-inventory-adjustment.dto';
 import { FindInventoryAdjustmentsQueryDto } from './dto/find-inventory-adjustments-query.dto';
 import { UpdateInventoryAdjustmentDto } from './dto/update-inventory-adjustment.dto';
+import { getNextSequenceNumber } from '../../common/utils/sequence.util';
 
 @Injectable()
 export class InventoryAdjustmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async generateAdjustmentNumber(tenantId: string): Promise<string> {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const count = await this.prisma.inventoryAdjustment.count({
-      where: {
-        tenantId,
-        createdAt: { gte: startOfDay },
-      },
-    });
-
-    const sequence = (count + 1).toString().padStart(6, '0');
-    return `ADJ-${dateStr}-${sequence}`;
+    return getNextSequenceNumber(this.prisma, tenantId, 'INVENTORY_ADJUSTMENT', 'ADJ', 6);
   }
 
   async create(tenantId: string, userId: string, dto: CreateInventoryAdjustmentDto) {
