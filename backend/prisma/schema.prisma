@@ -938,6 +938,7 @@ model DownloadLog {
 
 model AuditLog {
   id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String?  @map("tenant_id") @db.Uuid
   action    String   @db.VarChar(100)
   entity    String   @db.VarChar(100)
   entityId  String   @map("entity_id") @db.VarChar(100)
@@ -948,6 +949,7 @@ model AuditLog {
   adminUser User @relation(fields: [adminId], references: [id])
 
   @@index([adminId])
+  @@index([tenantId])
   @@index([entity])
   @@map("audit_logs")
 }
@@ -987,6 +989,7 @@ model Shift {
   openedById        String  @map("opened_by_id") @db.Uuid
   closedById        String? @map("closed_by_id") @db.Uuid
   managerOverrideId String? @map("manager_override_id") @db.Uuid
+  registerId        String? @map("register_id") @db.VarChar(100)
 
   status   ShiftStatus @default(OPEN)
   openedAt DateTime    @map("opened_at") @db.Timestamptz(6)
@@ -1016,5 +1019,19 @@ model Shift {
   @@index([tenantId])
   @@index([storeId])
   @@index([status])
+  @@index([tenantId, storeId, registerId, status])
   @@map("shifts")
+}
+
+model DocumentSequence {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  entityType String   @map("entity_type") @db.VarChar(50)
+  datePrefix String   @map("date_prefix") @db.VarChar(20)
+  counter    Int      @default(0)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, entityType, datePrefix])
+  @@index([tenantId, entityType])
+  @@map("document_sequences")
 }
