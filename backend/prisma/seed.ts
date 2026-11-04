@@ -1,3 +1,22 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Automatically load .env if DATABASE_URL is not set in environment
+if (!process.env.DATABASE_URL) {
+  const envPath = path.resolve(__dirname, '../.env');
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+        const [k, ...v] = trimmed.split('=');
+        const key = k.trim();
+        const val = v.join('=').trim().replace(/^["']|["']$/g, '');
+        if (!process.env[key]) process.env[key] = val;
+      }
+    }
+  }
+}
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
