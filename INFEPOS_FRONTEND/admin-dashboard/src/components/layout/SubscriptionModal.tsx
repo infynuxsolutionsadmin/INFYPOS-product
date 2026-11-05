@@ -5,7 +5,6 @@ import {
   ExternalLink,
   Receipt,
   CheckCircle2,
-  Sparkles,
   ChevronRight,
   Loader2,
   AlertCircle,
@@ -273,9 +272,8 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               <div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <div>
-                    <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-indigo-600" />
-                      <span>Available Subscription Tiers</span>
+                    <h4 className="text-sm font-bold text-gray-900">
+                      Available Subscription Tiers
                     </h4>
                     <p className="text-xs text-gray-500">
                       Switch or upgrade your plan at any time. Prorated balance is automatically credited.
