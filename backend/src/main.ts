@@ -8,7 +8,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { parseTrustProxySetting } from './common/utils/proxy-trust.util';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port', 3000);
@@ -21,7 +21,7 @@ async function bootstrap() {
 
   // Increase payload limit for large bulk product imports
   const express = require('express');
-  app.use(express.json({ limit: '50mb' }));
+  app.use(express.json({ limit: '50mb', verify: (req: any, _res: any, buf: Buffer) => { req.rawBody = buf; } }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Enable helmet for security headers

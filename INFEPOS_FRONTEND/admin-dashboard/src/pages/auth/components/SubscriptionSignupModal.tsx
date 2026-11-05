@@ -15,12 +15,15 @@ import {
   Store,
 } from 'lucide-react';
 import { registerTenant } from '../../../api/auth.api';
+import { createCheckoutSession } from '../../../api/billing.api';
 import { useAuthStore } from '../../../stores/authStore';
 import { useNavigate } from 'react-router-dom';
 
 interface SubscriptionSignupModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialPlan?: string;
+  initialBillingCycle?: 'MONTHLY' | 'ANNUAL';
 }
 
 interface PlanDetails {
@@ -82,10 +85,20 @@ const PLANS: PlanDetails[] = [
   },
 ];
 
-export const SubscriptionSignupModal: React.FC<SubscriptionSignupModalProps> = ({ isOpen, onClose }) => {
+export const SubscriptionSignupModal: React.FC<SubscriptionSignupModalProps> = ({
+  isOpen,
+  onClose,
+  initialPlan = 'PRO',
+  initialBillingCycle = 'MONTHLY',
+}) => {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL'>('MONTHLY');
-  const [selectedPlan, setSelectedPlan] = useState<string>('PRO');
+  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL'>(initialBillingCycle);
+  const [selectedPlan, setSelectedPlan] = useState<string>(initialPlan);
+
+  React.useEffect(() => {
+    if (initialPlan) setSelectedPlan(initialPlan);
+    if (initialBillingCycle) setBillingCycle(initialBillingCycle);
+  }, [initialPlan, initialBillingCycle, isOpen]);
 
   // Form Fields
   const [storeName, setStoreName] = useState('');
@@ -166,6 +179,22 @@ export const SubscriptionSignupModal: React.FC<SubscriptionSignupModalProps> = (
         response.tokens.accessToken,
         response.tokens.refreshToken
       );
+
+      // Trigger Stripe Checkout session
+      try {
+        const session = await createCheckoutSession({
+          plan: selectedPlan as any,
+          billingCycle,
+        });
+
+        if (session?.url && !session.url.includes('_mock_')) {
+          // Redirect merchant directly to Stripe's hosted checkout page
+          window.location.href = session.url;
+          return;
+        }
+      } catch (stripeErr) {
+        console.warn('[Stripe] Checkout creation defaulted to local credential handover:', stripeErr);
+      }
 
       setStep(4); // Move to Success & Credential Handover
     } catch (err: any) {
@@ -463,7 +492,7 @@ export const SubscriptionSignupModal: React.FC<SubscriptionSignupModalProps> = (
                 <div className="md:col-span-7 space-y-4">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wide">
                     <CreditCard className="w-4 h-4 text-blue-600" />
-                    <span>Payment Information (Sandbox Simulator)</span>
+                    <span>Payment Information (Stripe Secure Checkout)</span>
                   </div>
 
                   <div>

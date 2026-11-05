@@ -1,3 +1,4 @@
+import SubscriptionSignupModal from './auth/components/SubscriptionSignupModal';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -1632,7 +1633,8 @@ const InteractiveModal: React.FC<{
   itemData?: MenuItem | null;
   currentTheme: ProjectThemeConfig;
   navigate: (path: string) => void;
-}> = ({ isOpen, onClose, title, subtitle, badge, type, itemData, currentTheme, navigate }) => {
+  onOpenSignup?: (plan: string, billingCycle: 'MONTHLY' | 'ANNUAL') => void;
+}> = ({ isOpen, onClose, title, subtitle, badge, type, itemData, currentTheme, navigate, onOpenSignup }) => {
   const [storeCount, setStoreCount] = useState(5);
   const [terminalCount, setTerminalCount] = useState(15);
   const [deploymentMode, setDeploymentMode] = useState<'cloud' | 'on-premise'>('cloud');
@@ -1946,8 +1948,10 @@ const InteractiveModal: React.FC<{
                 <span className="text-xs text-slate-500 font-medium">✨ Includes 14-day free trial. Zero credit card required.</span>
                 <button
                   onClick={() => {
-                    alert(`Starting free trial for ${selectedPlan.toUpperCase()} plan (${billingCycle} billing)...`);
+                    const mappedPlan = selectedPlan === 'starter' ? 'STARTER' : selectedPlan === 'enterprise' ? 'ENTERPRISE' : 'PRO';
+                    const mappedCycle = billingCycle === 'annual' ? 'ANNUAL' : 'MONTHLY';
                     onClose();
+                    onOpenSignup?.(mappedPlan, mappedCycle);
                   }}
                   className={`px-8 py-3.5 rounded-full font-bold text-sm shadow-xl transition-all hover:scale-105 ${currentTheme.primaryBtn}`}
                 >
@@ -1994,6 +1998,11 @@ const LandingPage: React.FC = () => {
   // Navigation Dropdown State
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Subscription Signup Modal State
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
+  const [signupPlan, setSignupPlan] = useState<string>('PRO');
+  const [signupCycle, setSignupCycle] = useState<'MONTHLY' | 'ANNUAL'>('MONTHLY');
 
   // Modal State
   const [activeModal, setActiveModal] = useState<'product' | 'use-case' | 'resource' | 'enterprise' | 'pricing' | null>(null);
@@ -2849,7 +2858,7 @@ const LandingPage: React.FC = () => {
               </div>
 
               {/* Shining Glass Button */}
-              <button className="w-full py-3 rounded-xl font-black text-xs text-blue-700 bg-white hover:bg-blue-50 transition-all duration-300 shadow-md shadow-white/20 hover:scale-[1.02] active:scale-95">
+              <button onClick={() => { setSignupPlan("PRO"); setIsSignupOpen(true); }} className="w-full py-3 rounded-xl font-black text-xs text-blue-700 bg-white hover:bg-blue-50 transition-all duration-300 shadow-md shadow-white/20 hover:scale-[1.02] active:scale-95">
                 Start 14-Day Free Trial &rarr;
               </button>
             </div>
@@ -3104,6 +3113,18 @@ const LandingPage: React.FC = () => {
         itemData={modalItem}
         currentTheme={currentTheme}
         navigate={navigate}
+        onOpenSignup={(plan, cycle) => {
+          setSignupPlan(plan);
+          setSignupCycle(cycle);
+          setIsSignupOpen(true);
+        }}
+      />
+
+      <SubscriptionSignupModal
+        isOpen={isSignupOpen}
+        onClose={() => setIsSignupOpen(false)}
+        initialPlan={signupPlan}
+        initialBillingCycle={signupCycle}
       />
     </div>
   );

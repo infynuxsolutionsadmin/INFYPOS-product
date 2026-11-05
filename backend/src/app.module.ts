@@ -1,3 +1,4 @@
+import { BillingModule } from './modules/billing/billing.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { configurations } from './config/configuration';
@@ -77,6 +78,7 @@ import { APP_GUARD } from '@nestjs/core';
     SettingsModule,
     ShiftsModule,
     HealthModule,
+    BillingModule,
   ],
   controllers: [],
   providers: [

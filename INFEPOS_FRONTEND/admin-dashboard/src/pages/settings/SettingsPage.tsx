@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, Store, Tag, Save, RotateCcw, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Settings, Store, Tag, Save, RotateCcw, AlertTriangle, ChevronDown, CreditCard, ExternalLink, Receipt } from 'lucide-react';
+import { getBillingStatus, createCustomerPortalSession, type BillingStatusResponse } from '../../api/billing.api';
 import { useAuthStore } from '../../stores/authStore';
 import { getStores } from '../../api/stores.api';
 import { getVatSettings, getStoreSettings, updateStoreSettings } from '../../api/settings.api';
@@ -48,6 +49,46 @@ const SettingsPage: React.FC = () => {
   const [stores, setStores] = useState<StoreType[]>([]);
   const [storesLoading, setStoresLoading] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+
+  // SaaS Subscription & Stripe Billing State
+  const [billing, setBilling] = useState<BillingStatusResponse | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+  
+
+  const fetchBilling = useCallback(async () => {
+    setBillingLoading(true);
+    
+    try {
+      const data = await getBillingStatus();
+      setBilling(data);
+    } catch (err: any) {
+      console.warn('Failed to load billing status:', err);
+      // Soft fail in dev if unauthenticated or error
+      
+    } finally {
+      setBillingLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBilling();
+  }, [fetchBilling]);
+
+  const handleOpenStripePortal = async () => {
+    setPortalLoading(true);
+    try {
+      const res = await createCustomerPortalSession(window.location.href);
+      if (res?.url) {
+        window.location.href = res.url;
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to open Stripe billing portal');
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
 
   // Store config state
   const [storeData, setStoreData] = useState<StoreType | null>(null);
@@ -405,6 +446,135 @@ const SettingsPage: React.FC = () => {
           )}
         </Section>
       )}
+
+
+      {/* SaaS Subscription & Billing (Stripe) */}
+      <Section title="Subscription & Billing" icon={<CreditCard className="h-4 w-4" />}>
+        {billingLoading ? (
+          <div className="flex justify-center py-6">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+              <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none" />
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xs font-bold uppercase tracking-widest text-indigo-300 bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-400/30">
+                      Current Plan
+                    </span>
+                    <span className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                      billing?.subscriptionStatus === 'active'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    }`}>
+                      {billing?.subscriptionStatus || 'TRIAL'}
+                    </span>
+                  </div>
+                  <h3 className="text-2xl font-black tracking-tight text-white">
+                    {billing?.pricing?.name || 'Professional'} Retail Plan
+                  </h3>
+                  <p className="text-xs text-indigo-200/80 mt-1">
+                    Billed {billing?.billingCycle || 'MONTHLY'} • £{((billing?.pricing?.monthlyAmountGbp || 7900) / 100).toFixed(2)} / mo
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={handleOpenStripePortal}
+                    disabled={portalLoading}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white text-slate-900 font-bold text-xs hover:bg-indigo-50 hover:scale-105 active:scale-95 transition-all shadow-md shadow-black/20 disabled:opacity-50 cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>{portalLoading ? 'Connecting...' : 'Manage in Stripe Portal'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-white/10 text-xs">
+                <div>
+                  <span className="text-indigo-300 block mb-1">Billing Cycle</span>
+                  <span className="font-semibold text-white">{billing?.billingCycle || 'Monthly'}</span>
+                </div>
+                <div>
+                  <span className="text-indigo-300 block mb-1">Next Renewal</span>
+                  <span className="font-semibold text-white">
+                    {billing?.currentPeriodEnd ? new Date(billing.currentPeriodEnd).toLocaleDateString() : 'Auto-renew active'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-indigo-300 block mb-1">Payment Method</span>
+                  <span className="font-semibold text-white">
+                    {billing?.stripeCustomerId ? 'Stripe Secure Card' : 'Pending Verification'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-indigo-300 block mb-1">Invoices</span>
+                  <span className="font-semibold text-white">
+                    {billing?.invoices?.length || 0} Generated
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Invoices list */}
+            {billing?.invoices && billing.invoices.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-indigo-500" />
+                  <span>Stripe Billing Invoices</span>
+                </h4>
+                <div className="overflow-hidden border border-gray-100 rounded-2xl shadow-xs">
+                  <table className="min-w-full divide-y divide-gray-100 text-xs">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-bold text-gray-500 uppercase">Invoice</th>
+                        <th className="px-4 py-3 text-left font-bold text-gray-500 uppercase">Date</th>
+                        <th className="px-4 py-3 text-left font-bold text-gray-500 uppercase">Amount</th>
+                        <th className="px-4 py-3 text-left font-bold text-gray-500 uppercase">Status</th>
+                        <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase">Receipt</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 bg-white">
+                      {billing.invoices.map((inv) => (
+                        <tr key={inv.id} className="hover:bg-slate-50/50">
+                          <td className="px-4 py-3 font-mono font-medium text-indigo-600">{inv.stripeInvoiceId}</td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : new Date(inv.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-gray-900">£{(inv.amountPaid / 100).toFixed(2)}</td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">
+                              {inv.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {inv.invoicePdf || inv.hostedInvoiceUrl ? (
+                              <a
+                                href={inv.invoicePdf || inv.hostedInvoiceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-bold"
+                              >
+                                <span>PDF</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Section>
 
       {/* No accessible settings */}
       {!canReadSettings && !canReadStores && (

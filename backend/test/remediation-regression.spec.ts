@@ -1,3 +1,4 @@
+import { StripeService, PLAN_PRICING } from '../src/modules/billing/stripe.service';
 import * as path from 'path';
 import * as assert from 'assert';
 import * as crypto from 'crypto';
@@ -2788,6 +2789,119 @@ async function runTests() {
       'Production mode must disable menu and prevent DevTools shortcuts (F12, Ctrl+Shift+I)'
     );
   });
+
+  // =========================================================================
+  // STRIPE SAAS BILLING & SUBSCRIPTION INTEGRATION TESTS
+  // =========================================================================
+
+  test('STRIPE-01 [Unit]: Plan pricing catalog matches SaaS tiers (£39, £79, £149)', async () => {
+    assert.strictEqual(PLAN_PRICING.STARTER.monthlyAmountGbp, 3900);
+    assert.strictEqual(PLAN_PRICING.STARTER.annualAmountGbp, 37200);
+    assert.strictEqual(PLAN_PRICING.PRO.monthlyAmountGbp, 7900);
+    assert.strictEqual(PLAN_PRICING.PRO.annualAmountGbp, 75600);
+    assert.strictEqual(PLAN_PRICING.ENTERPRISE.monthlyAmountGbp, 14900);
+    assert.strictEqual(PLAN_PRICING.ENTERPRISE.annualAmountGbp, 142800);
+  });
+
+  test('STRIPE-02 [Unit]: StripeService creates simulated Checkout Session when keys are pending verification', async () => {
+    const mockPrisma: any = {
+      tenant: {
+        findUnique: async () => ({ id: 't-1', code: 'TEST_TENANT', name: 'Test Tenant', stripeCustomerId: null }),
+        update: async () => ({}),
+      },
+    };
+    const mockConfig: any = { get: () => 'sk_test_placeholder' };
+    const svc = new StripeService(mockConfig, mockPrisma);
+    const session = await svc.createCheckoutSession('t-1', { plan: 'PRO', billingCycle: 'MONTHLY' });
+    assert.ok(session.sessionId.startsWith('cs_test_mock_'), 'Must produce simulated session in dev mode');
+    assert.ok(session.url.includes('session_id=cs_test_mock_'));
+  });
+
+  test('STRIPE-03 [Unit]: Webhook checkout.session.completed activates tenant subscription', async () => {
+    let updatedTenantData: any = null;
+    const mockPrisma: any = {
+      tenant: {
+        update: async ({ data }: any) => { updatedTenantData = data; return data; },
+      },
+    };
+    const mockConfig: any = { get: () => 'sk_test_placeholder' };
+    const svc = new StripeService(mockConfig, mockPrisma);
+    await svc.handleWebhookEvent({
+      id: 'evt-test-1',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_live_123',
+          customer: 'cus_live_456',
+          subscription: 'sub_live_789',
+          metadata: { tenantId: 't-1', plan: 'PRO', billingCycle: 'ANNUAL' },
+        },
+      },
+    } as any);
+
+    assert.strictEqual(updatedTenantData.subscriptionPlan, 'PRO');
+    assert.strictEqual(updatedTenantData.billingCycle, 'ANNUAL');
+    assert.strictEqual(updatedTenantData.subscriptionStatus, 'active');
+    assert.strictEqual(updatedTenantData.stripeCustomerId, 'cus_live_456');
+    assert.strictEqual(updatedTenantData.stripeSubscriptionId, 'sub_live_789');
+  });
+
+  test('STRIPE-04 [Unit]: Webhook invoice.payment_succeeded records billing invoice and keeps tenant active', async () => {
+    let createdInvoice: any = null;
+    const mockPrisma: any = {
+      tenant: {
+        findFirst: async () => ({ id: 't-1', code: 'TEST_TENANT', stripeCustomerId: 'cus_live_456' }),
+        update: async () => ({}),
+      },
+      billingInvoice: {
+        upsert: async ({ create }: any) => { createdInvoice = create; return create; },
+      },
+    };
+    const mockConfig: any = { get: () => 'sk_test_placeholder' };
+    const svc = new StripeService(mockConfig, mockPrisma);
+    await svc.handleWebhookEvent({
+      id: 'evt-test-2',
+      type: 'invoice.payment_succeeded',
+      data: {
+        object: {
+          id: 'in_live_999',
+          customer: 'cus_live_456',
+          amount_due: 7900,
+          amount_paid: 7900,
+          currency: 'gbp',
+          status: 'paid',
+          hosted_invoice_url: 'https://invoice.stripe.com/test',
+        },
+      },
+    } as any);
+
+    assert.strictEqual(createdInvoice.stripeInvoiceId, 'in_live_999');
+    assert.strictEqual(createdInvoice.amountPaid, 7900);
+    assert.strictEqual(createdInvoice.currency, 'gbp');
+  });
+
+  test('STRIPE-05 [Unit]: Webhook customer.subscription.deleted cancels tenant subscription', async () => {
+    let canceledData: any = null;
+    const mockPrisma: any = {
+      tenant: {
+        findFirst: async () => ({ id: 't-1', code: 'TEST_TENANT' }),
+        update: async ({ data }: any) => { canceledData = data; return data; },
+      },
+    };
+    const mockConfig: any = { get: () => 'sk_test_placeholder' };
+    const svc = new StripeService(mockConfig, mockPrisma);
+    await svc.handleWebhookEvent({
+      id: 'evt-test-3',
+      type: 'customer.subscription.deleted',
+      data: {
+        object: { id: 'sub_live_789' },
+      },
+    } as any);
+
+    assert.strictEqual(canceledData.subscriptionStatus, 'canceled');
+    assert.strictEqual(canceledData.cancelAtPeriodEnd, true);
+  });
+
 
 
   console.log(`Results: ${passed}/${total} tests passed (${Math.round((passed / total) * 100)}%)`);
