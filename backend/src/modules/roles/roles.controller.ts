@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Body,
   Controller,
   Delete,
@@ -76,13 +77,20 @@ export class RolesController {
     return this.rolesService.remove(tenantId, id);
   }
 
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('roles.read')
+  @UseGuards(JwtAuthGuard)
   @Get(':id/permissions')
   async getPermissions(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('roleId') userRoleId: string,
+    @CurrentUser('roleCode') userRoleCode: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
+    if (userRoleId !== id && userRoleCode !== 'OWNER' && userRoleCode !== 'SUPER_ADMIN') {
+      const hasRead = await this.rolesService.roleHasPermission(userRoleCode, tenantId, 'roles.read');
+      if (!hasRead) {
+        throw new ForbiddenException('Insufficient permissions to view other role permissions');
+      }
+    }
     return this.rolesService.getPermissions(tenantId, id);
   }
 

@@ -29,4 +29,13 @@ export class AuthController {
   async logout(@Body() dto: RefreshTokenDto) {
     return this.authService.logout(dto);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/permissions')
+  async getMyPermissions(
+    @CurrentUser('roleCode') roleCode: string,
+    @CurrentUser('tenantId') tenantId: string,
+  ) {
+    return this.authService.getRolePermissions(roleCode, tenantId);
+  }
 }

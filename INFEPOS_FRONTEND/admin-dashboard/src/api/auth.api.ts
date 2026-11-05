@@ -7,6 +7,7 @@ interface BackendLoginResponse {
   data: {
     accessToken: string;
     refreshToken: string;
+    permissions?: string[];
     user: any;
   };
 }
@@ -19,14 +20,16 @@ export const login = async (data: LoginRequest): Promise<LoginResponse> => {
   localStorage.setItem('access_token', responseData.accessToken);
   localStorage.setItem('refresh_token', responseData.refreshToken);
 
-  let permissions: string[] = [];
-  try {
-    const permResponse = await client.get<any>(`/roles/${responseData.user.roleId}/permissions`);
-    if (permResponse.data?.data) {
-      permissions = permResponse.data.data.map((p: any) => p.code);
+  let permissions: string[] = Array.isArray(responseData.permissions) ? responseData.permissions : [];
+  if (permissions.length === 0 && responseData.user?.roleId) {
+    try {
+      const permResponse = await client.get<any>(`/roles/${responseData.user.roleId}/permissions`);
+      if (permResponse.data?.data) {
+        permissions = permResponse.data.data.map((p: any) => p.code);
+      }
+    } catch (error) {
+      console.error('Failed to fetch role permissions during login:', error);
     }
-  } catch (error) {
-    console.error('Failed to fetch role permissions during login:', error);
   }
 
   return {
@@ -99,3 +102,8 @@ export const logout = async (): Promise<void> => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
 };
+
+export const getMyPermissions = async (): Promise<string[]> => {
+  const response = await client.get<any>('/auth/me/permissions');
+  return response.data?.data || response.data || [];
+};

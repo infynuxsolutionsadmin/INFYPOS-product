@@ -9,6 +9,7 @@ interface AuthState {
   user: AuthUser | null;
   permissions: string[];
   setAuth: (user: AuthUser, permissions: string[], token: string, refreshToken: string) => void;
+  setPermissions: (permissions: string[]) => void;
   clearAuth: () => void;
   hasPermission: (permission: string) => boolean;
 }
@@ -26,6 +27,10 @@ export const useAuthStore = create<AuthState>()(
         localStorage.setItem('access_token', token);
         localStorage.setItem('refresh_token', refreshToken);
         set({ isAuthenticated: true, user, permissions });
+      },
+
+      setPermissions: (permissions: string[]) => {
+        set({ permissions });
       },
       
       clearAuth: () => {

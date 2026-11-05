@@ -273,4 +273,16 @@ export class RolesService {
 
     return this.getPermissions(tenantId, roleId);
   }
+
+  async roleHasPermission(roleCode: string, tenantId: string, permCode: string): Promise<boolean> {
+    const role = await this.prisma.role.findFirst({
+      where: { code: roleCode, tenantId },
+      include: {
+        permissions: {
+          include: { permission: true },
+        },
+      },
+    });
+    return role?.permissions.some((p) => p.permission.code === permCode) || false;
+  }
 }

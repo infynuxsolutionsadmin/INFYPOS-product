@@ -180,9 +180,12 @@ export class AuthService {
       },
     });
 
+    const permissions = await this.getRolePermissions(user.role.code, user.tenantId);
+
     return {
       accessToken,
       refreshToken,
+      permissions,
       user: {
         id: user.id,
         tenantId: user.tenantId,

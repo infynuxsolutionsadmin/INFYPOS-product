@@ -1,10 +1,25 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { getMyPermissions } from '../api/auth.api';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import Header from '../components/layout/Header';
 
 const AdminLayout: React.FC = () => {
-  const { isAuthenticated, _hasHydrated, user } = useAuthStore();
+  const { isAuthenticated, _hasHydrated, user, setPermissions } = useAuthStore();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      getMyPermissions()
+        .then((perms) => {
+          if (Array.isArray(perms) && perms.length > 0) {
+            setPermissions(perms);
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to refresh user permissions:', err);
+        });
+    }
+  }, [isAuthenticated, setPermissions]);
 
   if (!_hasHydrated) return null;
 
