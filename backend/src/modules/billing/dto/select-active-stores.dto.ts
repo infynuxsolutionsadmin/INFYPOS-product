@@ -9,3 +9,4 @@ export class SelectActiveStoresDto {
   @IsUUID('4', { each: true, message: 'Each active store ID must be a valid UUID' })
   activeStoreIds: string[];
 }
+

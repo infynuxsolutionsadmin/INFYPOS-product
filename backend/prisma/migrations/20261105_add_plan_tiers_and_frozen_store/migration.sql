@@ -23,3 +23,4 @@ CREATE TABLE IF NOT EXISTS "subscription_plan_tiers" (
     CONSTRAINT "subscription_plan_tiers_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "subscription_plan_tiers_code_key" UNIQUE ("code")
 );
+
