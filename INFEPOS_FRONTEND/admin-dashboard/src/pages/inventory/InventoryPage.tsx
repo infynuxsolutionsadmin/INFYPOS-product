@@ -10,11 +10,13 @@ import InventoryFormModal from '../../components/inventory/InventoryFormModal';
 import { InventoryImportModal } from '../../components/inventory/InventoryImportModal';
 
 const InventoryPage: React.FC = () => {
-  const { hasPermission } = useAuthStore();
+  const { user, hasPermission } = useAuthStore();
   const canCreate = hasPermission('inventory.create');
   const canRead = hasPermission('inventory.read');
   const canUpdate = hasPermission('inventory.update');
   const canDelete = hasPermission('inventory.delete');
+
+  const isStoreScoped = Boolean(user?.storeId && user?.roleCode !== 'OWNER' && user?.roleCode !== 'SYSTEM_ADMIN');
 
   const [inventoryList, setInventoryList] = useState<Inventory[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
@@ -26,7 +28,7 @@ const InventoryPage: React.FC = () => {
     limit: 10,
     search: '',
     status: undefined,
-    storeId: undefined,
+    storeId: isStoreScoped ? (user?.storeId || undefined) : undefined,
     stockLevel: undefined,
     sortBy: 'quantityOnHand',
     sortOrder: 'asc',
@@ -290,12 +292,15 @@ const InventoryPage: React.FC = () => {
             <select
               value={query.storeId || ''}
               onChange={handleStoreChange}
-              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer font-medium"
+              disabled={isStoreScoped}
+              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer font-medium disabled:opacity-75 disabled:cursor-not-allowed"
             >
-              <option value="">All Stores</option>
-              {stores.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
+              {!isStoreScoped && <option value="">All Stores</option>}
+              {stores
+                .filter(s => !isStoreScoped || s.id === user?.storeId)
+                .map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
             </select>
           </div>
           <div className="w-full sm:w-44">

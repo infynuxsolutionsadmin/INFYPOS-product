@@ -4,6 +4,7 @@ import type { Inventory, CreateInventoryRequest, UpdateInventoryRequest, Invento
 import { createInventory, updateInventory } from '../../api/inventory.api';
 import { getStores } from '../../api/stores.api';
 import { getProducts } from '../../api/products.api';
+import { useAuthStore } from '../../stores/authStore';
 import type { Store } from '../../types/stores';
 import type { Product } from '../../types/products';
 
@@ -21,9 +22,11 @@ const InventoryFormModal: React.FC<InventoryFormModalProps> = ({
   inventory,
 }) => {
   const isEditing = !!inventory;
+  const user = useAuthStore((s) => s.user);
+  const isStoreScoped = Boolean(user?.storeId && user?.roleCode !== 'OWNER' && user?.roleCode !== 'SYSTEM_ADMIN');
   
   const [formData, setFormData] = useState<CreateInventoryRequest & { status?: InventoryStatus }>({
-    storeId: '',
+    storeId: isStoreScoped ? (user?.storeId || '') : '',
     productId: '',
     quantityOnHand: 0,
     minimumStock: 0,
@@ -75,7 +78,7 @@ const InventoryFormModal: React.FC<InventoryFormModalProps> = ({
       });
     } else {
       setFormData({
-        storeId: '',
+        storeId: isStoreScoped ? (user?.storeId || '') : '',
         productId: '',
         quantityOnHand: 0,
         minimumStock: 0,
@@ -184,11 +187,20 @@ const InventoryFormModal: React.FC<InventoryFormModalProps> = ({
                     <>
                       <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Store *</label>
-                        <select name="storeId" required value={formData.storeId} onChange={handleChange} className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm">
-                          <option value="">Select a store</option>
-                          {stores.map(s => (
-                            <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                          ))}
+                        <select
+                          name="storeId"
+                          required
+                          value={formData.storeId}
+                          onChange={handleChange}
+                          disabled={isStoreScoped}
+                          className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm disabled:opacity-75 disabled:cursor-not-allowed"
+                        >
+                          {!isStoreScoped && <option value="">Select a store</option>}
+                          {stores
+                            .filter(s => !isStoreScoped || s.id === user?.storeId)
+                            .map(s => (
+                              <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                            ))}
                         </select>
                       </div>
                       <div>

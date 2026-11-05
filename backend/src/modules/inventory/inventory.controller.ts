@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   ParseUUIDPipe,
@@ -28,8 +29,15 @@ export class InventoryController {
   @Post()
   async create(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Body() dto: CreateInventoryDto,
   ) {
+    if (userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN') {
+      if (dto.storeId !== userStoreId) {
+        throw new ForbiddenException('You can only create inventory for your assigned store');
+      }
+    }
     return this.inventoryService.create(tenantId, dto);
   }
 
@@ -37,8 +45,14 @@ export class InventoryController {
   @Get()
   async findAll(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Query() query: FindInventoryQueryDto,
   ) {
+    // If user is scoped to a specific store (e.g. store inventory manager), strictly enforce their store
+    if (userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN') {
+      query.storeId = userStoreId;
+    }
     return this.inventoryService.findAll(tenantId, query);
   }
 
@@ -46,9 +60,14 @@ export class InventoryController {
   @Get('export')
   async getExportData(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Query('storeId') storeId?: string,
   ) {
-    return this.inventoryService.getExportData(tenantId, storeId);
+    const effectiveStoreId = (userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN')
+      ? userStoreId
+      : storeId;
+    return this.inventoryService.getExportData(tenantId, effectiveStoreId);
   }
 
   @Permissions('inventory.update')
@@ -56,14 +75,19 @@ export class InventoryController {
   async bulkImport(
     @CurrentUser('tenantId') tenantId: string,
     @CurrentUser('userId') currentUserId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Body() dto: { items: any[]; mode?: 'ADD' | 'SET'; defaultStoreId?: string },
   ) {
+    const effectiveStoreId = (userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN')
+      ? userStoreId
+      : dto.defaultStoreId;
     return this.inventoryService.bulkImport(
       tenantId,
       currentUserId,
       dto.items || [],
       dto.mode || 'ADD',
-      dto.defaultStoreId,
+      effectiveStoreId,
     );
   }
 
@@ -71,18 +95,30 @@ export class InventoryController {
   @Get(':id')
   async findOne(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.inventoryService.findOne(tenantId, id);
+    const item = await this.inventoryService.findOne(tenantId, id);
+    if (userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN' && item.storeId !== userStoreId) {
+      throw new ForbiddenException('You do not have permission to view inventory for another store');
+    }
+    return item;
   }
 
   @Permissions('inventory.update')
   @Patch(':id')
   async update(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateInventoryDto,
   ) {
+    const item = await this.inventoryService.findOne(tenantId, id);
+    if (userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN' && item.storeId !== userStoreId) {
+      throw new ForbiddenException('You do not have permission to modify inventory for another store');
+    }
     return this.inventoryService.update(tenantId, id, dto);
   }
 
@@ -90,8 +126,14 @@ export class InventoryController {
   @Delete(':id')
   async remove(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
+    const item = await this.inventoryService.findOne(tenantId, id);
+    if (userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN' && item.storeId !== userStoreId) {
+      throw new ForbiddenException('You do not have permission to delete inventory for another store');
+    }
     return this.inventoryService.remove(tenantId, id);
   }
 }
