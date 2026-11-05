@@ -1,8 +1,12 @@
 import { ProductStatus } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class FindProductsQueryDto {
+  @IsOptional()
+  @IsUUID('4')
+  storeId?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

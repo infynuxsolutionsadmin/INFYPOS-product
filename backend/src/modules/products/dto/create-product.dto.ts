@@ -111,5 +111,9 @@ export class CreateProductDto {
   @Min(0)
   @Transform(({ value }) => parseInt(value))
   reorderLevel?: number;
+
+  @IsString()
+  @IsOptional()
+  storeId?: string;
 }
 

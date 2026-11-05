@@ -632,6 +632,8 @@ export class AuthService {
         'shifts.zreport',
         'shifts.read',
         'products.read',
+        'products.create',
+        'products.update',
         'inventory.read',
         'inventory.create',
         'inventory.update',

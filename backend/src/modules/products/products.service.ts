@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,7 +15,13 @@ import { UpdateProductDto } from './dto/update-product.dto';
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(tenantId: string, currentUserId: string, dto: CreateProductDto) {
+  async create(
+    tenantId: string,
+    currentUserId: string,
+    dto: CreateProductDto,
+    userStoreId?: string | null,
+    roleCode?: string,
+  ) {
     if (dto.sellingPrice < 0 || dto.costPrice < 0) {
       throw new BadRequestException('Prices cannot be negative');
     }
@@ -78,17 +85,24 @@ export class ProductsService {
       select: this.getSelectFields(),
     });
 
-    // Auto-create inventory for active stores (assigning initial stock to designated/primary store only)
-    const stores = await this.prisma.store.findMany({
-      where: { tenantId, status: 'ACTIVE' },
-      select: { id: true },
-      orderBy: { createdAt: 'asc' },
-    });
+    // Auto-create inventory for active stores
+    // If the user is scoped to a specific store (e.g. Store Manager), strictly assign only to their store
+    const isStoreScoped = Boolean(userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN');
+    const targetStoreId = isStoreScoped ? userStoreId : (dto.storeId || null);
 
-    const targetStoreId = (dto as any).storeId || (stores.length > 0 ? stores[0].id : null);
+    const stores = isStoreScoped && userStoreId
+      ? await this.prisma.store.findMany({
+          where: { tenantId, id: userStoreId, status: 'ACTIVE' },
+          select: { id: true },
+        })
+      : await this.prisma.store.findMany({
+          where: { tenantId, status: 'ACTIVE' },
+          select: { id: true },
+          orderBy: { createdAt: 'asc' },
+        });
 
     for (const store of stores) {
-      const isTargetStore = store.id === targetStoreId;
+      const isTargetStore = targetStoreId ? store.id === targetStoreId : true;
       const initialQty = isTargetStore ? resolvedInitialStock : 0;
 
       const inventory = await this.prisma.inventory.upsert({
@@ -148,6 +162,14 @@ export class ProductsService {
     if (status) {
       where.status = status;
     }
+    if (query.storeId) {
+      where.inventories = {
+        some: {
+          storeId: query.storeId,
+          status: 'ACTIVE',
+        },
+      };
+    }
     if (category) {
       where.category = category;
     }
@@ -191,7 +213,7 @@ export class ProductsService {
     };
   }
 
-  async findOne(tenantId: string, id: string) {
+  async findOne(tenantId: string, id: string, storeId?: string | null) {
     const product = await this.prisma.product.findFirst({
       where: { id, tenantId },
       select: this.getSelectFields(),
@@ -201,16 +223,40 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
+    if (storeId) {
+      const storeInventory = await this.prisma.inventory.findFirst({
+        where: { storeId, productId: id },
+      });
+      if (!storeInventory) {
+        throw new ForbiddenException('Product not found or not assigned to your store');
+      }
+    }
+
     return product;
   }
 
-  async update(tenantId: string, id: string, currentUserId: string, dto: UpdateProductDto) {
+  async update(
+    tenantId: string,
+    id: string,
+    currentUserId: string,
+    dto: UpdateProductDto,
+    storeId?: string | null,
+  ) {
     const product = await this.prisma.product.findFirst({
       where: { id, tenantId },
     });
 
     if (!product) {
       throw new NotFoundException('Product not found');
+    }
+
+    if (storeId) {
+      const storeInventory = await this.prisma.inventory.findFirst({
+        where: { storeId, productId: id },
+      });
+      if (!storeInventory) {
+        throw new ForbiddenException('You do not have permission to modify products from another store');
+      }
     }
 
     const costPrice = dto.costPrice !== undefined ? dto.costPrice : Number(product.costPrice);
@@ -279,13 +325,22 @@ export class ProductsService {
     return this.findOne(tenantId, id);
   }
 
-  async remove(tenantId: string, id: string) {
+  async remove(tenantId: string, id: string, storeId?: string | null) {
     const product = await this.prisma.product.findFirst({
       where: { id, tenantId },
     });
 
     if (!product) {
       throw new NotFoundException('Product not found');
+    }
+
+    if (storeId) {
+      const storeInventory = await this.prisma.inventory.findFirst({
+        where: { storeId, productId: id },
+      });
+      if (!storeInventory) {
+        throw new ForbiddenException('You do not have permission to delete products from another store');
+      }
     }
 
     await this.prisma.$transaction([

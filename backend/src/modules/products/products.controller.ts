@@ -29,31 +29,44 @@ export class ProductsController {
   @Post('bulk-import')
   async bulkImport(
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('userId') currentUserId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Body() dto: { products: any[]; targetStoreId?: string },
   ) {
     if (!dto.products || !Array.isArray(dto.products)) {
       throw new BadRequestException('products array is required');
     }
-    return this.productsService.bulkImport(tenantId, currentUserId, dto.products, dto.targetStoreId);
+    const effectiveStoreId =
+      userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN'
+        ? userStoreId
+        : dto.targetStoreId;
+    return this.productsService.bulkImport(tenantId, currentUserId, dto.products, effectiveStoreId);
   }
 
   @Permissions('products.create')
   @Post()
   async create(
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('userId') currentUserId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Body() dto: CreateProductDto,
   ) {
-    return this.productsService.create(tenantId, currentUserId, dto);
+    return this.productsService.create(tenantId, currentUserId, dto, userStoreId, roleCode);
   }
 
   @Permissions('products.read')
   @Get()
   async findAll(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Query() query: FindProductsQueryDto,
   ) {
+    if (userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN') {
+      query.storeId = userStoreId;
+    }
     return this.productsService.findAll(tenantId, query);
   }
 
@@ -61,20 +74,28 @@ export class ProductsController {
   @Get(':id')
   async findOne(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.productsService.findOne(tenantId, id);
+    const effectiveStoreId =
+      userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN' ? userStoreId : null;
+    return this.productsService.findOne(tenantId, id, effectiveStoreId);
   }
 
   @Permissions('products.update')
   @Patch(':id')
   async update(
     @CurrentUser('tenantId') tenantId: string,
-    @CurrentUser('id') currentUserId: string,
+    @CurrentUser('userId') currentUserId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProductDto,
   ) {
-    return this.productsService.update(tenantId, id, currentUserId, dto);
+    const effectiveStoreId =
+      userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN' ? userStoreId : null;
+    return this.productsService.update(tenantId, id, currentUserId, dto, effectiveStoreId);
   }
 
   @Permissions('products.update')
@@ -105,12 +126,16 @@ export class ProductsController {
   @Delete(':id')
   async remove(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Query('permanent') permanent?: string,
   ) {
     if (permanent === 'true') {
       return this.productsService.permanentDelete(tenantId, id);
     }
-    return this.productsService.remove(tenantId, id);
+    const effectiveStoreId =
+      userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN' ? userStoreId : null;
+    return this.productsService.remove(tenantId, id, effectiveStoreId);
   }
 }
