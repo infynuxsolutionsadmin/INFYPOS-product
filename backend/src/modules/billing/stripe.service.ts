@@ -162,10 +162,22 @@ export class StripeService {
       `${baseUrl}/settings?billing=cancel`;
 
     if (!this.stripe) {
-      // Return simulated checkout session for dev / testing before live credentials
+      // In dev / stub mode: immediately apply the plan upgrade and unfreeze eligible stores
+      await this.prisma.tenant.update({
+        where: { id: tenant.id },
+        data: {
+          subscriptionPlan: dto.plan,
+          subscriptionStatus: 'active',
+          billingCycle: dto.billingCycle,
+        },
+      });
+
+      // Automatically unfreeze frozen stores that fit within the new plan limit
+      await this.autoUnfreezeStores(tenant.id, dto.plan);
+
       const mockSessionId = `cs_test_mock_${Date.now()}`;
       this.logger.log(
-        `[Stub Checkout] Simulated checkout session created for tenant ${tenant.code}: ${mockSessionId}`,
+        `[Stub Checkout] Applied immediate upgrade to plan ${dto.plan} for tenant ${tenant.code}: ${mockSessionId}`,
       );
       return {
         url: `${successUrl.replace('{CHECKOUT_SESSION_ID}', mockSessionId)}`,
@@ -513,7 +525,56 @@ export class StripeService {
       },
     });
 
+    // Automatically unfreeze eligible stores on upgrade
+    await this.autoUnfreezeStores(tenantId, plan);
+
     this.logger.log(`✅ Tenant ${tenantId} activated with ${plan} subscription (${billingCycle})`);
+  }
+
+  /**
+   * Automatically unfreezes stores when upgrading to a plan that allows more stores
+   */
+  async autoUnfreezeStores(tenantId: string, planCode: string) {
+    try {
+      const planTier = this.prisma?.subscriptionPlanTier?.findUnique
+        ? await this.prisma.subscriptionPlanTier.findUnique({
+            where: { code: planCode },
+          })
+        : null;
+
+      const maxStores = planTier?.maxStores ?? (planCode === 'STARTER' ? 1 : 5);
+
+      if (maxStores === -1 || maxStores > 1) {
+        const activeCount = await this.prisma.store.count({
+          where: { tenantId, status: StoreStatus.ACTIVE },
+        });
+
+        const slotsAvailable = maxStores === -1 ? 9999 : maxStores - activeCount;
+
+        if (slotsAvailable > 0) {
+          const frozenStores = await this.prisma.store.findMany({
+            where: { tenantId, status: StoreStatus.FROZEN },
+            orderBy: { createdAt: 'asc' },
+            take: slotsAvailable,
+          });
+
+          for (const fStore of frozenStores) {
+            await this.prisma.store.update({
+              where: { id: fStore.id },
+              data: {
+                status: StoreStatus.ACTIVE,
+                frozenAt: null,
+              },
+            });
+            this.logger.log(
+              `❄️ Automatically unfroze store ${fStore.name} (${fStore.code}) after upgrade to ${planCode}`,
+            );
+          }
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Failed auto-unfreezing stores: ${err.message}`);
+    }
   }
 
   private async handleSubscriptionUpdated(subscription: any) {

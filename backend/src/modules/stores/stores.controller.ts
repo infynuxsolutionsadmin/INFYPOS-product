@@ -61,6 +61,15 @@ export class StoresController {
     return this.storesService.update(tenantId, id, dto);
   }
 
+  @Permissions('stores.update')
+  @Post(':id/unfreeze')
+  async unfreeze(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.storesService.unfreeze(tenantId, id);
+  }
+
   @Permissions('stores.read')
   @Get(':id/export')
   async exportStore(

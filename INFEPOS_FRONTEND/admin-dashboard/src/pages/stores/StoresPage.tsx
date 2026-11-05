@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit2, Trash2, Search, Store as StoreIcon, X, Download, Loader2 } from 'lucide-react';
 import type { Store, FindStoresQuery, StoreStatus } from '../../types/stores';
-import { getStores, exportStoreData } from '../../api/stores.api';
+import { getStores, exportStoreData, unfreezeStore } from '../../api/stores.api';
 import { useAuthStore } from '../../stores/authStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import StoreFormModal from '../../components/stores/StoreFormModal';
@@ -64,9 +64,29 @@ const StoresPage: React.FC = () => {
     }
   }, [query, canRead]);
 
+  const [unfreezingStoreId, setUnfreezingStoreId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchStores();
   }, [fetchStores]);
+
+  useEffect(() => {
+    const handlePlanChanged = () => fetchStores();
+    window.addEventListener('infypos:plan-changed', handlePlanChanged);
+    return () => window.removeEventListener('infypos:plan-changed', handlePlanChanged);
+  }, [fetchStores]);
+
+  const handleUnfreezeStore = async (store: Store) => {
+    try {
+      setUnfreezingStoreId(store.id);
+      await unfreezeStore(store.id);
+      await fetchStores();
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to unfreeze store');
+    } finally {
+      setUnfreezingStoreId(null);
+    }
+  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(e.target.value);
@@ -232,13 +252,26 @@ const StoresPage: React.FC = () => {
                       {store.timezone || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap bg-white border-y border-gray-100 first:border-l first:rounded-l-[24px] last:border-r last:rounded-r-[24px] shadow-[0_2px_10px_rgba(0,0,0,0.02)] group-hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-shadow">
-                      <span className={`px-3 py-1 inline-flex text-xs font-bold rounded-full ${
-                        store.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 
-                        store.status === 'FROZEN' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                        store.status === 'INACTIVE' ? 'bg-gray-100 text-gray-600' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {store.status === 'FROZEN' ? '❄️ FROZEN (30d Grace)' : store.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1 inline-flex text-xs font-bold rounded-full ${
+                          store.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 
+                          store.status === 'FROZEN' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                          store.status === 'INACTIVE' ? 'bg-gray-100 text-gray-600' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {store.status === 'FROZEN' ? '❄️ FROZEN (30d Grace)' : store.status}
+                        </span>
+
+                        {store.status === 'FROZEN' && (
+                          <button
+                            onClick={() => handleUnfreezeStore(store)}
+                            disabled={unfreezingStoreId === store.id}
+                            className="px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-full transition-colors cursor-pointer disabled:opacity-50"
+                            title="Unfreeze Store (if current plan has store capacity)"
+                          >
+                            {unfreezingStoreId === store.id ? 'Unfreezing...' : 'Unfreeze Store'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium bg-white border-y border-r border-gray-100 last:rounded-r-[24px] shadow-[0_2px_10px_rgba(0,0,0,0.02)] group-hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-shadow">
                       <div className="flex items-center justify-end space-x-2 pr-2">

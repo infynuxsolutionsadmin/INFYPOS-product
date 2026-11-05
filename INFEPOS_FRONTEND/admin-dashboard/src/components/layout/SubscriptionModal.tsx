@@ -180,7 +180,14 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         cancelUrl: window.location.href,
       });
       if (res?.url) {
-        window.location.href = res.url;
+        if (res.url.startsWith('https://checkout.stripe.com')) {
+          window.location.href = res.url;
+        } else {
+          // Dev simulated checkout: immediately refresh data & show success
+          await loadData();
+          setDowngradeSuccessMsg(`🎉 Plan switched to ${plan.name}! Eligible stores have been automatically unfrozen.`);
+          window.dispatchEvent(new CustomEvent('infypos:plan-changed'));
+        }
       }
     } catch (err: any) {
       alert(err.response?.data?.message || err.message || 'Failed to initiate plan checkout');
@@ -211,6 +218,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
       );
       setDowngradePlan(null);
       await loadData();
+      window.dispatchEvent(new CustomEvent('infypos:plan-changed'));
     } catch (err: any) {
       alert(err.response?.data?.message || err.message || 'Failed to process store freeze selection');
     } finally {
@@ -416,7 +424,11 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     </div>
 
                     <h3 className="text-2xl font-black tracking-tight text-white">
-                      {billing?.pricing?.name || 'Professional'} Retail Plan
+                      {billing?.pricing?.name
+                        ? billing.pricing.name.toLowerCase().includes('plan')
+                          ? billing.pricing.name
+                          : `${billing.pricing.name} Plan`
+                        : 'Professional Retail Plan'}
                     </h3>
                     <p className="text-xs text-indigo-200/80 mt-1">
                       Billed {billing?.billingCycle || 'MONTHLY'} • £

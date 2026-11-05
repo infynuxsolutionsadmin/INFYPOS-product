@@ -149,9 +149,40 @@ export class StoresService {
       }
     }
 
+    if (dto.status === StoreStatus.ACTIVE && store.status !== StoreStatus.ACTIVE) {
+      await this.assertStoreLimitNotExceeded(tenantId);
+      (dto as any).frozenAt = null;
+    }
+
     await this.prisma.store.update({
       where: { id },
       data: dto,
+    });
+
+    return this.findOne(tenantId, id);
+  }
+
+  async unfreeze(tenantId: string, id: string) {
+    const store = await this.prisma.store.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!store) {
+      throw new NotFoundException('Store not found');
+    }
+
+    if (store.status !== StoreStatus.FROZEN) {
+      return this.findOne(tenantId, id);
+    }
+
+    await this.assertStoreLimitNotExceeded(tenantId);
+
+    await this.prisma.store.update({
+      where: { id },
+      data: {
+        status: StoreStatus.ACTIVE,
+        frozenAt: null,
+      },
     });
 
     return this.findOne(tenantId, id);

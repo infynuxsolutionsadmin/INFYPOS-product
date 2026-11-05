@@ -37,6 +37,11 @@ export const deleteStore = async (id: string): Promise<Store> => {
   return response.data.data;
 };
 
+export const unfreezeStore = async (id: string): Promise<Store> => {
+  const response = await client.post<BackendResponse<Store>>(`/stores/${id}/unfreeze`);
+  return response.data?.data || response.data;
+};
+
 export const exportStoreData = async (id: string): Promise<any> => {
   const response = await client.get<BackendResponse<any>>(`/stores/${id}/export`);
   return response.data?.data || response.data;
