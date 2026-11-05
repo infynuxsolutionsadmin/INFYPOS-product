@@ -130,6 +130,7 @@ export class SyncService {
 
       try {
         let processedPayload = null;
+        const eventUserId = event.payload?.cashierId || event.payload?.userId || userId;
 
         // 2. Route event to appropriate service
         if (event.eventType === 'SALE') {
@@ -137,13 +138,13 @@ export class SyncService {
             ...event.payload,
             idempotencyKey: event.payload?.idempotencyKey || event.eventId,
           };
-          processedPayload = await this.salesService.create(tenantId, userId, salePayload, true);
+          processedPayload = await this.salesService.create(tenantId, eventUserId, salePayload, true);
         } else if (event.eventType === 'SALE_RETURN') {
-          processedPayload = await this.salesReturnsService.create(tenantId, userId, event.payload, true);
+          processedPayload = await this.salesReturnsService.create(tenantId, eventUserId, event.payload, true);
         } else if (event.eventType === 'SHIFT_OPEN') {
-          processedPayload = await this.shiftsService.openShift(tenantId, storeId, userId, event.payload);
+          processedPayload = await this.shiftsService.openShift(tenantId, storeId, eventUserId, event.payload);
         } else if (event.eventType === 'SHIFT_CLOSE') {
-          processedPayload = await this.shiftsService.closeShift(tenantId, storeId, userId, event.payload.shiftId, event.payload);
+          processedPayload = await this.shiftsService.closeShift(tenantId, storeId, eventUserId, event.payload.shiftId, event.payload);
         } else {
           throw new Error(`Unsupported event type: ${event.eventType}`);
         }

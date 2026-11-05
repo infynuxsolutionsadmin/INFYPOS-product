@@ -27,7 +27,7 @@ export const useAuthStore = create<POSAuthState>()(
       _hasHydrated: false,
       setHasHydrated: (v) => set({ _hasHydrated: v }),
       isAuthenticated: false,
-      isPaired: !!localStorage.getItem('pos_access_token'),
+      isPaired: !!localStorage.getItem('pos_access_token') || !!localStorage.getItem('pos_device_token'),
       pairedTenantId: null,
       pairedTenantCode: null,
       pairedStoreId: null,
@@ -36,6 +36,8 @@ export const useAuthStore = create<POSAuthState>()(
       permissions: [],
 
       setPaired: (tenantId, storeId, accessToken, refreshToken, tenantCode, storeName) => {
+        localStorage.setItem('pos_device_token', accessToken);
+        localStorage.setItem('pos_device_refresh_token', refreshToken);
         localStorage.setItem('pos_access_token', accessToken);
         localStorage.setItem('pos_refresh_token', refreshToken);
         set({
@@ -48,6 +50,8 @@ export const useAuthStore = create<POSAuthState>()(
       },
 
       reauthorizeDevice: (accessToken, refreshToken) => {
+        localStorage.setItem('pos_device_token', accessToken);
+        localStorage.setItem('pos_device_refresh_token', refreshToken);
         localStorage.setItem('pos_access_token', accessToken);
         localStorage.setItem('pos_refresh_token', refreshToken);
         set({ isPaired: true });
@@ -65,13 +69,23 @@ export const useAuthStore = create<POSAuthState>()(
       },
 
       clearAuth: () => {
-        // Just clock out the cashier, keep device paired
+        // Just clock out the cashier, restore device manager token, keep device paired
+        const deviceToken = localStorage.getItem('pos_device_token');
+        const deviceRefresh = localStorage.getItem('pos_device_refresh_token');
+        if (deviceToken) {
+          localStorage.setItem('pos_access_token', deviceToken);
+        }
+        if (deviceRefresh) {
+          localStorage.setItem('pos_refresh_token', deviceRefresh);
+        }
         set({ isAuthenticated: false, user: null, permissions: [] });
       },
 
       unpairDevice: () => {
         localStorage.removeItem('pos_access_token');
         localStorage.removeItem('pos_refresh_token');
+        localStorage.removeItem('pos_device_token');
+        localStorage.removeItem('pos_device_refresh_token');
         localStorage.removeItem('pos-auth-storage');
         set({
           isPaired: false,

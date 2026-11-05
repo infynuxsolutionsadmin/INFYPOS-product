@@ -61,17 +61,37 @@ export const refreshAccessToken = async (refreshToken: string): Promise<string> 
 };
 
 export interface VerifyPinResponse {
+  accessToken: string;
+  refreshToken: string;
+  permissions: string[];
   user: {
     id: string;
-    firstName: string;
-    lastName: string | null;
-    email: string;
+    tenantId: string;
+    tenantCode?: string;
     roleId: string;
     roleCode: string;
     storeId: string;
-    tenantId: string;
+    storeName?: string;
+    email: string;
+    firstName: string;
+    lastName: string | null;
   };
 }
+
+export type CashierLoginResponse = VerifyPinResponse;
+
+export const cashierLogin = async (data: {
+  storeId?: string;
+  cashierId?: string;
+  userId?: string;
+  pin: string;
+}): Promise<CashierLoginResponse> => {
+  const response = await client.post<{ success: boolean; data: CashierLoginResponse }>(
+    '/auth/cashier-login',
+    data,
+  );
+  return response.data.data;
+};
 
 export const verifyPin = async (userId: string, pin: string): Promise<VerifyPinResponse> => {
   const response = await client.post<{ success: boolean; data: VerifyPinResponse }>('/auth/verify-pin', {

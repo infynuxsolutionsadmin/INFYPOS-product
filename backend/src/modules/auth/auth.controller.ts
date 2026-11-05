@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterTenantDto } from './dto/register-tenant.dto';
+import { CashierPinLoginDto } from './dto/cashier-pin-login.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -18,6 +19,16 @@ export class AuthController {
   @Post('login')
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('cashier-login')
+  async cashierLogin(@Body() dto: CashierPinLoginDto) {
+    return this.authService.cashierLogin(dto);
+  }
+
+  @Post('verify-pin')
+  async verifyPin(@Body() dto: CashierPinLoginDto) {
+    return this.authService.cashierLogin(dto);
   }
 
   @Post('refresh')

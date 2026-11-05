@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -11,6 +12,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterTenantDto } from './dto/register-tenant.dto';
+import { CashierPinLoginDto } from './dto/cashier-pin-login.dto';
 import { PasswordService } from './services/password.service';
 
 import * as crypto from 'crypto';
@@ -198,6 +200,105 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+      },
+    };
+  }
+
+  async cashierLogin(dto: CashierPinLoginDto) {
+    const targetUserId = dto.cashierId || dto.userId;
+    if (!targetUserId) {
+      throw new BadRequestException('Cashier ID or User ID is required');
+    }
+
+    const cashier = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      include: {
+        role: true,
+        store: true,
+        tenant: true,
+      },
+    });
+
+    if (!cashier) {
+      throw new UnauthorizedException('Cashier not found');
+    }
+
+    if (dto.storeId && cashier.storeId && cashier.storeId !== dto.storeId) {
+      throw new UnauthorizedException('Cashier does not belong to this store');
+    }
+
+    if (cashier.status === UserStatus.INACTIVE || cashier.status === UserStatus.LOCKED) {
+      throw new ForbiddenException(`Account is ${cashier.status.toLowerCase()}`);
+    }
+
+    const pinHash = cashier.pinCodeHash || cashier.passwordHash;
+    if (!pinHash) {
+      throw new UnauthorizedException('No PIN configured for this cashier');
+    }
+
+    const isPinValid = await this.passwordService.compare(dto.pin, pinHash);
+    if (!isPinValid) {
+      throw new UnauthorizedException('Invalid PIN code');
+    }
+
+    const effectiveStoreId = cashier.storeId || dto.storeId || null;
+    const effectiveStoreName = cashier.store?.name || null;
+
+    const payload = {
+      userId: cashier.id,
+      tenantId: cashier.tenantId,
+      roleId: cashier.roleId,
+      roleCode: cashier.role.code,
+      storeId: effectiveStoreId,
+      email: cashier.email || `${cashier.firstName.toLowerCase()}@store.pos`,
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get<string>('jwt.secret'),
+      expiresIn: this.configService.get<string>('jwt.expiresIn') as any,
+    });
+
+    const refreshExpiresInStr = this.configService.get<string>('jwt.refreshExpiresIn') || '7d';
+
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get<string>('jwt.refreshSecret'),
+      expiresIn: refreshExpiresInStr as any,
+    });
+
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const expiresAt = this.calculateExpirationDate(refreshExpiresInStr);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        userId: cashier.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    const permissions = await this.getRolePermissions(cashier.role.code, cashier.tenantId);
+
+    await this.prisma.user.update({
+      where: { id: cashier.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      permissions,
+      user: {
+        id: cashier.id,
+        tenantId: cashier.tenantId,
+        tenantCode: cashier.tenant?.code,
+        roleId: cashier.roleId,
+        roleCode: cashier.role.code,
+        storeId: effectiveStoreId,
+        storeName: effectiveStoreName,
+        storeCode: cashier.store?.code || null,
+        email: cashier.email || `${cashier.firstName.toLowerCase()}@store.pos`,
+        firstName: cashier.firstName,
+        lastName: cashier.lastName,
       },
     };
   }

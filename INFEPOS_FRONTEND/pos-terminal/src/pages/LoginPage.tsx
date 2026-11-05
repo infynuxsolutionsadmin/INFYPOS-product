@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut, RotateCw, KeyRound, ShieldCheck, CheckCircle2, X } from 'lucide-react';
-import { login, verifyPin, refreshAccessToken } from '../api/auth.api';
+import { login, cashierLogin } from '../api/auth.api';
 import { compareSync, hashSync } from 'bcrypt-ts';
 import { useAuthStore } from '../stores/authStore';
 import { useShiftStore } from '../stores/shiftStore';
@@ -243,108 +243,142 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    if (!selectedCashier.pinCodeHash) {
-      setError('No PIN configured for this cashier. Please configure a 4-digit PIN in the Admin Dashboard.');
-      setPin('');
-      setLoading(false);
-      return;
-    }
-    
-    // Check PIN against cached hash; if mismatch, attempt live re-fetch in case PIN was recently reset
-    setTimeout(async () => {
-      try {
-        let isValid = compareSync(pin, selectedCashier.pinCodeHash || '');
+    try {
+      let loginSuccess = false;
+      let authenticatedUser: any = null;
+      let authenticatedTokens: { accessToken?: string; refreshToken?: string } = {};
+      let userPermissions: string[] = [];
 
-        if (!isValid) {
-          try {
-            const res = await verifyPin(selectedCashier.id, pin);
-            if (res?.user) {
+      // 1. Attempt Online Cashier PIN Login (Issues a real Cashier JWT carrying Cashier identity and Cashier RBAC)
+      try {
+        const res = await cashierLogin({
+          storeId: pairedStoreId || undefined,
+          cashierId: selectedCashier.id,
+          pin,
+        });
+        if (res && res.accessToken) {
+          loginSuccess = true;
+          authenticatedUser = res.user;
+          authenticatedTokens = {
+            accessToken: res.accessToken,
+            refreshToken: res.refreshToken,
+          };
+          userPermissions = res.permissions || [
+            'sales.create',
+            'sales.read',
+            'salesReturns.create',
+            'salesReturns.read',
+            'shifts.open',
+            'shifts.close',
+          ];
+        }
+      } catch (onlineErr: any) {
+        // If server responded with a definitive auth rejection (invalid PIN, inactive account), do not mask as offline
+        if (onlineErr.response && (onlineErr.response.status === 401 || onlineErr.response.status === 403)) {
+          let localValid = false;
+          if (selectedCashier.pinCodeHash && compareSync(pin, selectedCashier.pinCodeHash)) {
+            localValid = true;
+          }
+          if (!localValid) {
+            const msg = onlineErr.response.data?.message || 'Invalid PIN code';
+            const currentAttempts = (failedAttempts[cashierId] || 0) + 1;
+            setFailedAttempts((prev) => ({ ...prev, [cashierId]: currentAttempts }));
+            if (currentAttempts >= 5) {
+              const lockoutUntil = Date.now() + 60000;
+              setLockoutMap((prev) => ({ ...prev, [cashierId]: lockoutUntil }));
+              setLockoutRemaining(60);
+              setError('Too many failed attempts. Cashier terminal locked for 60 seconds.');
+            } else {
+              setError(`${Array.isArray(msg) ? msg.join(', ') : msg} (${5 - currentAttempts} attempt(s) remaining)`);
+            }
+            setPin('');
+            setLoading(false);
+            return;
+          }
+        }
+
+        // 2. Offline Fallback: If network failed or server unreachable, authenticate against local SQLite hash
+        if (!loginSuccess) {
+          let isValid = false;
+          if (selectedCashier.pinCodeHash && compareSync(pin, selectedCashier.pinCodeHash)) {
+            isValid = true;
+          } else {
+            // Check local DB fresh
+            const localCashiers = await getLocalCashiers();
+            const localC = (localCashiers || []).find((c: any) => c.id === selectedCashier.id);
+            if (localC?.pinCodeHash && compareSync(pin, localC.pinCodeHash)) {
               isValid = true;
             }
-          } catch {
-            // fallback
-          }
-        }
-
-        if (!isValid && pairedStoreId) {
-          try {
-            const res = await client.get(`/users/cashiers/${pairedStoreId}`);
-            const freshList = res.data?.data || res.data || [];
-            if (Array.isArray(freshList)) {
-              const freshCashier = freshList.find((c: any) => c.id === selectedCashier.id);
-              if (freshCashier?.pinCodeHash && compareSync(pin, freshCashier.pinCodeHash)) {
-                isValid = true;
-                selectedCashier.pinCodeHash = freshCashier.pinCodeHash;
-                await syncCashiersToLocalDb(freshList);
-                setCashiers(freshList);
-              }
-            }
-          } catch (syncErr) {
-            console.warn('Live PIN re-verification attempt failed', syncErr);
-          }
-        }
-        
-        if (isValid) {
-          // Success! Clear lockout records
-          setFailedAttempts((prev) => ({ ...prev, [cashierId]: 0 }));
-          setLockoutMap((prev) => {
-            const copy = { ...prev };
-            delete copy[cashierId];
-            return copy;
-          });
-          setLockoutRemaining(0);
-
-          const currentShift = useShiftStore.getState().currentShift;
-          if (currentShift && currentShift.storeId !== pairedStoreId) {
-            useShiftStore.getState().clearShift();
           }
 
-          // Silently refresh the access token so the cashier session starts
-          // with a fresh, valid token regardless of how long the device has been
-          // idle or whether the backend was restarted since the last pairing.
-          try {
-            const storedRefresh = localStorage.getItem('pos_refresh_token');
-            if (storedRefresh) {
-              await refreshAccessToken(storedRefresh);
-            }
-          } catch {
-            // Best-effort: if refresh fails here (e.g. offline / expired),
-            // the axios interceptor will retry on the first real API call.
-            // Do not block the cashier from proceeding.
-          }
-
-          setAuth({
-            id: selectedCashier.id,
-            firstName: selectedCashier.firstName,
-            lastName: selectedCashier.lastName,
-            email: selectedCashier.email || 'cashier@store.com',
-            roleId: selectedCashier.roleId || 'cashier-role',
-            storeId: pairedStoreId,
-            tenantId: pairedTenantId || 'tenant-id'
-          }, ['sales.create']);
-          
-          navigate('/open-shift', { replace: true });
-        } else {
-          const currentAttempts = (failedAttempts[cashierId] || 0) + 1;
-          setFailedAttempts((prev) => ({ ...prev, [cashierId]: currentAttempts }));
-          if (currentAttempts >= 5) {
-            const lockoutUntil = Date.now() + 60000;
-            setLockoutMap((prev) => ({ ...prev, [cashierId]: lockoutUntil }));
-            setLockoutRemaining(60);
-            setError('Too many failed attempts. Cashier terminal locked for 60 seconds.');
+          if (isValid) {
+            loginSuccess = true;
+            authenticatedUser = {
+              id: selectedCashier.id,
+              firstName: selectedCashier.firstName,
+              lastName: selectedCashier.lastName,
+              email: selectedCashier.email || 'cashier@store.pos',
+              roleId: selectedCashier.roleId || 'cashier-role',
+              storeId: pairedStoreId,
+              tenantId: pairedTenantId || 'tenant-id',
+            };
+            userPermissions = [
+              'sales.create',
+              'sales.read',
+              'salesReturns.create',
+              'salesReturns.read',
+              'shifts.open',
+              'shifts.close',
+            ];
           } else {
-            setError(`Invalid PIN code (${5 - currentAttempts} attempt(s) remaining)`);
+            const currentAttempts = (failedAttempts[cashierId] || 0) + 1;
+            setFailedAttempts((prev) => ({ ...prev, [cashierId]: currentAttempts }));
+            if (currentAttempts >= 5) {
+              const lockoutUntil = Date.now() + 60000;
+              setLockoutMap((prev) => ({ ...prev, [cashierId]: lockoutUntil }));
+              setLockoutRemaining(60);
+              setError('Too many failed attempts. Cashier terminal locked for 60 seconds.');
+            } else {
+              setError(`Invalid PIN code (${5 - currentAttempts} attempt(s) remaining)`);
+            }
+            setPin('');
+            setLoading(false);
+            return;
           }
-          setPin('');
         }
-      } catch (err: any) {
-        const msg = err.response?.data?.message || err.message || 'Authentication error occurred';
-        setError(Array.isArray(msg) ? msg.join(', ') : msg);
-        setPin('');
-      } finally {
-        setLoading(false);
       }
-    }, 300);
+
+      if (loginSuccess && authenticatedUser) {
+        // Success! Clear lockout records
+        setFailedAttempts((prev) => ({ ...prev, [cashierId]: 0 }));
+        setLockoutMap((prev) => {
+          const copy = { ...prev };
+          delete copy[cashierId];
+          return copy;
+        });
+        setLockoutRemaining(0);
+
+        const currentShift = useShiftStore.getState().currentShift;
+        if (currentShift && currentShift.storeId !== pairedStoreId) {
+          useShiftStore.getState().clearShift();
+        }
+
+        setAuth(
+          authenticatedUser,
+          userPermissions,
+          authenticatedTokens.accessToken,
+          authenticatedTokens.refreshToken,
+        );
+
+        navigate('/open-shift', { replace: true });
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Authentication error occurred';
+      setError(Array.isArray(msg) ? msg.join(', ') : msg);
+      setPin('');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOfflinePinReset = async (e: React.FormEvent) => {
