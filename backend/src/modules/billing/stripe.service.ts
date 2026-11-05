@@ -395,12 +395,15 @@ export class StripeService {
    * Downgrade active stores selection (freezes unselected stores)
    */
   async selectActiveStores(tenantId: string, targetPlan: string, activeStoreIds: string[]) {
-    const planTier = await this.prisma.subscriptionPlanTier.findUnique({
-      where: { code: targetPlan },
-    });
-    const maxStores = planTier?.maxStores ?? (targetPlan === 'STARTER' ? 1 : 5);
+    const planTier = this.prisma?.subscriptionPlanTier?.findUnique
+      ? await this.prisma.subscriptionPlanTier.findUnique({
+          where: { code: targetPlan },
+        })
+      : null;
+    const maxStores =
+      planTier?.maxStores ?? (targetPlan === 'STARTER' ? 1 : targetPlan === 'PRO' ? 5 : 9999);
 
-    if (maxStores !== -1 && activeStoreIds.length > maxStores) {
+    if (maxStores !== -1 && maxStores < 999 && activeStoreIds.length > maxStores) {
       throw new BadRequestException(
         `Selected active stores (${activeStoreIds.length}) exceed the limit of ${maxStores} for the ${planTier?.name || targetPlan} plan.`,
       );
@@ -542,14 +545,16 @@ export class StripeService {
           })
         : null;
 
-      const maxStores = planTier?.maxStores ?? (planCode === 'STARTER' ? 1 : 5);
+      const maxStores =
+        planTier?.maxStores ?? (planCode === 'STARTER' ? 1 : planCode === 'PRO' ? 5 : 9999);
 
       if (maxStores === -1 || maxStores > 1) {
         const activeCount = await this.prisma.store.count({
           where: { tenantId, status: StoreStatus.ACTIVE },
         });
 
-        const slotsAvailable = maxStores === -1 ? 9999 : maxStores - activeCount;
+        const slotsAvailable =
+          maxStores === -1 || maxStores >= 999 ? 9999 : Math.max(0, maxStores - activeCount);
 
         if (slotsAvailable > 0) {
           const frozenStores = await this.prisma.store.findMany({

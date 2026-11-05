@@ -30,6 +30,13 @@ interface SubscriptionModalProps {
   onClose: () => void;
 }
 
+const PLAN_TIER_RANK: Record<string, number> = {
+  FREE_TRIAL: 0,
+  STARTER: 1,
+  PRO: 2,
+  ENTERPRISE: 3,
+};
+
 const FALLBACK_PLANS: SubscriptionPlanTier[] = [
   {
     id: 'STARTER',
@@ -156,21 +163,39 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   };
 
   const activeStores = stores.filter((s) => s.status === 'ACTIVE');
+  const currentPlanCode = billing?.subscriptionPlan || 'STARTER';
 
   const handleInitiateSwitchPlan = async (plan: SubscriptionPlanTier) => {
-    const maxStores = plan.maxStores ?? (plan.code === 'STARTER' ? 1 : 5);
+    const currentRank = PLAN_TIER_RANK[currentPlanCode] ?? 1;
+    const targetRank = PLAN_TIER_RANK[plan.code] ?? 1;
+    const isDowngrade = targetRank < currentRank;
 
-    // If downgrading to a plan where active stores exceed the limit, open the store freeze dialog
-    if (maxStores !== -1 && activeStores.length > maxStores) {
+    const maxStores =
+      plan.maxStores === -1 || plan.maxStores >= 999
+        ? Infinity
+        : (plan.maxStores ?? (plan.code === 'STARTER' ? 1 : plan.code === 'PRO' ? 5 : Infinity));
+
+    // If switching to higher plan or lateral, ALWAYS clear any pending downgrade dialog immediately
+    if (!isDowngrade) {
+      setDowngradePlan(null);
+    }
+
+    // Only if this is an actual DOWNGRADE and active stores strictly exceed the new plan limit:
+    if (isDowngrade && maxStores !== Infinity && activeStores.length > maxStores) {
       setDowngradePlan(plan);
-      // Pre-select default store or the first maxStores stores
+      // Pre-select default store or first active stores up to maxStores limit
       const defaultStore = activeStores.find((s) => s.isDefault);
-      const initialSelection = defaultStore ? [defaultStore.id] : [activeStores[0]?.id].filter(Boolean);
-      setSelectedActiveStoreIds(initialSelection);
+      const initialSelection = defaultStore
+        ? [defaultStore.id]
+        : activeStores.slice(0, maxStores).map((s) => s.id);
+      setSelectedActiveStoreIds(initialSelection.length > 0 ? initialSelection : [stores[0]?.id].filter(Boolean));
       return;
     }
 
-    // Normal switch / upgrade flow
+    // If downgrading but active stores fit comfortably within limits (e.g. Enterprise to Pro with 2 stores):
+    setDowngradePlan(null);
+
+    // Normal switch / upgrade / downgrade-without-freeze flow
     try {
       setCheckoutLoading(plan.code);
       const res = await createCheckoutSession({
@@ -185,12 +210,16 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         } else {
           // Dev simulated checkout: immediately refresh data & show success
           await loadData();
-          setDowngradeSuccessMsg(`🎉 Plan switched to ${plan.name}! Eligible stores have been automatically unfrozen.`);
+          setDowngradeSuccessMsg(
+            targetRank > currentRank
+              ? `🎉 Upgraded to ${plan.name}! Eligible stores have been automatically unfrozen.`
+              : `✅ Successfully switched to ${plan.name}!`
+          );
           window.dispatchEvent(new CustomEvent('infypos:plan-changed'));
         }
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || err.message || 'Failed to initiate plan checkout');
+      alert(err.response?.data?.message || err.message || 'Failed to switch plan');
     } finally {
       setCheckoutLoading(null);
     }
@@ -198,7 +227,10 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
   const handleConfirmStoreSelectionAndDowngrade = async () => {
     if (!downgradePlan) return;
-    const maxAllowed = downgradePlan.maxStores ?? 1;
+    const maxAllowed =
+      downgradePlan.maxStores === -1 || downgradePlan.maxStores >= 999
+        ? stores.length
+        : (downgradePlan.maxStores ?? 1);
 
     if (selectedActiveStoreIds.length === 0) {
       alert('Please select at least 1 store to keep active.');
@@ -214,7 +246,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
       setIsDowngrading(true);
       const res = await selectActiveStores(downgradePlan.code, selectedActiveStoreIds);
       setDowngradeSuccessMsg(
-        `Plan switched to ${downgradePlan.name}! ${res.activeCount} store is active. ${res.frozenCount} store(s) are frozen for 30 days.`
+        `✅ Plan switched to ${downgradePlan.name}! ${res.activeCount} store is active. ${res.frozenCount} store(s) are frozen for 30 days.`
       );
       setDowngradePlan(null);
       await loadData();
@@ -227,7 +259,11 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   };
 
   const toggleStoreSelection = (storeId: string) => {
-    const maxAllowed = downgradePlan?.maxStores ?? 1;
+    const maxAllowed =
+      !downgradePlan || downgradePlan.maxStores === -1 || downgradePlan.maxStores >= 999
+        ? stores.length
+        : (downgradePlan.maxStores ?? 1);
+
     if (selectedActiveStoreIds.includes(storeId)) {
       if (selectedActiveStoreIds.length === 1) {
         alert('You must keep at least 1 store active.');
@@ -237,7 +273,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     } else {
       if (selectedActiveStoreIds.length >= maxAllowed) {
         if (maxAllowed === 1) {
-          // Replace selection for single store plans
+          // Replace selection for single store plans with 1 click
           setSelectedActiveStoreIds([storeId]);
         } else {
           alert(`You can only select up to ${maxAllowed} active stores on this plan.`);
@@ -247,8 +283,6 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
       }
     }
   };
-
-  const currentPlanCode = billing?.subscriptionPlan || 'STARTER';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-900/60 backdrop-blur-sm animate-fade-in">
@@ -327,7 +361,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
                   {/* Store Selection Cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    {activeStores.map((st) => {
+                    {stores.map((st) => {
                       const isSelected = selectedActiveStoreIds.includes(st.id);
                       return (
                         <div
@@ -532,6 +566,16 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     const isCurrent = currentPlanCode === plan.code;
                     const price = billingCycle === 'ANNUAL' ? plan.annualPriceGbp : plan.monthlyPriceGbp;
 
+                    const currentRank = PLAN_TIER_RANK[currentPlanCode] ?? 1;
+                    const targetRank = PLAN_TIER_RANK[plan.code] ?? 1;
+                    const isUpgrade = targetRank > currentRank;
+                    const isDowngrade = targetRank < currentRank;
+                    const planMaxStores =
+                      plan.maxStores === -1 || plan.maxStores >= 999
+                        ? Infinity
+                        : (plan.maxStores ?? (plan.code === 'STARTER' ? 1 : plan.code === 'PRO' ? 5 : Infinity));
+                    const willNeedFreeze = isDowngrade && planMaxStores !== Infinity && activeStores.length > planMaxStores;
+
                     return (
                       <div
                         key={plan.code}
@@ -593,13 +637,25 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                             <button
                               onClick={() => handleInitiateSwitchPlan(plan)}
                               disabled={checkoutLoading !== null}
-                              className="w-full py-2 px-3 rounded-xl bg-gray-900 hover:bg-indigo-600 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                              className={`w-full py-2 px-3 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                                isUpgrade
+                                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
+                                  : willNeedFreeze
+                                  ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs'
+                                  : 'bg-gray-900 hover:bg-gray-800 text-white'
+                              }`}
                             >
                               {checkoutLoading === plan.code ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               ) : (
                                 <>
-                                  <span>Switch to {plan.name.split(' ')[0]}</span>
+                                  <span>
+                                    {isUpgrade
+                                      ? `Upgrade to ${plan.name.split(' ')[0]}`
+                                      : willNeedFreeze
+                                      ? `Downgrade to ${plan.name.split(' ')[0]} (Select Stores)`
+                                      : `Downgrade to ${plan.name.split(' ')[0]}`}
+                                  </span>
                                   <ChevronRight className="w-3.5 h-3.5" />
                                 </>
                               )}
