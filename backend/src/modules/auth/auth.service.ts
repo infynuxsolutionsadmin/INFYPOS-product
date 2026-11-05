@@ -633,6 +633,7 @@ export class AuthService {
         'shifts.read',
         'products.read',
         'inventory.read',
+        'inventory.create',
         'inventory.update',
         'reports.read',
         'dashboard.read',
