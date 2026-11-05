@@ -18,3 +18,4 @@ export class CashierPinLoginDto {
   @Matches(/^\d{4,10}$/, { message: 'PIN code must be between 4 and 10 digits' })
   pin: string;
 }
+

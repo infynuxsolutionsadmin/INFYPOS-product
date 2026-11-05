@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { CreditCard } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
+import { SubscriptionModal } from './SubscriptionModal';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard' },
@@ -16,7 +18,14 @@ const navigation = [
 ];
 
 const Header: React.FC = () => {
-  const { clearAuth, hasPermission } = useAuthStore();
+  const { clearAuth, hasPermission, user } = useAuthStore();
+  const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
+
+  const canManageBilling =
+    !user?.storeId ||
+    user?.roleCode === 'OWNER' ||
+    user?.roleCode === 'SYSTEM_ADMIN' ||
+    hasPermission('settings.read');
 
   return (
     <header className="sticky top-0 z-40 bg-[#F3F5F9] px-4 sm:px-6 lg:px-8 pt-6 pb-2">
@@ -54,12 +63,29 @@ const Header: React.FC = () => {
           })}
         </nav>
 
-        {/* Exit Button */}
-        <div className="flex items-center">
+        {/* Header Actions (Plan & Exit) */}
+        <div className="flex items-center gap-3">
+          {canManageBilling && (
+            <button
+              onClick={() => setIsSubscriptionOpen(true)}
+              id="btn-app-subscription"
+              className="group flex flex-col items-center justify-center p-1 focus:outline-none transition-transform active:scale-95 cursor-pointer"
+              title="Manage Subscription & Billing"
+            >
+              <span className="text-[11px] font-bold text-gray-700 tracking-wider uppercase mb-1 group-hover:text-indigo-600 transition-colors">
+                Plan
+              </span>
+              <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-[18px] bg-white border border-gray-100/90 shadow-[5px_5px_14px_rgba(163,177,198,0.25),-5px_-5px_14px_rgba(255,255,255,0.95)] group-hover:shadow-[4px_4px_14px_rgba(99,102,241,0.25),-4px_-4px_14px_rgba(255,255,255,0.95)] transition-all duration-300">
+                <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 group-hover:text-indigo-600 transition-colors" />
+              </div>
+            </button>
+          )}
+
+          {/* Exit Button */}
           <button
             onClick={clearAuth}
             id="btn-app-logout"
-            className="group flex flex-col items-center justify-center p-1 focus:outline-none transition-transform active:scale-95"
+            className="group flex flex-col items-center justify-center p-1 focus:outline-none transition-transform active:scale-95 cursor-pointer"
             title="Exit Application"
           >
             <span className="text-[11px] font-bold text-gray-700 tracking-wider uppercase mb-1 group-hover:text-red-600 transition-colors">
@@ -83,6 +109,12 @@ const Header: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Subscription & Billing Modal */}
+      <SubscriptionModal
+        isOpen={isSubscriptionOpen}
+        onClose={() => setIsSubscriptionOpen(false)}
+      />
     </header>
   );
 };
