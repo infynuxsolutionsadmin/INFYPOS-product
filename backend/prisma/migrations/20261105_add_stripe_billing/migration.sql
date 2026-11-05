@@ -32,3 +32,4 @@ CREATE TABLE IF NOT EXISTS "billing_invoices" (
 );
 
 CREATE INDEX IF NOT EXISTS "billing_invoices_tenant_id_idx" ON "billing_invoices"("tenant_id");
+

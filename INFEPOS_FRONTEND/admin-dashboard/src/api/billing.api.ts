@@ -72,3 +72,4 @@ export const getBillingStatus = async (): Promise<BillingStatusResponse> => {
   const response = await client.get<any>('/billing/status');
   return response.data?.data || response.data;
 };
+

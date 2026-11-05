@@ -23,3 +23,4 @@ export class CreateCheckoutSessionDto {
   @IsUrl({ require_tld: false }, { message: 'cancelUrl must be a valid URL' })
   cancelUrl?: string;
 }
+

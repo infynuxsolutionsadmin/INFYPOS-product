@@ -4,6 +4,7 @@ import { getReturnableSale, createSaleReturn } from '../../api/sales.api';
 import type { Sale } from '../../types/sale';
 import { useShiftStore } from '../../stores/shiftStore';
 import { useSyncStore } from '../../stores/syncStore';
+import { incrementLocalProductStock } from '../../services/localDb';
 
 interface ReturnModalProps {
   sale: Sale;
@@ -83,14 +84,25 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onSuccess }) =
       items: itemsToReturn,
     };
 
+    // Extract returned products and quantities to restore local stock immediately
+    const returnedItems = returnableData.returnableItems
+      .filter((i: any) => returnQuantities[i.saleItemId] > 0)
+      .map((i: any) => ({
+        productId: i.productId,
+        quantity: returnQuantities[i.saleItemId],
+      }));
+
     try {
       await createSaleReturn(payload);
+      // Immediately restore inventory quantity in local SQLite database
+      await incrementLocalProductStock(returnedItems);
       onSuccess();
     } catch (err: any) {
       if (!err.response) {
-        // Offline / Network error
+        // Offline / Network error: save in SQLite sync queue & restore stock locally
         useSyncStore.getState().addEvent('SALE_RETURN', payload);
-        alert('Return saved locally. It will sync when online.');
+        await incrementLocalProductStock(returnedItems);
+        alert('Return saved locally and inventory restored. It will sync to cloud when online.');
         onSuccess();
       } else {
         const msg = err?.response?.data?.message || 'Failed to process return.';

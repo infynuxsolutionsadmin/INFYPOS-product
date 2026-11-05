@@ -478,12 +478,79 @@ export class AuthService {
         },
       });
 
-      await tx.role.createMany({
-        data: [
-          { tenantId: tenant.id, name: 'Store Manager', code: 'STORE_MANAGER', description: 'Manages a specific store' },
-          { tenantId: tenant.id, name: 'Cashier', code: 'CASHIER', description: 'Point of sale operator' },
-        ],
+      const managerRole = await tx.role.create({
+        data: {
+          tenantId: tenant.id,
+          name: 'Store Manager',
+          code: 'STORE_MANAGER',
+          description: 'Manages a specific store',
+        },
       });
+
+      const cashierRole = await tx.role.create({
+        data: {
+          tenantId: tenant.id,
+          name: 'Cashier',
+          code: 'CASHIER',
+          description: 'Point of sale operator',
+        },
+      });
+
+      // Seed standard default permissions for Store Manager and Cashier
+      const allPerms = await tx.permission.findMany();
+      const permsMap = new Map(allPerms.map((p) => [p.code, p.id]));
+
+      const cashierPermCodes = [
+        'sales.create',
+        'sales.read',
+        'salesReturns.create',
+        'salesReturns.read',
+        'shifts.open',
+        'shifts.close',
+        'shifts.xreport',
+        'shifts.zreport',
+        'products.read',
+        'inventory.read',
+      ];
+
+      const managerPermCodes = [
+        'sales.create',
+        'sales.read',
+        'sales.update',
+        'sales.delete',
+        'salesReturns.create',
+        'salesReturns.read',
+        'salesReturns.update',
+        'salesReturns.delete',
+        'shifts.open',
+        'shifts.close',
+        'shifts.xreport',
+        'shifts.zreport',
+        'shifts.read',
+        'products.read',
+        'inventory.read',
+        'inventory.update',
+        'reports.read',
+        'dashboard.read',
+      ];
+
+      const rolePermData = [
+        ...cashierPermCodes
+          .map((code) => permsMap.get(code))
+          .filter(Boolean)
+          .map((permId) => ({ roleId: cashierRole.id, permissionId: permId! })),
+        ...managerPermCodes
+          .map((code) => permsMap.get(code))
+          .filter(Boolean)
+          .map((permId) => ({ roleId: managerRole.id, permissionId: permId! })),
+      ];
+
+      if (rolePermData.length > 0) {
+        await tx.rolePermission.createMany({
+          data: rolePermData,
+          skipDuplicates: true,
+        });
+      }
 
       const user = await tx.user.create({
         data: {

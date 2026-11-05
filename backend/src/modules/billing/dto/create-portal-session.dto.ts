@@ -5,3 +5,4 @@ export class CreatePortalSessionDto {
   @IsUrl({ require_tld: false }, { message: 'returnUrl must be a valid URL' })
   returnUrl?: string;
 }
+

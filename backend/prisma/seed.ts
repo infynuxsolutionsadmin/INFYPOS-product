@@ -119,6 +119,64 @@ async function main() {
   });
 
   console.log(`✅ Assigned ${assignedCount} new permissions to OWNER roles.`);
+
+  // 5. Assign default operational permissions to STORE_MANAGER and CASHIER roles
+  const permsMap = new Map(insertedPermissions.map((p) => [p.code, p.id]));
+
+  const cashierPermCodes = [
+    'sales.create',
+    'sales.read',
+    'salesReturns.create',
+    'salesReturns.read',
+    'shifts.open',
+    'shifts.close',
+    'shifts.xreport',
+    'shifts.zreport',
+    'products.read',
+    'inventory.read',
+  ];
+
+  const managerPermCodes = [
+    'sales.create',
+    'sales.read',
+    'sales.update',
+    'sales.delete',
+    'salesReturns.create',
+    'salesReturns.read',
+    'salesReturns.update',
+    'salesReturns.delete',
+    'shifts.open',
+    'shifts.close',
+    'shifts.xreport',
+    'shifts.zreport',
+    'shifts.read',
+    'products.read',
+    'inventory.read',
+    'inventory.update',
+    'reports.read',
+    'dashboard.read',
+  ];
+
+  const otherRoles = await prisma.role.findMany({
+    where: { code: { in: ['STORE_MANAGER', 'CASHIER'] } },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    for (const role of otherRoles) {
+      const codes = role.code === 'STORE_MANAGER' ? managerPermCodes : cashierPermCodes;
+      const rolePermData = codes
+        .map((code) => permsMap.get(code))
+        .filter(Boolean)
+        .map((permId) => ({ roleId: role.id, permissionId: permId! }));
+
+      await tx.rolePermission.createMany({
+        data: rolePermData,
+        skipDuplicates: true,
+      });
+    }
+  });
+
+  console.log(`✅ Assigned operational permissions to ${otherRoles.length} STORE_MANAGER & CASHIER roles.`);
   console.log('🎉 Enterprise RBAC Seeding Complete.');
 }
 

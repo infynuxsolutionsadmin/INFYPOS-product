@@ -182,6 +182,26 @@ export const decrementLocalProductStock = async (items: { productId: string; qua
     try { await queryLocalDb('ROLLBACK'); } catch { }
   }
 };
+
+export const incrementLocalProductStock = async (items: { productId: string; quantity: number }[]) => {
+  if (!isDesktopApp() || !items || items.length === 0) return;
+  try {
+    await queryLocalDb('BEGIN TRANSACTION');
+    for (const item of items) {
+      await queryLocalDb(
+        `UPDATE products SET stockQuantity = stockQuantity + ? WHERE id = ?`,
+        item.quantity,
+        item.productId
+      );
+    }
+    await queryLocalDb('COMMIT');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('local-catalog-updated'));
+    }
+  } catch (err) {
+    try { await queryLocalDb('ROLLBACK'); } catch { }
+  }
+};
 
 export const syncCashiersToLocalDb = async (cashiers: any[]) => {
   const activeCashiers = (cashiers || []).filter(c => c.status !== 'INACTIVE');
