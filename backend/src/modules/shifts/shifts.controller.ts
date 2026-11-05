@@ -15,6 +15,9 @@ export class ShiftsController {
   @Get()
   @Permissions('shifts.read')
   async findAll(@Req() req, @Query() query: FindShiftsQueryDto) {
+    if (req.user.storeId && req.user.roleCode !== 'OWNER' && req.user.roleCode !== 'SYSTEM_ADMIN') {
+      query.storeId = req.user.storeId;
+    }
     const result = await this.shiftsService.findAll(req.user.tenantId, query);
     return {
       success: true,

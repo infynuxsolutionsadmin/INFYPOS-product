@@ -34,8 +34,13 @@ export class DashboardController {
   @Get('summary')
   getSummary(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Query() query: DashboardQueryDto,
   ) {
+    if (userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN') {
+      query.storeId = userStoreId;
+    }
     return this.dashboardService.getSummary(tenantId, query);
   }
 }

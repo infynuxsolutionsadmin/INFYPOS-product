@@ -34,8 +34,13 @@ export class SalesReturnsController {
   @Get()
   findAll(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('storeId') userStoreId: string | null,
+    @CurrentUser('roleCode') roleCode: string,
     @Query() query: FindSaleReturnsQueryDto,
   ) {
+    if (userStoreId && roleCode !== 'OWNER' && roleCode !== 'SYSTEM_ADMIN') {
+      query.storeId = userStoreId;
+    }
     return this.salesReturnsService.findAll(tenantId, query);
   }
 
