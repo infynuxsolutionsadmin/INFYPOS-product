@@ -2,8 +2,9 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { PrismaService } from '../../database/prisma.service';
-import { TenantStatus } from '@prisma/client';
+import { StoreStatus, TenantStatus } from '@prisma/client';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
+import { UpdatePlanDto } from './dto/update-plan.dto';
 
 export interface PlanPricing {
   id: 'STARTER' | 'PRO' | 'ENTERPRISE';
@@ -126,9 +127,25 @@ export class StripeService {
     }
 
     const customerId = await this.getOrCreateCustomer(tenantId);
+    
+    // Check DB for dynamic plan tier first (with safe fallback for mock prisma in unit tests)
+    const dbPlan = this.prisma?.subscriptionPlanTier?.findUnique
+      ? await this.prisma.subscriptionPlanTier.findUnique({
+          where: { code: dto.plan },
+        })
+      : null;
+
     const planInfo = PLAN_PRICING[dto.plan];
     const isAnnual = dto.billingCycle === 'ANNUAL';
-    const amount = isAnnual ? planInfo.annualAmountGbp : planInfo.monthlyAmountGbp;
+    const amount = dbPlan
+      ? isAnnual
+        ? Math.round(Number(dbPlan.annualPriceGbp) * 12 * 100)
+        : Math.round(Number(dbPlan.monthlyPriceGbp) * 100)
+      : isAnnual
+        ? planInfo.annualAmountGbp
+        : planInfo.monthlyAmountGbp;
+
+    const planName = dbPlan?.name || planInfo.name;
     const interval: Stripe.PriceCreateParams.Recurring.Interval = isAnnual ? 'year' : 'month';
 
     const baseUrl =
@@ -164,8 +181,8 @@ export class StripeService {
           price_data: {
             currency: 'gbp',
             product_data: {
-              name: `INFEPOS ${planInfo.name} Plan`,
-              description: `${planInfo.name} Subscription (${isAnnual ? 'Billed Annually' : 'Billed Monthly'})`,
+              name: `INFEPOS ${planName} Plan`,
+              description: `${planName} Subscription (${isAnnual ? 'Billed Annually' : 'Billed Monthly'})`,
             },
             unit_amount: amount,
             recurring: {
@@ -256,7 +273,24 @@ export class StripeService {
       throw new NotFoundException(`Tenant with ID ${tenantId} not found`);
     }
 
-    const planPricing = PLAN_PRICING[tenant.subscriptionPlan as keyof typeof PLAN_PRICING] || PLAN_PRICING.PRO;
+    const dbPlan = this.prisma?.subscriptionPlanTier?.findUnique
+      ? await this.prisma.subscriptionPlanTier.findUnique({
+          where: { code: tenant.subscriptionPlan || 'STARTER' },
+        })
+      : null;
+
+    const fallbackPricing = PLAN_PRICING[tenant.subscriptionPlan as keyof typeof PLAN_PRICING] || PLAN_PRICING.PRO;
+    const planPricing = dbPlan
+      ? {
+          id: dbPlan.code as any,
+          name: dbPlan.name,
+          monthlyAmountGbp: Math.round(Number(dbPlan.monthlyPriceGbp) * 100),
+          annualAmountGbp: Math.round(Number(dbPlan.annualPriceGbp) * 12 * 100),
+          maxStores: dbPlan.maxStores,
+          maxUsers: dbPlan.maxUsers,
+          features: dbPlan.features,
+        }
+      : fallbackPricing;
 
     return {
       tenantId: tenant.id,
@@ -271,6 +305,131 @@ export class StripeService {
       pricing: planPricing,
       invoices: tenant.billingInvoices,
       stripeEnabled: this.isConfigured(),
+    };
+  }
+
+  /**
+   * Get all active subscription plan tiers
+   */
+  async getAllPlans() {
+    const dbPlans = this.prisma?.subscriptionPlanTier?.findMany
+      ? await this.prisma.subscriptionPlanTier.findMany({
+          where: { isActive: true },
+          orderBy: { monthlyPriceGbp: 'asc' },
+        })
+      : [];
+
+    if (dbPlans.length > 0) {
+      return dbPlans.map((p) => ({
+        id: p.code,
+        code: p.code,
+        name: p.name,
+        description: p.description,
+        badge: p.badge,
+        monthlyPriceGbp: Number(p.monthlyPriceGbp),
+        annualPriceGbp: Number(p.annualPriceGbp),
+        maxStores: p.maxStores,
+        maxUsers: p.maxUsers,
+        features: p.features,
+      }));
+    }
+
+    return Object.values(PLAN_PRICING).map((p) => ({
+      id: p.id,
+      code: p.id,
+      name: p.name,
+      description: null,
+      badge: null,
+      monthlyPriceGbp: p.monthlyAmountGbp / 100,
+      annualPriceGbp: p.annualAmountGbp / 12 / 100,
+      maxStores: p.id === 'STARTER' ? 1 : p.id === 'PRO' ? 5 : 9999,
+      maxUsers: p.id === 'STARTER' ? 2 : p.id === 'PRO' ? 15 : 9999,
+      features: [],
+    }));
+  }
+
+  /**
+   * Master Admin: update plan tier configuration
+   */
+  async updatePlan(code: string, dto: UpdatePlanDto) {
+    return this.prisma.subscriptionPlanTier.upsert({
+      where: { code },
+      update: {
+        name: dto.name,
+        description: dto.description,
+        badge: dto.badge !== undefined ? dto.badge : undefined,
+        monthlyPriceGbp: dto.monthlyPriceGbp !== undefined ? dto.monthlyPriceGbp : undefined,
+        annualPriceGbp: dto.annualPriceGbp !== undefined ? dto.annualPriceGbp : undefined,
+        maxStores: dto.maxStores !== undefined ? dto.maxStores : undefined,
+        maxUsers: dto.maxUsers !== undefined ? dto.maxUsers : undefined,
+        features: dto.features,
+      },
+      create: {
+        code,
+        name: dto.name || code,
+        description: dto.description,
+        badge: dto.badge,
+        monthlyPriceGbp: dto.monthlyPriceGbp || 0,
+        annualPriceGbp: dto.annualPriceGbp || 0,
+        maxStores: dto.maxStores || 1,
+        maxUsers: dto.maxUsers || 2,
+        features: dto.features || [],
+        isActive: true,
+      },
+    });
+  }
+
+  /**
+   * Downgrade active stores selection (freezes unselected stores)
+   */
+  async selectActiveStores(tenantId: string, targetPlan: string, activeStoreIds: string[]) {
+    const planTier = await this.prisma.subscriptionPlanTier.findUnique({
+      where: { code: targetPlan },
+    });
+    const maxStores = planTier?.maxStores ?? (targetPlan === 'STARTER' ? 1 : 5);
+
+    if (maxStores !== -1 && activeStoreIds.length > maxStores) {
+      throw new BadRequestException(
+        `Selected active stores (${activeStoreIds.length}) exceed the limit of ${maxStores} for the ${planTier?.name || targetPlan} plan.`,
+      );
+    }
+
+    const allStores = await this.prisma.store.findMany({
+      where: { tenantId },
+    });
+
+    const activeSet = new Set(activeStoreIds);
+    const frozenStoreIds: string[] = [];
+
+    for (const store of allStores) {
+      if (activeSet.has(store.id)) {
+        await this.prisma.store.update({
+          where: { id: store.id },
+          data: { status: StoreStatus.ACTIVE, frozenAt: null },
+        });
+      } else {
+        await this.prisma.store.update({
+          where: { id: store.id },
+          data: { status: StoreStatus.FROZEN, frozenAt: new Date() },
+        });
+        frozenStoreIds.push(store.id);
+      }
+    }
+
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        subscriptionPlan: targetPlan,
+        subscriptionStatus: 'active',
+      },
+    });
+
+    return {
+      success: true,
+      plan: targetPlan,
+      activeCount: activeStoreIds.length,
+      frozenCount: frozenStoreIds.length,
+      frozenStoreIds,
     };
   }
 

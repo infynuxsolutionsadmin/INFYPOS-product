@@ -8,34 +8,39 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  Store as StoreIcon,
+  Snowflake,
+  ShieldAlert,
+  ArrowRight,
 } from 'lucide-react';
 import {
   type BillingStatusResponse,
+  type SubscriptionPlanTier,
   getBillingStatus,
+  getSubscriptionPlans,
   createCustomerPortalSession,
   createCheckoutSession,
+  selectActiveStores,
 } from '../../api/billing.api';
+import { getStores } from '../../api/stores.api';
+import type { Store } from '../../types/stores';
 
 interface SubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface PlanOption {
-  id: 'STARTER' | 'PRO' | 'ENTERPRISE';
-  name: string;
-  monthlyGbp: number;
-  annualGbp: number;
-  badge?: string;
-  features: string[];
-}
-
-const AVAILABLE_PLANS: PlanOption[] = [
+const FALLBACK_PLANS: SubscriptionPlanTier[] = [
   {
     id: 'STARTER',
+    code: 'STARTER',
     name: 'Starter Retail',
-    monthlyGbp: 39,
-    annualGbp: 31,
+    description: 'Perfect for single stores and boutique shops.',
+    badge: null,
+    monthlyPriceGbp: 39,
+    annualPriceGbp: 31,
+    maxStores: 1,
+    maxUsers: 2,
     features: [
       '1 Store Location',
       'Up to 2 POS Registers',
@@ -46,13 +51,17 @@ const AVAILABLE_PLANS: PlanOption[] = [
   },
   {
     id: 'PRO',
+    code: 'PRO',
     name: 'Professional Retail',
-    monthlyGbp: 79,
-    annualGbp: 63,
+    description: 'For growing retail businesses with multi-tills.',
     badge: 'Most Popular',
+    monthlyPriceGbp: 79,
+    annualPriceGbp: 63,
+    maxStores: 5,
+    maxUsers: 15,
     features: [
-      'Multi-Store Management',
-      'Unlimited POS Cashier Terminals',
+      'Multi-Store Management (Up to 5 stores)',
+      'Up to 15 POS Cashier Terminals',
       'Advanced Inventory & Stock Transfers',
       'Loyalty, Discounts & Gift Cards',
       'Stripe Integrated Payments',
@@ -60,9 +69,14 @@ const AVAILABLE_PLANS: PlanOption[] = [
   },
   {
     id: 'ENTERPRISE',
+    code: 'ENTERPRISE',
     name: 'Enterprise Multi-Chain',
-    monthlyGbp: 149,
-    annualGbp: 119,
+    description: 'For multi-chain enterprises and franchises.',
+    badge: 'Enterprise',
+    monthlyPriceGbp: 149,
+    annualPriceGbp: 119,
+    maxStores: 9999,
+    maxUsers: 9999,
     features: [
       'Unlimited Store Locations',
       'Central Warehouse Management',
@@ -78,31 +92,51 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   onClose,
 }) => {
   const [billing, setBilling] = useState<BillingStatusResponse | null>(null);
+  const [plans, setPlans] = useState<SubscriptionPlanTier[]>(FALLBACK_PLANS);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL'>('MONTHLY');
 
-  useEffect(() => {
-    if (!isOpen) return;
+  // Downgrade store selection state
+  const [downgradePlan, setDowngradePlan] = useState<SubscriptionPlanTier | null>(null);
+  const [selectedActiveStoreIds, setSelectedActiveStoreIds] = useState<string[]>([]);
+  const [isDowngrading, setIsDowngrading] = useState(false);
+  const [downgradeSuccessMsg, setDowngradeSuccessMsg] = useState<string | null>(null);
 
+  const loadData = async () => {
     setLoading(true);
     setError(null);
 
-    getBillingStatus()
-      .then((data) => {
-        setBilling(data);
-        if (data.billingCycle) {
-          setBillingCycle(data.billingCycle);
-        }
-      })
-      .catch((err: any) => {
-        setError(err.response?.data?.message || err.message || 'Failed to load subscription details');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    try {
+      const [billingData, plansData, storesData] = await Promise.all([
+        getBillingStatus(),
+        getSubscriptionPlans().catch(() => FALLBACK_PLANS),
+        getStores({ limit: 100 }).catch(() => ({ items: [] })),
+      ]);
+
+      setBilling(billingData);
+      if (billingData.billingCycle) {
+        setBillingCycle(billingData.billingCycle);
+      }
+      if (plansData && plansData.length > 0) {
+        setPlans(plansData);
+      }
+      setStores(storesData.items || []);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Failed to load subscription details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    loadData();
+    setDowngradePlan(null);
+    setDowngradeSuccessMsg(null);
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -121,11 +155,26 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     }
   };
 
-  const handleSwitchPlan = async (planId: 'STARTER' | 'PRO' | 'ENTERPRISE') => {
+  const activeStores = stores.filter((s) => s.status === 'ACTIVE');
+
+  const handleInitiateSwitchPlan = async (plan: SubscriptionPlanTier) => {
+    const maxStores = plan.maxStores ?? (plan.code === 'STARTER' ? 1 : 5);
+
+    // If downgrading to a plan where active stores exceed the limit, open the store freeze dialog
+    if (maxStores !== -1 && activeStores.length > maxStores) {
+      setDowngradePlan(plan);
+      // Pre-select default store or the first maxStores stores
+      const defaultStore = activeStores.find((s) => s.isDefault);
+      const initialSelection = defaultStore ? [defaultStore.id] : [activeStores[0]?.id].filter(Boolean);
+      setSelectedActiveStoreIds(initialSelection);
+      return;
+    }
+
+    // Normal switch / upgrade flow
     try {
-      setCheckoutLoading(planId);
+      setCheckoutLoading(plan.code);
       const res = await createCheckoutSession({
-        plan: planId,
+        plan: plan.code as any,
         billingCycle,
         successUrl: window.location.href,
         cancelUrl: window.location.href,
@@ -140,7 +189,58 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     }
   };
 
-  const currentPlanId = billing?.subscriptionPlan || 'PRO';
+  const handleConfirmStoreSelectionAndDowngrade = async () => {
+    if (!downgradePlan) return;
+    const maxAllowed = downgradePlan.maxStores ?? 1;
+
+    if (selectedActiveStoreIds.length === 0) {
+      alert('Please select at least 1 store to keep active.');
+      return;
+    }
+
+    if (selectedActiveStoreIds.length > maxAllowed) {
+      alert(`You can select at most ${maxAllowed} store(s) for the ${downgradePlan.name} plan.`);
+      return;
+    }
+
+    try {
+      setIsDowngrading(true);
+      const res = await selectActiveStores(downgradePlan.code, selectedActiveStoreIds);
+      setDowngradeSuccessMsg(
+        `Plan switched to ${downgradePlan.name}! ${res.activeCount} store is active. ${res.frozenCount} store(s) are frozen for 30 days.`
+      );
+      setDowngradePlan(null);
+      await loadData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to process store freeze selection');
+    } finally {
+      setIsDowngrading(false);
+    }
+  };
+
+  const toggleStoreSelection = (storeId: string) => {
+    const maxAllowed = downgradePlan?.maxStores ?? 1;
+    if (selectedActiveStoreIds.includes(storeId)) {
+      if (selectedActiveStoreIds.length === 1) {
+        alert('You must keep at least 1 store active.');
+        return;
+      }
+      setSelectedActiveStoreIds(selectedActiveStoreIds.filter((id) => id !== storeId));
+    } else {
+      if (selectedActiveStoreIds.length >= maxAllowed) {
+        if (maxAllowed === 1) {
+          // Replace selection for single store plans
+          setSelectedActiveStoreIds([storeId]);
+        } else {
+          alert(`You can only select up to ${maxAllowed} active stores on this plan.`);
+        }
+      } else {
+        setSelectedActiveStoreIds([...selectedActiveStoreIds, storeId]);
+      }
+    }
+  };
+
+  const currentPlanCode = billing?.subscriptionPlan || 'STARTER';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-900/60 backdrop-blur-sm animate-fade-in">
@@ -187,6 +287,113 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             </div>
           ) : (
             <>
+              {/* Success alert banner */}
+              {downgradeSuccessMsg && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-800 text-xs">
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+                  <p className="font-semibold">{downgradeSuccessMsg}</p>
+                </div>
+              )}
+
+              {/* Downgrade Store Selection Dialog */}
+              {downgradePlan && (
+                <div className="p-6 bg-amber-50/70 border border-amber-200 rounded-3xl space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <ShieldAlert className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-amber-950">
+                        Downgrade Plan: Choose Which Store to Keep Active
+                      </h4>
+                      <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                        The <strong>{downgradePlan.name}</strong> plan allows a maximum of{' '}
+                        <strong>{downgradePlan.maxStores} active store location(s)</strong>. You currently have{' '}
+                        <strong>{activeStores.length} stores</strong>. Please select which store to keep active.
+                      </p>
+                      <p className="text-[11px] text-amber-700 mt-1">
+                        ❄️ <strong>Unselected store(s) will be FROZEN for a 30-day grace period.</strong> All products, inventory, and historical sales remain 100% safe. You can download a full backup file anytime or upgrade to unfreeze.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Store Selection Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    {activeStores.map((st) => {
+                      const isSelected = selectedActiveStoreIds.includes(st.id);
+                      return (
+                        <div
+                          key={st.id}
+                          onClick={() => toggleStoreSelection(st.id)}
+                          className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                            isSelected
+                              ? 'border-indigo-600 bg-white shadow-sm ring-2 ring-indigo-500/20'
+                              : 'border-amber-200/80 bg-white/70 hover:bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                                isSelected ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-100 text-gray-400'
+                              }`}
+                            >
+                              <StoreIcon className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-gray-900">{st.name}</p>
+                              <p className="text-[10px] text-gray-500 font-mono">
+                                Code: {st.code} {st.isDefault && '• (Default Store)'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            {isSelected ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Keep Active</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/60 px-2.5 py-1 rounded-full">
+                                <Snowflake className="w-3 h-3" />
+                                <span>Will Freeze (30d)</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      onClick={() => setDowngradePlan(null)}
+                      disabled={isDowngrading}
+                      className="px-4 py-2 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 bg-white hover:bg-gray-50 cursor-pointer disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleConfirmStoreSelectionAndDowngrade}
+                      disabled={isDowngrading || selectedActiveStoreIds.length === 0}
+                      className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                    >
+                      {isDowngrading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Applying Store Freeze...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Confirm Store Selection & Switch to {downgradePlan.name.split(' ')[0]}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Hero Banner: Current Plan */}
               <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none" />
@@ -254,9 +461,9 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     </span>
                   </div>
                   <div>
-                    <span className="text-indigo-300 block mb-1">Payment Method</span>
+                    <span className="text-indigo-300 block mb-1">Active Stores</span>
                     <span className="font-semibold text-white">
-                      {billing?.stripeCustomerId ? 'Stripe Secure Card' : 'Pending Verification'}
+                      {activeStores.length} Active {stores.some((s) => s.status === 'FROZEN') && `(${stores.filter((s) => s.status === 'FROZEN').length} Frozen)`}
                     </span>
                   </div>
                   <div>
@@ -268,7 +475,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 </div>
               </div>
 
-              {/* Plan Options & Switcher */}
+              {/* Plan Options & Switcher (Sparkle icon removed as requested) */}
               <div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <div>
@@ -276,7 +483,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                       Available Subscription Tiers
                     </h4>
                     <p className="text-xs text-gray-500">
-                      Switch or upgrade your plan at any time. Prorated balance is automatically credited.
+                      Switch or upgrade your plan at any time. Limits and prices are updated live.
                     </p>
                   </div>
 
@@ -309,13 +516,13 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {AVAILABLE_PLANS.map((plan) => {
-                    const isCurrent = currentPlanId === plan.id;
-                    const price = billingCycle === 'ANNUAL' ? plan.annualGbp : plan.monthlyGbp;
+                  {plans.map((plan) => {
+                    const isCurrent = currentPlanCode === plan.code;
+                    const price = billingCycle === 'ANNUAL' ? plan.annualPriceGbp : plan.monthlyPriceGbp;
 
                     return (
                       <div
-                        key={plan.id}
+                        key={plan.code}
                         className={`rounded-2xl p-5 border flex flex-col justify-between transition-all ${
                           isCurrent
                             ? 'border-indigo-500 bg-indigo-50/30 ring-2 ring-indigo-500/20'
@@ -342,6 +549,16 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                             </span>
                           </div>
 
+                          {/* Quick Limit Badges */}
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                              {plan.maxStores === -1 || plan.maxStores >= 999 ? 'Unlimited' : `${plan.maxStores}`} Store{plan.maxStores !== 1 ? 's' : ''}
+                            </span>
+                            <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                              {plan.maxUsers === -1 || plan.maxUsers >= 999 ? 'Unlimited' : `${plan.maxUsers}`} User{plan.maxUsers !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+
                           <ul className="space-y-2 mb-6">
                             {plan.features.map((feat, i) => (
                               <li key={i} className="text-xs text-gray-600 flex items-start gap-2">
@@ -362,11 +579,11 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                             </button>
                           ) : (
                             <button
-                              onClick={() => handleSwitchPlan(plan.id)}
+                              onClick={() => handleInitiateSwitchPlan(plan)}
                               disabled={checkoutLoading !== null}
                               className="w-full py-2 px-3 rounded-xl bg-gray-900 hover:bg-indigo-600 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                             >
-                              {checkoutLoading === plan.id ? (
+                              {checkoutLoading === plan.code ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               ) : (
                                 <>

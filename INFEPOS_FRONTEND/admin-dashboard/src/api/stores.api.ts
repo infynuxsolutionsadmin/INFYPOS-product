@@ -36,3 +36,8 @@ export const deleteStore = async (id: string): Promise<Store> => {
   const response = await client.delete<BackendResponse<Store>>(`/stores/${id}`);
   return response.data.data;
 };
+
+export const exportStoreData = async (id: string): Promise<any> => {
+  const response = await client.get<BackendResponse<any>>(`/stores/${id}/export`);
+  return response.data?.data || response.data;
+};

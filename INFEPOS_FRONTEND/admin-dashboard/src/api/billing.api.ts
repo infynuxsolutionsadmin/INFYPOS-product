@@ -25,6 +25,19 @@ export interface BillingInvoice {
   createdAt: string;
 }
 
+export interface SubscriptionPlanTier {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  badge?: string | null;
+  monthlyPriceGbp: number;
+  annualPriceGbp: number;
+  maxStores: number;
+  maxUsers: number;
+  features: string[];
+}
+
 export interface BillingStatusResponse {
   tenantId: string;
   tenantCode: string;
@@ -40,6 +53,9 @@ export interface BillingStatusResponse {
     name: string;
     monthlyAmountGbp: number;
     annualAmountGbp: number;
+    maxStores?: number;
+    maxUsers?: number;
+    features?: string[];
   };
   invoices: BillingInvoice[];
   stripeEnabled: boolean;
@@ -73,3 +89,35 @@ export const getBillingStatus = async (): Promise<BillingStatusResponse> => {
   return response.data?.data || response.data;
 };
 
+/**
+ * Retrieve all active subscription plan tiers
+ */
+export const getSubscriptionPlans = async (): Promise<SubscriptionPlanTier[]> => {
+  const response = await client.get<any>('/billing/plans');
+  return response.data?.data || response.data;
+};
+
+/**
+ * Select active stores on plan downgrade (freezes unselected stores)
+ */
+export const selectActiveStores = async (
+  plan: string,
+  activeStoreIds: string[],
+): Promise<{ success: boolean; plan: string; activeCount: number; frozenCount: number; frozenStoreIds: string[] }> => {
+  const response = await client.post<any>('/billing/select-active-stores', {
+    plan,
+    activeStoreIds,
+  });
+  return response.data?.data || response.data;
+};
+
+/**
+ * Master Admin: update plan tier configuration
+ */
+export const updatePlanConfig = async (
+  code: string,
+  payload: Partial<SubscriptionPlanTier>,
+): Promise<SubscriptionPlanTier> => {
+  const response = await client.patch<any>(`/billing/master/plans/${code}`, payload);
+  return response.data?.data || response.data;
+};

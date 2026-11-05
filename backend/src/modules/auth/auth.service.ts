@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { TenantStatus, UserStatus } from '@prisma/client';
+import { StoreStatus, TenantStatus, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -147,6 +147,16 @@ export class AuthService {
       throw new ForbiddenException(`Account is ${user.status.toLowerCase()}`);
     }
 
+    if (
+      user.store?.status === StoreStatus.FROZEN &&
+      user.role.code !== 'OWNER' &&
+      user.role.code !== 'SYSTEM_ADMIN'
+    ) {
+      throw new ForbiddenException(
+        `Store ${user.store.name} is currently frozen due to subscription plan limits. Please contact your account owner to reactivate.`,
+      );
+    }
+
     const effectiveStoreId = user.storeId || matchedStore?.id || null;
     const effectiveStoreName = user.store?.name || matchedStore?.name || null;
 
@@ -239,6 +249,12 @@ export class AuthService {
     const isPinValid = await this.passwordService.compare(dto.pin, pinHash);
     if (!isPinValid) {
       throw new UnauthorizedException('Invalid PIN code');
+    }
+
+    if (cashier.store?.status === StoreStatus.FROZEN) {
+      throw new ForbiddenException(
+        `Store ${cashier.store.name} is currently frozen due to subscription plan limits. Please contact your account owner to reactivate.`,
+      );
     }
 
     const effectiveStoreId = cashier.storeId || dto.storeId || null;

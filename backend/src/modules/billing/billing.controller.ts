@@ -6,15 +6,21 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  Param,
+  Patch,
   Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 import { CreatePortalSessionDto } from './dto/create-portal-session.dto';
+import { SelectActiveStoresDto } from './dto/select-active-stores.dto';
+import { UpdatePlanDto } from './dto/update-plan.dto';
 import { StripeService } from './stripe.service';
 
 interface RequestWithRawBody extends Request {
@@ -58,6 +64,39 @@ export class BillingController {
   @Get('status')
   async getStatus(@CurrentUser('tenantId') tenantId: string) {
     return this.stripeService.getBillingStatus(tenantId);
+  }
+
+  /**
+   * Get all active subscription plan tiers
+   */
+  @Get('plans')
+  async getPlans() {
+    return this.stripeService.getAllPlans();
+  }
+
+  /**
+   * Update active stores selection on plan downgrade (freezes unselected stores)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('select-active-stores')
+  async selectActiveStores(
+    @CurrentUser('tenantId') tenantId: string,
+    @Body() dto: SelectActiveStoresDto,
+  ) {
+    return this.stripeService.selectActiveStores(tenantId, dto.plan, dto.activeStoreIds);
+  }
+
+  /**
+   * Master Admin: Update plan pricing, limits, and features
+   */
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('system.tenants.manage')
+  @Patch('master/plans/:code')
+  async updatePlan(
+    @Param('code') code: string,
+    @Body() dto: UpdatePlanDto,
+  ) {
+    return this.stripeService.updatePlan(code, dto);
   }
 
   /**

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Search, Store as StoreIcon, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Store as StoreIcon, X, Download, Loader2 } from 'lucide-react';
 import type { Store, FindStoresQuery, StoreStatus } from '../../types/stores';
-import { getStores } from '../../api/stores.api';
+import { getStores, exportStoreData } from '../../api/stores.api';
 import { useAuthStore } from '../../stores/authStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import StoreFormModal from '../../components/stores/StoreFormModal';
@@ -17,6 +17,7 @@ const StoresPage: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exportingStoreId, setExportingStoreId] = useState<string | null>(null);
 
   const [query, setQuery] = useState<FindStoresQuery>({
     page: 1,
@@ -95,6 +96,27 @@ const StoresPage: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
+  const handleExportStore = async (store: Store) => {
+    try {
+      setExportingStoreId(store.id);
+      const data = await exportStoreData(store.id);
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `store-${store.code.toLowerCase()}-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to export store data');
+    } finally {
+      setExportingStoreId(null);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-12">
       <div className="flex justify-between items-center mb-6">
@@ -105,7 +127,7 @@ const StoresPage: React.FC = () => {
         {canCreate && (
           <button
             onClick={openCreateModal}
-            className="inline-flex items-center justify-center px-6 py-2.5 border border-transparent shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] text-sm font-bold rounded-full text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 focus:outline-none hover:-translate-y-0.5 transition-all"
+            className="inline-flex items-center justify-center px-6 py-2.5 border border-transparent shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] text-sm font-bold rounded-full text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 focus:outline-none hover:-translate-y-0.5 transition-all cursor-pointer"
           >
             <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
             Add Store
@@ -122,51 +144,54 @@ const StoresPage: React.FC = () => {
               type="text"
               value={searchInput}
               onChange={handleSearchChange}
-              className="block w-full pl-11 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 placeholder-gray-400"
-              placeholder="Search by Name, Code..."
+              placeholder="Search stores..."
+              className="block w-full pl-11 pr-10 py-3 bg-[#f8f9fc] border-none rounded-2xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all"
             />
             {searchInput && (
               <button
                 onClick={() => setSearchInput('')}
-                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600"
-                title="Clear search"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
-          <div className="w-full sm:w-56">
+
+          <div className="flex gap-4">
             <select
               value={query.status || ''}
               onChange={handleStatusChange}
-              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer"
+              className="px-4 py-3 bg-[#f8f9fc] border-none rounded-2xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all font-medium"
             >
               <option value="">All Statuses</option>
               <option value="ACTIVE">Active</option>
+              <option value="FROZEN">Frozen (Grace Period)</option>
               <option value="INACTIVE">Inactive</option>
               <option value="SUSPENDED">Suspended</option>
             </select>
           </div>
-        </div>
+      </div>
 
-      <div className="bg-white rounded-[30px] shadow-[0px_4px_24px_rgba(149,157,165,0.08)] border border-gray-100 p-6 overflow-hidden">
-        {error ? (
-          <div className="p-4 text-red-500 text-center">{error}</div>
-        ) : loading ? (
-          <div className="p-10 flex justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#5B58F2]"></div>
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-[20px] text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Stores List */}
+      <div className="space-y-4">
+        {loading ? (
+          <div className="bg-white rounded-[24px] p-12 text-center shadow-[0px_4px_24px_rgba(149,157,165,0.08)] border border-gray-100">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-purple-500 border-t-transparent"></div>
+            <p className="mt-4 text-sm text-gray-500">Loading stores...</p>
           </div>
         ) : stores.length === 0 ? (
-          <div className="p-10 text-center text-gray-500">
-            <p>No stores found.</p>
-            {canCreate && (
-              <button
-                onClick={openCreateModal}
-                className="mt-4 inline-flex items-center px-6 py-2.5 border border-transparent shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] text-sm font-bold rounded-full text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:-translate-y-0.5 transition-all"
-              >
-                Add Store
-              </button>
-            )}
+          <div className="bg-white rounded-[24px] p-12 text-center shadow-[0px_4px_24px_rgba(149,157,165,0.08)] border border-gray-100">
+            <StoreIcon className="mx-auto h-12 w-12 text-gray-300" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No stores found</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {query.search || query.status ? 'Try adjusting your search criteria.' : 'Get started by creating a new store.'}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto overflow-y-visible pb-4">
@@ -209,23 +234,37 @@ const StoresPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap bg-white border-y border-gray-100 first:border-l first:rounded-l-[24px] last:border-r last:rounded-r-[24px] shadow-[0_2px_10px_rgba(0,0,0,0.02)] group-hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-shadow">
                       <span className={`px-3 py-1 inline-flex text-xs font-bold rounded-full ${
                         store.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 
+                        store.status === 'FROZEN' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
                         store.status === 'INACTIVE' ? 'bg-gray-100 text-gray-600' : 'bg-red-100 text-red-700'
                       }`}>
-                        {store.status}
+                        {store.status === 'FROZEN' ? '❄️ FROZEN (30d Grace)' : store.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium bg-white border-y border-r border-gray-100 last:rounded-r-[24px] shadow-[0_2px_10px_rgba(0,0,0,0.02)] group-hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-shadow">
                       <div className="flex items-center justify-end space-x-2 pr-2">
+                        {/* Download full store backup */}
+                        <button
+                          onClick={() => handleExportStore(store)}
+                          disabled={exportingStoreId === store.id}
+                          title="Download Full Store Backup (JSON)"
+                          className="p-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors mr-2 cursor-pointer disabled:opacity-50"
+                        >
+                          {exportingStoreId === store.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </button>
                         {canUpdate && (
-                        <button onClick={() => openEditModal(store)} className="p-2 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors mr-4">
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                      )}
-                      {canDelete && (
-                        <button onClick={() => openDeleteModal(store)} className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
+                          <button onClick={() => openEditModal(store)} className="p-2 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors mr-2 cursor-pointer">
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => openDeleteModal(store)} className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors cursor-pointer">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -246,7 +285,7 @@ const StoresPage: React.FC = () => {
                     <button
                       onClick={() => handlePageChange((query.page || 1) - 1)}
                       disabled={(query.page || 1) <= 1}
-                      className="px-4 py-2 rounded-full  bg-white text-sm font-bold text-[#1a1f36] hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm"
+                      className="px-4 py-2 rounded-full  bg-white text-sm font-bold text-[#1a1f36] hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
                     >
                       Previous
                     </button>
@@ -256,7 +295,7 @@ const StoresPage: React.FC = () => {
                     <button
                       onClick={() => handlePageChange((query.page || 1) + 1)}
                       disabled={(query.page || 1) >= totalPages}
-                      className="px-4 py-2 rounded-full  bg-white text-sm font-bold text-[#1a1f36] hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm"
+                      className="px-4 py-2 rounded-full  bg-white text-sm font-bold text-[#1a1f36] hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
                     >
                       Next
                     </button>
@@ -286,5 +325,3 @@ const StoresPage: React.FC = () => {
 };
 
 export default StoresPage;
-
-// <!-- fixed -->

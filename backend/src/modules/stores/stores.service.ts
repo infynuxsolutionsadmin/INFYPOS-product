@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -29,17 +30,24 @@ export class StoresService {
         throw new ConflictException('Store code already exists');
       }
 
+      // Check plan limits before reactivating
+      await this.assertStoreLimitNotExceeded(tenantId);
+
       // Reactivate
       await this.prisma.store.update({
         where: { id: existing.id },
         data: {
           ...dto,
           status: StoreStatus.ACTIVE,
+          frozenAt: null,
         },
       });
 
       return this.findOne(tenantId, existing.id);
     }
+
+    // Check plan limits before creating
+    await this.assertStoreLimitNotExceeded(tenantId);
 
     const created = await this.prisma.store.create({
       data: {
@@ -185,6 +193,103 @@ export class StoresService {
     return this.findOne(tenantId, id);
   }
 
+  async assertStoreLimitNotExceeded(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+
+    const planCode = tenant?.subscriptionPlan || 'STARTER';
+    const planTier = this.prisma?.subscriptionPlanTier?.findUnique
+      ? await this.prisma.subscriptionPlanTier.findUnique({
+          where: { code: planCode },
+        })
+      : null;
+
+    const activeCount = await this.prisma.store.count({
+      where: { tenantId, status: StoreStatus.ACTIVE },
+    });
+
+    const maxAllowed = planTier?.maxStores ?? (planCode === 'STARTER' ? 1 : 5);
+    if (maxAllowed !== -1 && activeCount >= maxAllowed) {
+      throw new BadRequestException(
+        `Store limit reached: Your ${planTier?.name || planCode} plan allows a maximum of ${maxAllowed} active store location(s). Please upgrade to add more stores.`,
+      );
+    }
+  }
+
+  async exportStoreData(tenantId: string, storeId: string) {
+    const store = await this.prisma.store.findUnique({
+      where: { id: storeId },
+      include: {
+        users: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: { select: { name: true, code: true } },
+            createdAt: true,
+          },
+        },
+        inventories: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                barcode: true,
+                sellingPrice: true,
+              },
+            },
+          },
+        },
+        sales: {
+          take: 500,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            items: true,
+            payments: true,
+          },
+        },
+        Shift: {
+          take: 50,
+          orderBy: { openedAt: 'desc' },
+        },
+      },
+    });
+
+    if (!store || store.tenantId !== tenantId) {
+      throw new NotFoundException('Store not found');
+    }
+
+    return {
+      exportedAt: new Date().toISOString(),
+      store: {
+        id: store.id,
+        name: store.name,
+        code: store.code,
+        status: store.status,
+        frozenAt: store.frozenAt,
+        phone: store.phone,
+        email: store.email,
+        address: `${store.addressLine1 || ''} ${store.addressLine2 || ''}, ${store.city || ''}, ${store.country || ''}`.trim(),
+      },
+      staff: store.users,
+      inventory: store.inventories.map((inv) => ({
+        productName: inv.product?.name,
+        sku: inv.product?.sku,
+        barcode: inv.product?.barcode,
+        quantity: inv.quantityOnHand,
+        minQuantity: inv.minimumStock,
+        sellingPrice: inv.product?.sellingPrice,
+      })),
+      recentSalesCount: store.sales.length,
+      recentSales: store.sales,
+      recentShifts: store.Shift,
+    };
+  }
+
   private getSelectFields() {
     return {
       id: true,
@@ -202,6 +307,7 @@ export class StoresService {
       currency: true,
       isDefault: true,
       status: true,
+      frozenAt: true,
       createdAt: true,
       updatedAt: true,
     };

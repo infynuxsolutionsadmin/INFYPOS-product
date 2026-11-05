@@ -177,6 +177,91 @@ async function main() {
   });
 
   console.log(`✅ Assigned operational permissions to ${otherRoles.length} STORE_MANAGER & CASHIER roles.`);
+
+  // 6. Seed Subscription Plan Tiers
+  const DEFAULT_PLANS = [
+    {
+      code: 'STARTER',
+      name: 'Starter Retail',
+      description: 'Perfect for single stores and boutique shops.',
+      badge: null,
+      monthlyPriceGbp: 39.0,
+      annualPriceGbp: 31.0,
+      maxStores: 1,
+      maxUsers: 2,
+      features: [
+        '1 Store Location',
+        'Up to 2 POS Registers',
+        'Real-time SQLite Offline Sync',
+        'Core Inventory & Barcodes',
+        'Cashier Shifts & Z-Reports',
+      ],
+    },
+    {
+      code: 'PRO',
+      name: 'Professional Retail',
+      description: 'For growing retail businesses with multi-tills.',
+      badge: 'Most Popular',
+      monthlyPriceGbp: 79.0,
+      annualPriceGbp: 63.0,
+      maxStores: 5,
+      maxUsers: 15,
+      features: [
+        'Multi-Store Management (Up to 5 stores)',
+        'Up to 15 POS Cashier Terminals',
+        'Advanced Inventory & Stock Transfers',
+        'Loyalty, Discounts & Gift Cards',
+        'Stripe Integrated Payments',
+      ],
+    },
+    {
+      code: 'ENTERPRISE',
+      name: 'Enterprise Multi-Chain',
+      description: 'For multi-chain enterprises and franchises.',
+      badge: 'Enterprise',
+      monthlyPriceGbp: 149.0,
+      annualPriceGbp: 119.0,
+      maxStores: 9999,
+      maxUsers: 9999,
+      features: [
+        'Unlimited Store Locations',
+        'Central Warehouse Management',
+        'Dedicated Database Instance',
+        'Priority 24/7 Phone & SLA Support',
+        'Custom ERP & Accounting Webhooks',
+      ],
+    },
+  ];
+
+  for (const plan of DEFAULT_PLANS) {
+    await prisma.subscriptionPlanTier.upsert({
+      where: { code: plan.code },
+      update: {
+        name: plan.name,
+        description: plan.description,
+        badge: plan.badge,
+        monthlyPriceGbp: plan.monthlyPriceGbp,
+        annualPriceGbp: plan.annualPriceGbp,
+        maxStores: plan.maxStores,
+        maxUsers: plan.maxUsers,
+        features: plan.features,
+      },
+      create: {
+        code: plan.code,
+        name: plan.name,
+        description: plan.description,
+        badge: plan.badge,
+        monthlyPriceGbp: plan.monthlyPriceGbp,
+        annualPriceGbp: plan.annualPriceGbp,
+        maxStores: plan.maxStores,
+        maxUsers: plan.maxUsers,
+        features: plan.features,
+        isActive: true,
+      },
+    });
+  }
+  console.log('✅ SubscriptionPlanTier default tiers seeded.');
+
   console.log('🎉 Enterprise RBAC Seeding Complete.');
 }
 

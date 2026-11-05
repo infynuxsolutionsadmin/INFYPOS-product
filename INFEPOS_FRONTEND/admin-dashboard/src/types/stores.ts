@@ -1,4 +1,4 @@
-export type StoreStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type StoreStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'FROZEN';
 
 export interface Store {
   id: string;
@@ -17,6 +17,7 @@ export interface Store {
   currency: string | null;
   isDefault: boolean;
   status: StoreStatus;
+  frozenAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +62,6 @@ export interface PaginatedResponse<T> {
 
 export interface BackendResponse<T> {
   success: boolean;
-  statusCode: number;
   data: T;
+  message?: string;
 }

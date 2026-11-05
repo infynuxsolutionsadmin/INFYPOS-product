@@ -61,6 +61,15 @@ export class StoresController {
     return this.storesService.update(tenantId, id, dto);
   }
 
+  @Permissions('stores.read')
+  @Get(':id/export')
+  async exportStore(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.storesService.exportStoreData(tenantId, id);
+  }
+
   @Permissions('stores.delete')
   @Delete(':id')
   async remove(

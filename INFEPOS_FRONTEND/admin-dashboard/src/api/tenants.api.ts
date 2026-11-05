@@ -7,6 +7,8 @@ export interface Tenant {
   email: string | null;
   phone: string | null;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  subscriptionPlan?: string | null;
+  subscriptionStatus?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,10 +22,18 @@ export interface QueryTenantDto {
 
 export const getTenants = async (query?: QueryTenantDto) => {
   const response = await client.get<any>('/tenants', { params: query });
-  return response.data.data; // response.data is the axios body, .data is the interceptor wrapper
+  return response.data.data;
 };
 
-export const createTenant = async (data: { name: string; code: string; email?: string; phone?: string; ownerEmail: string; ownerFirstName: string; ownerLastName: string }) => {
+export const createTenant = async (data: {
+  name: string;
+  code: string;
+  email?: string;
+  phone?: string;
+  ownerEmail: string;
+  ownerFirstName: string;
+  ownerLastName: string;
+}) => {
   const response = await client.post<any>('/tenants', data);
   return response.data.data;
 };
