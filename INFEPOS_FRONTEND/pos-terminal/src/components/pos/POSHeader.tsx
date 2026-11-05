@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Store, LogOut, History, FileText, Wifi, WifiOff, RefreshCcw, AlertCircle, ShieldAlert } from 'lucide-react';
+import { User, Store, History, FileText, Wifi, WifiOff, RefreshCcw, AlertCircle, ShieldAlert } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useShiftStore } from '../../stores/shiftStore';
 import { useNavigate } from 'react-router-dom';
@@ -309,13 +309,53 @@ const POSHeader: React.FC = () => {
         <button
           id="btn-pos-logout"
           type="button"
-          className="btn-pos btn-ghost"
           onClick={handleLogout}
-          style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', gap: '0.35rem' }}
-          title="Sign out"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0 0.4rem',
+            transition: 'transform 0.15s ease',
+          }}
+          title="Exit Terminal"
         >
-          <LogOut size={14} />
-          Sign Out
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#374151', marginBottom: '2px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            Exit
+          </span>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '12px',
+              background: '#ffffff',
+              boxShadow: '3px 3px 10px rgba(163,177,198,0.25), -3px -3px 10px rgba(255,255,255,0.95)',
+              border: '1px solid rgba(0,0,0,0.04)',
+              color: '#374151',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </div>
         </button>
       </div>
 

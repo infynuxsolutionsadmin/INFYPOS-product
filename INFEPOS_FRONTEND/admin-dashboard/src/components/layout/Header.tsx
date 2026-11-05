@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 
 const navigation = [
@@ -55,15 +54,32 @@ const Header: React.FC = () => {
           })}
         </nav>
 
-        {/* Profile Area */}
+        {/* Exit Button */}
         <div className="flex items-center">
           <button
             onClick={clearAuth}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-all focus:outline-none shadow-sm text-sm font-bold"
-            title="Logout"
+            id="btn-app-logout"
+            className="group flex flex-col items-center justify-center p-1 focus:outline-none transition-transform active:scale-95"
+            title="Exit Application"
           >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Logout</span>
+            <span className="text-[11px] font-bold text-gray-700 tracking-wider uppercase mb-1 group-hover:text-red-600 transition-colors">
+              Exit
+            </span>
+            <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-[18px] bg-white border border-gray-100/90 shadow-[5px_5px_14px_rgba(163,177,198,0.25),-5px_-5px_14px_rgba(255,255,255,0.95)] group-hover:shadow-[4px_4px_14px_rgba(239,68,68,0.2),-4px_-4px_14px_rgba(255,255,255,0.95)] transition-all duration-300">
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 group-hover:text-red-600 transition-colors"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </div>
           </button>
         </div>
       </div>
