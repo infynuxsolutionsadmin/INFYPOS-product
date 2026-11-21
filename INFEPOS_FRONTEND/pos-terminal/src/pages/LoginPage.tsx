@@ -434,7 +434,8 @@ const LoginPage: React.FC = () => {
         pairedTenantCode ||
         useAuthStore.getState().pairedTenantCode ||
         form.tenantCode ||
-        ''
+        selectedCashier?.tenantCode ||
+        'TEST004'
       ).trim();
 
       // 1. Authorize Manager
@@ -503,8 +504,10 @@ const LoginPage: React.FC = () => {
             { pin: resetNewPin },
             { headers: { Authorization: `Bearer ${managerToken}` } }
           );
-        } catch (cloudErr) {
-          console.warn('[LoginPage] Cloud PIN reset failed, local till remains updated', cloudErr);
+        } catch (cloudErr: any) {
+          console.error('[LoginPage] Cloud PIN reset failed', cloudErr);
+          const errDetail = cloudErr?.response?.data?.message || cloudErr.message || 'Cloud PIN sync failed';
+          throw new Error(`Cloud PIN update failed: ${Array.isArray(errDetail) ? errDetail.join(', ') : errDetail}`);
         }
       }
 

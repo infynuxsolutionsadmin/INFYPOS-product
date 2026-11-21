@@ -395,7 +395,7 @@ export class UsersService {
     return this.findOne(tenantId, id);
   }
 
-  async resetPin(tenantId: string, id: string, customPin?: string) {
+  async resetPin(tenantId: string, id: string, customPin?: string, restrictedStoreId?: string | null) {
     const user = await this.prisma.user.findFirst({
       where: { id, tenantId },
       include: { role: true },
@@ -411,6 +411,10 @@ export class UsersService {
 
     if (!user.storeId) {
       throw new BadRequestException('Cashier must be assigned to a store to have a PIN code');
+    }
+
+    if (restrictedStoreId && user.storeId !== restrictedStoreId) {
+      throw new ForbiddenException('Store managers can only reset PINs for cashiers in their store');
     }
 
     let plainPinCode = customPin;

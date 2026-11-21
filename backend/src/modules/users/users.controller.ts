@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -74,14 +74,19 @@ export class UsersController {
     return this.usersService.getCashiersForStore(tenantId, storeId);
   }
 
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('users.update')
+  @UseGuards(JwtAuthGuard)
   @Post(':id/reset-pin')
   async resetPin(
     @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('roleCode') roleCode: string,
+    @CurrentUser('storeId') managerStoreId: string | null,
     @Param('id', ParseUUIDPipe) id: string,
     @Body('pin') pin?: string,
   ) {
-    return this.usersService.resetPin(tenantId, id, pin);
+    const allowedRoles = ['OWNER', 'ADMIN', 'STORE_MANAGER', 'SUPER_ADMIN'];
+    if (!allowedRoles.includes(roleCode)) {
+      throw new ForbiddenException('Only Store Managers and Administrators can reset cashier PINs');
+    }
+    return this.usersService.resetPin(tenantId, id, pin, roleCode === 'STORE_MANAGER' ? managerStoreId : undefined);
   }
 }
