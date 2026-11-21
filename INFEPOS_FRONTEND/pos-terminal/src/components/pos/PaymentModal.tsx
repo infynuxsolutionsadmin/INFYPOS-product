@@ -4,6 +4,7 @@ import { useCartStore } from '../../stores/cartStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useShiftStore } from '../../stores/shiftStore';
 import { createSale } from '../../api/sales.api';
+import { getActiveShift } from '../../api/shifts.api';
 import { useSyncStore } from '../../stores/syncStore';
 import { isDesktopApp } from '../../services/localDb';
 import type { PaymentMethod, Sale } from '../../types/sale';
@@ -76,9 +77,24 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
 
     setLoading(true);
     setError(null);
+
+    // Ensure shiftId is a valid UUID — if stored shift has a non-UUID placeholder, self-heal via getActiveShift()
+    let effectiveShiftId = currentShift?.id;
+    const isUuid = Boolean(effectiveShiftId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(effectiveShiftId));
+    if (!isUuid) {
+      try {
+        const liveShift = await getActiveShift();
+        if (liveShift?.id) {
+          useShiftStore.getState().setShift(liveShift);
+          effectiveShiftId = liveShift.id;
+        }
+      } catch (err) {
+        console.warn('[PaymentModal] Could not fetch live shift for UUID healing', err);
+      }
+    }
     
     const payload = {
-      shiftId: currentShift?.id,
+      shiftId: effectiveShiftId,
       storeId: user.storeId,
       customerPhone: customerPhone.trim() || undefined,
       discountAmount: parsedDiscount,

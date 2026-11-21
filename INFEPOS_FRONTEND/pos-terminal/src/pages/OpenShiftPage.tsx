@@ -115,7 +115,7 @@ const OpenShiftPage: React.FC = () => {
         // Industry-standard Local-First Fallback:
         // If network offline or token expiring, never block the cashier at the lane!
         const offlineShift: Shift = {
-          id: 'local-shift-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'a0000000-0000-4000-8000-000000000000',
           tenantId: user?.tenantId || 'offline-tenant',
           storeId: user?.storeId || '',
           openedById: user?.id || '',
