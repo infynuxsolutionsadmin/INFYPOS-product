@@ -98,14 +98,14 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
     >
       <div
         style={{
-          background: 'var(--pos-surface, #1e293b)',
-          color: 'var(--pos-text, #f8fafc)',
+          background: '#FFFFFF',
+          color: '#1E293B',
           borderRadius: 16,
-          border: '1px solid var(--pos-border, #334155)',
+          border: '1px solid #E2E8F0',
           maxWidth: 440,
           width: '100%',
           overflow: 'hidden',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -117,8 +117,8 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '1.25rem 1.5rem',
-            borderBottom: '1px solid var(--pos-border, #334155)',
-            background: 'rgba(234, 179, 8, 0.08)',
+            borderBottom: '1px solid #FEF08A',
+            background: '#FEFCE8',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -127,20 +127,20 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
                 width: 36,
                 height: 36,
                 borderRadius: '50%',
-                background: 'rgba(234, 179, 8, 0.2)',
+                background: '#FEF08A',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#eab308',
+                color: '#D97706',
               }}
             >
               <ShieldAlert size={20} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--pos-text, #f8fafc)' }}>
+              <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: '#1E293B' }}>
                 Manager Re-Authorization
               </h2>
-              <span style={{ fontSize: '0.75rem', color: '#eab308', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.75rem', color: '#D97706', fontWeight: 600 }}>
                 Cloud Synchronization Paused
               </span>
             </div>
@@ -151,7 +151,7 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
             style={{
               background: 'transparent',
               border: 'none',
-              color: 'var(--pos-text-dim, #94a3b8)',
+              color: '#64748B',
               cursor: 'pointer',
               padding: 4,
               display: 'flex',
@@ -168,16 +168,16 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
         <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
           <div
             style={{
-              padding: '0.75rem 1rem',
+              padding: '0.85rem 1rem',
               borderRadius: 8,
-              background: 'rgba(59, 130, 246, 0.1)',
-              border: '1px solid rgba(59, 130, 246, 0.25)',
-              color: '#93c5fd',
-              fontSize: '0.8rem',
-              lineHeight: 1.45,
+              background: '#EFF6FF',
+              border: '1px solid #BFDBFE',
+              color: '#1E40AF',
+              fontSize: '0.82rem',
+              lineHeight: 1.5,
             }}
           >
-            <strong>Zero Downtime Guarantee:</strong> Your active shift and pending offline transactions are completely safe. Enter Manager credentials to re-link this terminal and resume cloud sync.
+            <strong style={{ color: '#1E3A8A' }}>Zero Downtime Guarantee:</strong> Your active shift and pending offline transactions are completely safe. Enter Manager credentials to re-link this terminal and resume cloud sync.
           </div>
 
           {error && (
@@ -185,9 +185,9 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
               style={{
                 padding: '0.75rem 1rem',
                 borderRadius: 8,
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#fca5a5',
+                background: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#991B1B',
                 fontSize: '0.82rem',
                 lineHeight: 1.4,
               }}
@@ -201,9 +201,9 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
               style={{
                 padding: '0.75rem 1rem',
                 borderRadius: 8,
-                background: 'rgba(34, 197, 94, 0.15)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-                color: '#86efac',
+                background: '#F0FDF4',
+                border: '1px solid #BBF7D0',
+                color: '#166534',
                 fontSize: '0.85rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -211,14 +211,14 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
                 fontWeight: 600,
               }}
             >
-              <CheckCircle2 size={18} color="#86efac" />
+              <CheckCircle2 size={18} color="#16a34a" />
               Re-authorization successful! Resuming cloud sync...
             </div>
           )}
 
           {!pairedTenantCode && (
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--pos-text-dim, #94a3b8)', marginBottom: 6, fontWeight: 500 }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', color: '#334155', marginBottom: 6, fontWeight: 600 }}>
                 Store / Tenant Code
               </label>
               <input
@@ -231,9 +231,9 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
                   width: '100%',
                   padding: '0.65rem 0.85rem',
                   borderRadius: 8,
-                  border: '1px solid var(--pos-border, #334155)',
-                  background: 'var(--pos-surface-card, #0f172a)',
-                  color: 'white',
+                  border: '1.5px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#0F172A',
                   fontSize: '0.9rem',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -243,7 +243,7 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
           )}
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--pos-text-dim, #94a3b8)', marginBottom: 6, fontWeight: 500 }}>
+            <label style={{ display: 'block', fontSize: '0.82rem', color: '#334155', marginBottom: 6, fontWeight: 600 }}>
               Manager Email
             </label>
             <input
@@ -257,9 +257,9 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
                 width: '100%',
                 padding: '0.65rem 0.85rem',
                 borderRadius: 8,
-                border: '1px solid var(--pos-border, #334155)',
-                background: 'var(--pos-surface-card, #0f172a)',
-                color: 'white',
+                border: '1.5px solid #CBD5E1',
+                background: '#FFFFFF',
+                color: '#0F172A',
                 fontSize: '0.9rem',
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -268,7 +268,7 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--pos-text-dim, #94a3b8)', marginBottom: 6, fontWeight: 500 }}>
+            <label style={{ display: 'block', fontSize: '0.82rem', color: '#334155', marginBottom: 6, fontWeight: 600 }}>
               Manager Password
             </label>
             <div style={{ position: 'relative' }}>
@@ -282,9 +282,9 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
                   width: '100%',
                   padding: '0.65rem 2.5rem 0.65rem 0.85rem',
                   borderRadius: 8,
-                  border: '1px solid var(--pos-border, #334155)',
-                  background: 'var(--pos-surface-card, #0f172a)',
-                  color: 'white',
+                  border: '1.5px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#0F172A',
                   fontSize: '0.9rem',
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -300,7 +300,7 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
                   transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
-                  color: 'var(--pos-text-dim, #94a3b8)',
+                  color: '#64748B',
                   cursor: 'pointer',
                   padding: 0,
                   display: 'flex',
@@ -321,9 +321,9 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
                 flex: 1,
                 padding: '0.75rem',
                 borderRadius: 8,
-                border: '1px solid var(--pos-border, #334155)',
-                background: 'transparent',
-                color: 'var(--pos-text, #f8fafc)',
+                border: '1px solid #CBD5E1',
+                background: '#F1F5F9',
+                color: '#334155',
                 fontSize: '0.85rem',
                 fontWeight: 600,
                 cursor: loading ? 'not-allowed' : 'pointer',
@@ -339,7 +339,7 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
                 padding: '0.75rem',
                 borderRadius: 8,
                 border: 'none',
-                background: success ? '#22c55e' : 'var(--pos-primary, #6366f1)',
+                background: success ? '#16A34A' : '#2563EB',
                 color: 'white',
                 fontSize: '0.85rem',
                 fontWeight: 600,
@@ -348,6 +348,7 @@ export const ManagerReauthModal: React.FC<ManagerReauthModalProps> = ({ onClose,
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
               }}
             >
               {loading ? (
