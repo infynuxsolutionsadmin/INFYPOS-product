@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, AlertCircle, Link, Users, Lock, LogOut, RotateCw, KeyRound, ShieldCheck, CheckCircle2, X } from 'lucide-react';
 import { login, cashierLogin } from '../api/auth.api';
+import { getActiveShift } from '../api/shifts.api';
 import { compareSync, hashSync } from 'bcrypt-ts';
 import { useAuthStore } from '../stores/authStore';
 import { useShiftStore } from '../stores/shiftStore';
@@ -369,6 +370,26 @@ const LoginPage: React.FC = () => {
           authenticatedTokens.accessToken,
           authenticatedTokens.refreshToken,
         );
+
+        // Industry Standard POS Pattern:
+        // If an active shift is already open for this store/register (e.g. opened earlier),
+        // adopt it automatically and navigate straight to /pos. Do NOT block the cashier!
+        const existingLocal = useShiftStore.getState().currentShift;
+        if (existingLocal && existingLocal.status === 'OPEN' && (!pairedStoreId || existingLocal.storeId === pairedStoreId)) {
+          navigate('/pos', { replace: true });
+          return;
+        }
+
+        try {
+          const activeOnline = await getActiveShift();
+          if (activeOnline && activeOnline.status === 'OPEN' && (!pairedStoreId || activeOnline.storeId === pairedStoreId)) {
+            useShiftStore.getState().setShift(activeOnline);
+            navigate('/pos', { replace: true });
+            return;
+          }
+        } catch {
+          // If offline or request fails, proceed to open shift check
+        }
 
         navigate('/open-shift', { replace: true });
       }

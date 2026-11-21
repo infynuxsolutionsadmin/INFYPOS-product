@@ -69,15 +69,7 @@ export const useAuthStore = create<POSAuthState>()(
       },
 
       clearAuth: () => {
-        // Just clock out the cashier, restore device manager token, keep device paired
-        const deviceToken = localStorage.getItem('pos_device_token');
-        const deviceRefresh = localStorage.getItem('pos_device_refresh_token');
-        if (deviceToken) {
-          localStorage.setItem('pos_access_token', deviceToken);
-        }
-        if (deviceRefresh) {
-          localStorage.setItem('pos_refresh_token', deviceRefresh);
-        }
+        // Clock out the cashier, keep device paired without corrupting tokens
         set({ isAuthenticated: false, user: null, permissions: [] });
       },
 
