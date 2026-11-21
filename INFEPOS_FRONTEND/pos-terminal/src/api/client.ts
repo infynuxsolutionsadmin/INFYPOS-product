@@ -14,10 +14,16 @@ const client = axios.create({
   timeout: 10000,
 });
 
-// Attach access token on every request
+// Attach access token on every request (except login & refresh endpoints)
 client.interceptors.request.use((config) => {
+  const isAuthEndpoint =
+    config.url?.includes('/auth/login') ||
+    config.url?.includes('/auth/cashier-login') ||
+    config.url?.includes('/auth/verify-pin') ||
+    config.url?.includes('/auth/refresh');
+
   const token = localStorage.getItem('pos_access_token');
-  if (token && config.headers) {
+  if (token && config.headers && !isAuthEndpoint) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -42,7 +48,10 @@ client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const isLoginEndpoint = originalRequest?.url?.includes('/auth/login');
+    const isLoginEndpoint =
+      originalRequest?.url?.includes('/auth/login') ||
+      originalRequest?.url?.includes('/auth/cashier-login') ||
+      originalRequest?.url?.includes('/auth/verify-pin');
     const isRefreshEndpoint = originalRequest?.url?.includes('/auth/refresh');
 
     if (error.response?.status === 401 && !isLoginEndpoint && !isRefreshEndpoint && !originalRequest._retry) {
