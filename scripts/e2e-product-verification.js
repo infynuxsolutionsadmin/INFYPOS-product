@@ -155,7 +155,7 @@ async function runTest() {
   const cashiersListRes = await request(`/users/cashiers/${storeId}`, {
     headers: { Authorization: `Bearer ${ownerToken}` },
   });
-  const createdCashier = (cashiersListRes.data.data || []).find(c => c.id === cashierId);
+  const createdCashier = (cashiersListRes.data.data?.items || cashiersListRes.data.data || []).find(c => c.id === cashierId);
   console.log(`✅ Cashier Verified in Store: ${createdCashier.firstName} ${createdCashier.lastName}, Has PIN Hash=${Boolean(createdCashier.pinCodeHash)}`);
 
   // -------------------------------------------------------------
@@ -289,7 +289,7 @@ async function runTest() {
   console.log(`   - Product 1: Espresso Blend (£3.50, 20% VAT, Initial Stock: 100) -> ${product1Id}`);
   console.log(`   - Product 2: Butter Croissant (£2.75, 0% VAT, Initial Stock: 50)  -> ${product2Id}`);
 
-  // Edge Case 7a: DTO Validation Check - Missing required fields in POST /inventory
+  // Edge Case 7a: DTO Validation Check - Missing required inventory fields in POST /inventory
   console.log('       Testing Edge Case: Missing required inventory fields validation (400)...');
   const invalidInvRes = await request('/inventory', {
     method: 'POST',
@@ -301,7 +301,7 @@ async function runTest() {
     }),
   });
   if (invalidInvRes.status === 400) {
-    console.log(`✅ Correctly rejected invalid inventory DTO (Status 400: ${JSON.stringify(invalidInvRes.data.message)})`);
+    console.log(`✅ Correctly rejected invalid inventory DTO (Status 400)`);
   } else {
     console.error('❌ Expected 400 for incomplete inventory DTO, got:', invalidInvRes.status);
     process.exit(1);
@@ -576,8 +576,102 @@ async function runTest() {
     process.exit(1);
   }
 
+  // -------------------------------------------------------------
+  // STEP 14: Offline POS Synchronization & Idempotency Check
+  // -------------------------------------------------------------
+  console.log('\n[STEP 14] Testing Offline POS Batch Synchronization via POST /sync...');
+  const offlineShiftId = 'c1111111-2222-4333-8444-555555555555';
+  const offlineSaleId1 = `offline-sale-1-${timestamp}`;
+  const offlineSaleId2 = `offline-sale-2-${timestamp}`;
+
+  // Offline Sale 1: 1x Espresso (£3.50 + 20% VAT = £4.20)
+  // Offline Sale 2: 1x Croissant (£2.75 + 0% VAT = £2.75)
+  const syncPayload = {
+    deviceId: `POS-TILL-${timestamp}`,
+    events: [
+      {
+        eventId: offlineSaleId1,
+        eventType: 'SALE',
+        occurredAt: new Date().toISOString(),
+        payload: {
+          shiftId: offlineShiftId,
+          storeId,
+          payments: [{ paymentMethod: 'CASH', amount: 4.20 }],
+          items: [{ productId: product1Id, quantity: 1 }],
+        },
+      },
+      {
+        eventId: offlineSaleId2,
+        eventType: 'SALE',
+        occurredAt: new Date().toISOString(),
+        payload: {
+          shiftId: offlineShiftId,
+          storeId,
+          payments: [{ paymentMethod: 'CARD', amount: 2.75 }],
+          items: [{ productId: product2Id, quantity: 1 }],
+        },
+      },
+    ],
+  };
+
+  const syncRes = await request('/sync', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${cashierToken}` },
+    body: JSON.stringify(syncPayload),
+  });
+
+  if (!syncRes.ok) {
+    console.error('❌ Sync failed:', syncRes.data);
+    process.exit(1);
+  }
+
+  const syncResult = syncRes.data.data || syncRes.data;
+  console.log(`✅ Offline Sync Batch Processed!`);
+  console.log(`   - Processed Events: ${syncResult.processed?.length || 0}`);
+  console.log(`   - Failed Events:    ${syncResult.failed?.length || 0}`);
+
+  if (syncResult.processed?.length !== 2) {
+    console.error('❌ Expected 2 processed events in sync, got:', syncResult);
+    process.exit(1);
+  }
+
+  // Edge Case 14a: Idempotent Replay (Re-submitting the same sync batch must not duplicate sales or inventory deductions)
+  console.log('       Testing Edge Case: Re-submitting duplicate sync batch (Idempotency Invariant)...');
+  const replaySyncRes = await request('/sync', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${cashierToken}` },
+    body: JSON.stringify(syncPayload),
+  });
+
+  const replayResult = replaySyncRes.data.data || replaySyncRes.data;
+  if (replayResult.alreadyProcessed?.length === 2) {
+    console.log(`✅ Idempotency verified! Server correctly recognized already-processed events (${replayResult.alreadyProcessed.length} events acknowledged).`);
+  } else {
+    console.error('❌ Expected 2 alreadyProcessed events on replay, got:', replayResult);
+    process.exit(1);
+  }
+
+  // Edge Case 14b: Verify inventory accurately reflects offline batch sales
+  console.log('       Verifying inventory counts after offline sync...');
+  const invAfterSyncRes = await request(`/inventory?storeId=${storeId}`, {
+    headers: { Authorization: `Bearer ${ownerToken}` },
+  });
+  const invAfterSync = invAfterSyncRes.data.data?.items || invAfterSyncRes.data.data || [];
+  const p1StockAfter = invAfterSync.find(i => i.productId === product1Id)?.quantityOnHand;
+  const p2StockAfter = invAfterSync.find(i => i.productId === product2Id)?.quantityOnHand;
+
+  console.log(`   - Product 1 (Espresso): 94 - 1 offline sold = Expected: 93 | Actual: ${p1StockAfter}`);
+  console.log(`   - Product 2 (Croissant): 49 - 1 offline sold = Expected: 48 | Actual: ${p2StockAfter}`);
+
+  if (Number(p1StockAfter) === 93 && Number(p2StockAfter) === 48) {
+    console.log('✅ Offline batch sales decremented inventory accurately without duplication!');
+  } else {
+    console.error('❌ Stock count mismatch after offline sync!', { p1StockAfter, p2StockAfter });
+    process.exit(1);
+  }
+
   console.log('\n================================================================');
-  console.log('   🎉 ALL 13 END-TO-END FLOWS & EDGE CASES PASSED PERFECTLY!');
+  console.log('   🎉 ALL 14 END-TO-END FLOWS & EDGE CASES PASSED PERFECTLY!');
   console.log('================================================================\n');
 }
 

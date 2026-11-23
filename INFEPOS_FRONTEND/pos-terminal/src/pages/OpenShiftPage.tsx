@@ -6,6 +6,7 @@ import { openShift, getActiveShift } from '../api/shifts.api';
 import type { Shift } from '../types/shift';
 import { useShiftStore } from '../stores/shiftStore';
 import { useAuthStore } from '../stores/authStore';
+import { isDesktopApp, queueSyncEvent } from '../services/localDb';
 import logoImg from '../assets/transparent_logo.png';
 
 const OpenShiftPage: React.FC = () => {
@@ -138,6 +139,14 @@ const OpenShiftPage: React.FC = () => {
             email: user?.email || 'cashier@pos.local',
           },
         };
+        if (isDesktopApp()) {
+          queueSyncEvent('SHIFT_OPEN', {
+            id: offlineShift.id,
+            startingFloat: amount,
+            storeId: user?.storeId || '',
+          }).catch((err) => console.error('Failed to queue offline shift open event:', err));
+        }
+
         setShift(offlineShift);
         navigate('/pos', { replace: true });
         return;

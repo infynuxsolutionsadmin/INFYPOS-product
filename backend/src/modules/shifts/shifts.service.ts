@@ -155,6 +155,7 @@ export class ShiftsService {
 
       const shift = await tx.shift.create({
         data: {
+          id: (dto as any).id || undefined,
           tenantId,
           storeId,
           openedById: userId,

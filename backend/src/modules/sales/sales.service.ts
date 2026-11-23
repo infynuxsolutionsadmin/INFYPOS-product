@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { InventoryStatus, Prisma, ProductStatus, StoreStatus, UserStatus, SaleStatus, PaymentMethod } from '@prisma/client';
+import { InventoryStatus, Prisma, ProductStatus, StoreStatus, UserStatus, SaleStatus, PaymentMethod, ShiftStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { FindSalesQueryDto } from './dto/find-sales-query.dto';
@@ -86,9 +86,35 @@ export class SalesService {
       if (!dto.shiftId) {
         throw new BadRequestException('An active shift is required to create a sale.');
       }
-      const shift = await this.prisma.shift.findUnique({
+      let shift = await this.prisma.shift.findUnique({
         where: { id: dto.shiftId },
       });
+
+      // Resilient Offline-First Sync Recovery:
+      // If the sale was generated offline on the till and the shift hasn't synced yet,
+      // adopt the store's active open shift or auto-provision the offline shift in PostgreSQL
+      if (!shift && isSync) {
+        const activeStoreShift = await this.prisma.shift.findFirst({
+          where: { tenantId, storeId: dto.storeId, status: ShiftStatus.OPEN },
+        });
+
+        if (activeStoreShift) {
+          shift = activeStoreShift;
+        } else {
+          shift = await this.prisma.shift.create({
+            data: {
+              id: dto.shiftId,
+              tenantId,
+              storeId: dto.storeId,
+              openedById: userId,
+              status: ShiftStatus.OPEN,
+              startingFloat: new Prisma.Decimal(0),
+              openedAt: new Date(),
+            },
+          });
+        }
+      }
+
       if (!shift) {
         throw new NotFoundException('Shift not found.');
       }
