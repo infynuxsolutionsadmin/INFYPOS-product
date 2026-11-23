@@ -38,3 +38,4 @@ echo               ALL INFYPOS SERVICES HAVE STOPPED
 echo ================================================================
 echo.
 pause
+

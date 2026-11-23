@@ -58,11 +58,15 @@ export class UsersService {
     let plainPinCode = null;
     let pinCodeHash = null;
 
-    if (role.code === 'CASHIER' && dto.storeId) {
-      // Fetch all active cashiers in this store to guarantee uniqueness
+    if (role.code === 'CASHIER') {
+      // Fetch active cashiers to guarantee PIN uniqueness (store-specific or tenant-wide)
+      const cashierWhere = dto.storeId
+        ? { storeId: dto.storeId, role: { code: 'CASHIER' }, status: UserStatus.ACTIVE }
+        : { tenantId, role: { code: 'CASHIER' }, status: UserStatus.ACTIVE };
+
       const storeCashiers = await this.prisma.user.findMany({
-        where: { storeId: dto.storeId, role: { code: 'CASHIER' }, status: 'ACTIVE' },
-        select: { pinCodeHash: true }
+        where: cashierWhere,
+        select: { pinCodeHash: true },
       });
 
       let isUnique = false;
@@ -104,7 +108,7 @@ export class UsersService {
       },
     });
 
-    return { ...user, pinCode: plainPinCode };
+    return { ...user, pinCode: plainPinCode, generatedPin: plainPinCode };
   }
 
   async findAll(tenantId: string, query: FindUsersQueryDto) {
@@ -202,7 +206,10 @@ export class UsersService {
     const cashiers = await this.prisma.user.findMany({
       where: {
         tenantId,
-        storeId,
+        OR: [
+          { storeId },
+          { storeId: null },
+        ],
         status: UserStatus.ACTIVE,
         role: { code: 'CASHIER' }
       },

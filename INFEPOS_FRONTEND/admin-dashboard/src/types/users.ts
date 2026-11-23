@@ -22,6 +22,7 @@ export interface User {
   roleId: string;
   storeId: string | null;
   pinCode?: string;
+  generatedPin?: string;
   hasPin?: boolean;
   role?: UserRole;
   store?: UserStore | null;

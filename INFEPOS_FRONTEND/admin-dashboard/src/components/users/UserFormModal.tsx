@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Copy, Check } from 'lucide-react';
 import type { User, CreateUserPayload, UpdateUserPayload, RoleOption, UserStatus } from '../../types/users';
 import type { Store } from '../../types/stores';
 import { createUser, updateUser, getRoles } from '../../api/users.api';
@@ -30,6 +30,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
   const [storeId, setStoreId] = useState('');
   const [status, setStatus] = useState<UserStatus>('ACTIVE');
   const [generatedPin, setGeneratedPin] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   // Password only for create
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -37,9 +38,19 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
   const selectedRole = roles.find(r => r.id === roleId);
   const isCashier = selectedRole?.code?.toUpperCase() === 'CASHIER' || selectedRole?.name?.toUpperCase() === 'CASHIER';
 
+  const handleCopyPin = () => {
+    if (generatedPin) {
+      navigator.clipboard.writeText(generatedPin);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       setError(null);
+      setGeneratedPin(null);
+      setCopied(false);
       // Populate form
       if (user) {
         setFirstName(user.firstName);
@@ -112,8 +123,9 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
         if (storeId) payload.storeId = storeId;
         const res: any = await createUser(payload);
         onSuccess();
-        if (res.generatedPin) {
-          setGeneratedPin(res.generatedPin);
+        const pin = res?.generatedPin || res?.pinCode;
+        if (pin) {
+          setGeneratedPin(pin);
           return; // don't close, show PIN
         }
       }
@@ -313,20 +325,40 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSucces
               </div>
             </form>
             ) : (
-              <div className="text-center py-8">
-                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
-                  <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              <div className="text-center py-6">
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 mb-5">
+                  <svg className="h-8 w-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h4 className="text-lg font-medium text-gray-900 mb-2">Cashier Account Created</h4>
-                <p className="text-sm text-gray-500 mb-6">
-                  Please share this 4-digit PIN with the cashier. They will need it to clock in.
+                <h4 className="text-xl font-bold text-gray-900 mb-2">Cashier Account Created</h4>
+                <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+                  Please share this 4-digit PIN with the cashier. They will need it to clock in to the POS terminal.
                 </p>
-                <div className="bg-gray-50 rounded-xl p-6 border border-gray-100 mb-8 inline-block">
-                  <span className="text-4xl font-mono font-bold tracking-[0.25em] text-gray-900">
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-6 mb-4 inline-flex flex-col items-center justify-center min-w-[240px]">
+                  <span className="text-4xl font-mono font-bold tracking-[0.3em] text-[#1a1f36] select-all mb-3">
                     {generatedPin}
                   </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyPin}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-gray-200 shadow-xs hover:bg-gray-50 text-gray-700 transition-colors cursor-pointer"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-700">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-gray-500" />
+                        <span>Copy PIN</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="bg-amber-50 border border-amber-200/70 text-amber-800 text-xs rounded-xl p-3 mb-6 max-w-sm mx-auto text-center">
+                  <strong>Notice:</strong> This PIN is shown now for the cashier. If forgotten later, it can be reset by a manager or owner.
                 </div>
                 <div className="bg-slate-50/50 px-4 py-4 sm:px-8 sm:flex sm:flex-row-reverse -mx-6 sm:-mx-8 -mb-6 sm:-mb-8 rounded-b-[30px] border-t border-gray-100">
                   <button
