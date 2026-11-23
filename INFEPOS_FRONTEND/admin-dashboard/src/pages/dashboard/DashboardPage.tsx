@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDashboardSummary } from '../../api/dashboard.api';
+import { getStores } from '../../api/stores.api';
 import { useAuthStore } from '../../stores/authStore';
 import type { DashboardSummary } from '../../types/dashboard';
+import type { Store } from '../../types/stores';
 import { ShoppingCart, PoundSterling, Coins, ShoppingBag, BarChart3, CornerDownLeft, Users, FileText, Package, PackageOpen, Monitor, Refrigerator, WashingMachine, Smartphone, Tv } from 'lucide-react';
 
 const ProductIcon = ({ category, name }: { category?: string; name: string }) => {
@@ -15,12 +17,31 @@ const ProductIcon = ({ category, name }: { category?: string; name: string }) =>
 };
 
 const DashboardPage: React.FC = () => {
-  const { hasPermission } = useAuthStore();
+  const { user, hasPermission } = useAuthStore();
   const canReadDashboard = hasPermission('dashboard.read');
+
+  const isStoreScoped = Boolean(user?.storeId && user?.roleCode !== 'OWNER' && user?.roleCode !== 'SYSTEM_ADMIN');
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedStoreId, setSelectedStoreId] = useState<string>(
+    isStoreScoped ? (user?.storeId || '') : ''
+  );
 
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchStores = useCallback(async () => {
+    try {
+      const data = await getStores({ limit: 1000 });
+      setStores(data.items);
+    } catch (err) {
+      console.error('Failed to load stores for dashboard filter');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStores();
+  }, [fetchStores]);
 
   const fmt = (n: any) => `£${Number(n || 0).toFixed(2)}`;
 
@@ -35,7 +56,9 @@ const DashboardPage: React.FC = () => {
         setLoading(true);
         setError(null);
       }
-      const data = await getDashboardSummary({});
+      const data = await getDashboardSummary({
+        storeId: selectedStoreId || undefined,
+      });
       setSummary(data);
     } catch (err: any) {
       if (!isPolling) {
@@ -46,7 +69,7 @@ const DashboardPage: React.FC = () => {
     } finally {
       if (!isPolling) setLoading(false);
     }
-  }, [canReadDashboard]);
+  }, [canReadDashboard, selectedStoreId]);
 
   useEffect(() => {
     fetchDashboard();
@@ -76,7 +99,32 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="min-h-full">
-      <h1 className="text-3xl font-bold text-[#1a1f36] mb-8">Dashboard</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-[#1a1f36]">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">Real-time overview of business performance and sales.</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="w-60">
+            <select
+              value={selectedStoreId}
+              onChange={(e) => setSelectedStoreId(e.target.value)}
+              disabled={isStoreScoped}
+              className="block w-full pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-[#5B58F2] focus:border-transparent outline-none transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white text-gray-800 cursor-pointer font-medium disabled:opacity-75 disabled:cursor-not-allowed"
+            >
+              {!isStoreScoped && <option value="">All Stores (Overview)</option>}
+              {stores
+                .filter((s) => !isStoreScoped || s.id === user?.storeId)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+        </div>
+      </div>
       
       {summary ? (
         <>
