@@ -45,6 +45,21 @@ services:
     networks:
       - infypos-network
 
+  frontend:
+    build:
+      context: ../INFEPOS_FRONTEND/admin-dashboard
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api/v1}
+    container_name: infypos-prod-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-80}:80"
+    networks:
+      - infypos-network
+
 volumes:
   postgres_data:
     name: infypos_prod_postgres_data

@@ -15,6 +15,24 @@ jobs:
     name: Backend CI (NestJS & Prisma)
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: infypos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/infypos?schema=public"
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -30,9 +48,11 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Generate Prisma Client
+      - name: Generate Prisma Client & Migrate Schema
         working-directory: backend
-        run: npx prisma generate
+        run: |
+          npx prisma generate
+          npx prisma db push --skip-generate
 
       - name: Run Backend Regression & Security Test Suite
         working-directory: backend
