@@ -6,6 +6,24 @@ import { SyncPayloadDto } from './dto/sync.dto';
 import { ShiftsService } from '../shifts/shifts.service';
 import { AuditService } from '../audit/audit.service';
 
+export interface SyncProcessedItem {
+  eventId: string;
+  status: string;
+}
+
+export interface SyncFailedItem {
+  eventId: string;
+  status: string;
+  error?: string;
+}
+
+export interface SyncResult {
+  success: boolean;
+  processed: SyncProcessedItem[];
+  alreadyProcessed: SyncProcessedItem[];
+  failed: SyncFailedItem[];
+}
+
 @Injectable()
 export class SyncService {
   private readonly logger = new Logger(SyncService.name);
@@ -18,7 +36,7 @@ export class SyncService {
     private readonly auditService: AuditService,
   ) {}
 
-  async processSync(tenantId: string, userId: string, dto: SyncPayloadDto) {
+  async processSync(tenantId: string, userId: string, dto: SyncPayloadDto): Promise<SyncResult> {
     // 1. Mandatory Batch-Level Preflight Security Check
     // Credential mutation (CASHIER_PIN_RESET) is strictly forbidden via generic synchronization.
     const forbiddenResetEvent = dto.events?.find(
@@ -67,7 +85,7 @@ export class SyncService {
       );
     }
 
-    const results = {
+    const results: SyncResult = {
       success: true,
       processed: [],
       alreadyProcessed: [],
