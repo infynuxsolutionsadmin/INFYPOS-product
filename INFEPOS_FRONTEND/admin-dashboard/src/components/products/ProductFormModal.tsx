@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Store as StoreIcon } from 'lucide-react';
 import type { Product, CreateProductRequest, UpdateProductRequest, ProductStatus } from '../../types/products';
 import { createProduct, updateProduct } from '../../api/products.api';
+import { getStores } from '../../api/stores.api';
+import type { Store } from '../../types/stores';
+import { useAuthStore } from '../../stores/authStore';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -17,7 +20,10 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   product,
 }) => {
   const isEditing = !!product;
+  const user = useAuthStore((s) => s.user);
+  const isStoreScoped = Boolean(user?.storeId && user?.roleCode !== 'OWNER' && user?.roleCode !== 'SYSTEM_ADMIN');
   
+  const [stores, setStores] = useState<Store[]>([]);
   const [formData, setFormData] = useState<CreateProductRequest>({
     sku: '',
     barcode: '',
@@ -33,10 +39,25 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     trackInventory: true,
     status: 'ACTIVE' as ProductStatus,
     initialStock: 0,
+    storeId: isStoreScoped ? (user?.storeId || '') : '',
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      getStores({ limit: 100 })
+        .then((res) => {
+          const list = (res.items || []).filter((s) => s.status === 'ACTIVE');
+          setStores(list);
+          if (list.length === 1 && !formData.storeId) {
+            setFormData((prev) => ({ ...prev, storeId: list[0].id }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (product) {
@@ -71,11 +92,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         trackInventory: true,
         status: 'ACTIVE' as ProductStatus,
         initialStock: 0,
+        storeId: isStoreScoped ? (user?.storeId || '') : '',
       });
     }
     setError(null);
     setLoading(false);
-  }, [product, isOpen]);
+  }, [product, isOpen, isStoreScoped, user?.storeId]);
 
   if (!isOpen) return null;
 
@@ -117,6 +139,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       if (!payload.category) delete payload.category;
       if (!payload.brand) delete payload.brand;
       if (!payload.imageUrl) delete payload.imageUrl;
+      if (!payload.storeId) delete (payload as any).storeId;
 
       if (isEditing && product) {
         await updateProduct(product.id, payload as UpdateProductRequest);
@@ -209,6 +232,30 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     <option value="DRAFT">Draft</option>
                   </select>
                 </div>
+                {!isEditing && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                      <StoreIcon className="h-3.5 w-3.5 text-[#5B58F2]" />
+                      Target Shop / Store
+                    </label>
+                    <select
+                      name="storeId"
+                      value={formData.storeId || ''}
+                      onChange={handleChange}
+                      disabled={isStoreScoped}
+                      className="block w-full border border-gray-200 bg-gray-50/50 rounded-2xl py-2.5 px-4 text-sm font-medium text-gray-800 focus:ring-[#5B58F2] focus:border-[#5B58F2] focus:bg-white transition-colors shadow-sm disabled:opacity-60 cursor-pointer"
+                    >
+                      {!isStoreScoped && <option value="">-- All Active Stores --</option>}
+                      {stores
+                        .filter((s) => !isStoreScoped || s.id === user?.storeId)
+                        .map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} ({s.code})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
                 {!isEditing && (
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stock in Hand</label>

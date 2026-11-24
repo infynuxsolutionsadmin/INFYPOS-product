@@ -23,7 +23,7 @@ client.interceptors.request.use((config) => {
     config.url?.includes('/auth/refresh');
 
   const token = localStorage.getItem('pos_access_token');
-  if (token && config.headers && !isAuthEndpoint) {
+  if (token && config.headers && !isAuthEndpoint && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;

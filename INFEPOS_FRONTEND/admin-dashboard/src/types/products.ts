@@ -40,6 +40,7 @@ export interface CreateProductRequest {
   minimumStock?: number;
   maximumStock?: number;
   reorderLevel?: number;
+  storeId?: string;
 }
 
 export type UpdateProductRequest = Partial<CreateProductRequest>;

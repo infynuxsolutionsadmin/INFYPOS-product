@@ -80,13 +80,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
 
     // Ensure shiftId is a valid UUID — if stored shift has a non-UUID placeholder, self-heal via getActiveShift()
     let effectiveShiftId = currentShift?.id;
-    const isUuid = Boolean(effectiveShiftId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(effectiveShiftId));
+    let isUuid = Boolean(effectiveShiftId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(effectiveShiftId));
     if (!isUuid) {
       try {
         const liveShift = await getActiveShift();
         if (liveShift?.id) {
           useShiftStore.getState().setShift(liveShift);
           effectiveShiftId = liveShift.id;
+          isUuid = Boolean(effectiveShiftId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(effectiveShiftId));
         }
       } catch (err) {
         console.warn('[PaymentModal] Could not fetch live shift for UUID healing', err);
@@ -94,7 +95,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, onSuccess }) => {
     }
     
     const payload = {
-      shiftId: effectiveShiftId,
+      shiftId: isUuid ? effectiveShiftId : undefined,
       storeId: user.storeId,
       customerPhone: customerPhone.trim() || undefined,
       discountAmount: parsedDiscount,

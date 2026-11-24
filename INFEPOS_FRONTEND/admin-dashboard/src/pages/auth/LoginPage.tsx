@@ -43,7 +43,17 @@ const LoginPage: React.FC = () => {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      const data = err.response?.data;
+      let rawMsg = data?.message ?? err.message ?? 'Login failed. Please check your credentials.';
+
+      // Safely unwrap if message is an object (e.g. { message, error, statusCode })
+      if (typeof rawMsg === 'object' && rawMsg !== null && !Array.isArray(rawMsg)) {
+        rawMsg = rawMsg.message || rawMsg.error || JSON.stringify(rawMsg);
+      }
+
+      // If validation error is an array of messages, join with comma
+      const finalMsg = Array.isArray(rawMsg) ? rawMsg.join(', ') : String(rawMsg);
+      setError(finalMsg);
     } finally {
       setLoading(false);
     }

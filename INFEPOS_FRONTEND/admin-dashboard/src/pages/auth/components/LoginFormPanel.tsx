@@ -61,7 +61,11 @@ export const LoginFormPanel: React.FC<LoginFormPanelProps> = ({
         {error && (
           <div className="mb-3.5 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-xs font-semibold flex items-center gap-2 shadow-xs animate-fadeIn">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
-            <span className="leading-snug">{error}</span>
+            <span className="leading-snug">
+              {typeof error === 'object' && error !== null
+                ? (error as any).message || (error as any).error || JSON.stringify(error)
+                : String(error)}
+            </span>
           </div>
         )}
 

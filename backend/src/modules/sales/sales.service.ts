@@ -83,12 +83,22 @@ export class SalesService {
 
     try {
       // 0. Validate Shift
-      if (!dto.shiftId) {
-        throw new BadRequestException('An active shift is required to create a sale.');
+      let shift = dto.shiftId
+        ? await this.prisma.shift.findUnique({ where: { id: dto.shiftId } })
+        : null;
+
+      if (!shift) {
+        // Fallback: auto-adopt active open shift for this store
+        const activeStoreShift = await this.prisma.shift.findFirst({
+          where: { tenantId, storeId: dto.storeId, status: ShiftStatus.OPEN },
+        });
+
+        if (activeStoreShift) {
+          shift = activeStoreShift;
+        } else if (!dto.shiftId) {
+          throw new BadRequestException('An active shift is required to create a sale.');
+        }
       }
-      let shift = await this.prisma.shift.findUnique({
-        where: { id: dto.shiftId },
-      });
 
       // Resilient Offline-First Sync Recovery:
       // If the sale was generated offline on the till and the shift hasn't synced yet,
